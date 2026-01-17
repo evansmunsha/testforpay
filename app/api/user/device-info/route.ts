@@ -1,19 +1,41 @@
+// app/api/user/device-info/route.ts
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { deviceInfoSchema } from '@/lib/validators'
 
-// POST - Create or update device info
+export async function GET() {
+  try {
+    const currentUser = await getCurrentUser()
+    
+    if (!currentUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const deviceInfo = await prisma.deviceInfo.findUnique({
+      where: { userId: currentUser.userId }
+    })
+
+    return NextResponse.json(deviceInfo || null)
+
+  } catch (error) {
+    console.error('Device info fetch error:', error)
+    return NextResponse.json(
+      { error: 'Failed to fetch device info' },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentUser()
-
+    
     if (!currentUser) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // Check if user is a tester
     if (currentUser.role !== 'TESTER') {
       return NextResponse.json(
         { error: 'Only testers can add device info' },
@@ -22,43 +44,42 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { deviceModel, androidVersion, screenSize } = body
-
-    // Check if device info already exists
-    const existingDeviceInfo = await prisma.deviceInfo.findUnique({
-      where: { userId: currentUser.userId },
-    })
-
-    let deviceInfo
-
-    if (existingDeviceInfo) {
-      // Update existing
-      deviceInfo = await prisma.deviceInfo.update({
-        where: { userId: currentUser.userId },
-        data: {
-          deviceModel,
-          androidVersion,
-          screenSize,
-        },
-      })
-    } else {
-      // Create new
-      deviceInfo = await prisma.deviceInfo.create({
-        data: {
-          userId: currentUser.userId,
-          deviceModel,
-          androidVersion,
-          screenSize,
-        },
-      })
+    
+    // Validate with Zod schema
+    const validationResult = deviceInfoSchema.safeParse(body)
+    
+    if (!validationResult.success) {
+      return NextResponse.json(
+        { error: 'Invalid input', details: validationResult.error },
+        { status: 400 }
+      )
     }
+
+    const { deviceModel, androidVersion, screenSize } = validationResult.data
+
+    // Upsert device info
+    const deviceInfo = await prisma.deviceInfo.upsert({
+      where: { userId: currentUser.userId },
+      update: {
+        deviceModel,
+        androidVersion,
+        screenSize: screenSize || null
+      },
+      create: {
+        userId: currentUser.userId,
+        deviceModel,
+        androidVersion,
+        screenSize: screenSize || null
+      }
+    })
 
     return NextResponse.json({
       success: true,
-      deviceInfo,
+      deviceInfo
     })
+
   } catch (error) {
-    console.error('Device info error:', error)
+    console.error('Device info save error:', error)
     return NextResponse.json(
       { error: 'Failed to save device info' },
       { status: 500 }

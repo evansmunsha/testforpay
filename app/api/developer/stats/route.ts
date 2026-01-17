@@ -1,21 +1,20 @@
 // app/api/developer/stats/route.ts
-import prisma from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { getCurrentUser } from '@/lib/auth'
+import prisma from '@/lib/prisma'
 
 export async function GET() {
   try {
-    const session = await getServerSession(authOptions)
+    const currentUser = await getCurrentUser()
     
-    if (!session?.user?.id) {
+    if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const userId = session.user.id
-
     // Get active jobs count
-    const activeJobs = await prisma.job.count({
+    const activeJobs = await prisma.testingJob.count({
       where: {
-        developerId: userId,
+        developerId: currentUser.userId,
         status: 'ACTIVE'
       }
     })
@@ -24,10 +23,10 @@ export async function GET() {
     const totalTesters = await prisma.application.count({
       where: {
         job: {
-          developerId: userId
+          developerId: currentUser.userId
         },
         status: {
-          in: ['APPROVED', 'OPTED_IN', 'TESTING', 'COMPLETED']
+          in: ['APPROVED', 'OPTED_IN', 'VERIFIED', 'TESTING', 'COMPLETED']
         }
       }
     })
@@ -36,7 +35,7 @@ export async function GET() {
     const pendingReviews = await prisma.application.count({
       where: {
         job: {
-          developerId: userId
+          developerId: currentUser.userId
         },
         status: 'PENDING'
       }
@@ -45,11 +44,13 @@ export async function GET() {
     // Get total spent (sum of all completed payments)
     const payments = await prisma.payment.aggregate({
       where: {
-        developerId: userId,
+        job: {
+          developerId: currentUser.userId
+        },
         status: 'COMPLETED'
       },
       _sum: {
-        amount: true
+        totalAmount: true
       }
     })
 
@@ -57,7 +58,7 @@ export async function GET() {
       activeJobs,
       totalTesters,
       pendingReviews,
-      totalSpent: payments._sum.amount || 0
+      totalSpent: payments._sum.totalAmount || 0
     })
 
   } catch (error) {

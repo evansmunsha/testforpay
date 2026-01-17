@@ -1,67 +1,91 @@
+// app/api/webhooks/stripe/route.ts
 import { NextResponse } from 'next/server'
 import { headers } from 'next/headers'
 import { stripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import Stripe from 'stripe'
 
+// This is CRITICAL for Stripe webhooks
+export const runtime = 'nodejs'
+
 export async function POST(request: Request) {
-  const body = await request.text()
-  const headersList = await headers()
-  const signature = headersList.get('stripe-signature')
-
-  if (!signature) {
-    return NextResponse.json(
-      { error: 'No signature' },
-      { status: 400 }
-    )
-  }
-
-  let event: Stripe.Event
-
   try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    )
-  } catch (err) {
-    console.error('Webhook signature verification failed:', err)
-    return NextResponse.json(
-      { error: 'Invalid signature' },
-      { status: 400 }
-    )
-  }
+    // Get raw body as Buffer (NOT text!)
+    const rawBody = await request.arrayBuffer()
+    const body = Buffer.from(rawBody).toString('utf8')
+    
+    const headersList = await headers()
+    const signature = headersList.get('stripe-signature')
 
-  try {
+    if (!signature) {
+      console.error('❌ No signature found')
+      return NextResponse.json(
+        { error: 'No signature' },
+        { status: 400 }
+      )
+    }
+
+    if (!body) {
+      console.error('❌ Empty body received')
+      return NextResponse.json(
+        { error: 'Empty body' },
+        { status: 400 }
+      )
+    }
+
+    console.log('📦 Body length:', body.length)
+
+    let event: Stripe.Event
+
+    try {
+      // Verify webhook signature with raw body
+      event = stripe.webhooks.constructEvent(
+        body,
+        signature,
+        process.env.STRIPE_WEBHOOK_SECRET!
+      )
+      console.log('✅ Webhook verified:', event.type)
+    } catch (err: any) {
+      console.error('❌ Signature verification failed:', err.message)
+      return NextResponse.json(
+        { error: 'Invalid signature' },
+        { status: 400 }
+      )
+    }
+
+    // Handle events
     switch (event.type) {
-      case 'payment_intent.succeeded': {
-        const paymentIntent = event.data.object as Stripe.PaymentIntent
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session
         
-        // Update job status to active and mark as paid
-        if (paymentIntent.metadata?.jobId) {
+        console.log('💳 Checkout completed:', session.id)
+        
+        if (session.metadata?.jobId) {
           await prisma.testingJob.update({
-            where: { id: paymentIntent.metadata.jobId },
+            where: { id: session.metadata.jobId },
             data: {
               status: 'ACTIVE',
               publishedAt: new Date(),
             },
           })
 
-          console.log('Job payment successful:', paymentIntent.metadata.jobId)
+          console.log('✅ Job activated:', session.metadata.jobId)
+        } else {
+          console.warn('⚠️ No jobId in metadata')
         }
         break
       }
 
       case 'payment_intent.payment_failed': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
-        console.error('Payment failed:', paymentIntent.id)
+        console.error('❌ Payment failed:', paymentIntent.id)
         break
       }
 
       case 'transfer.created': {
         const transfer = event.data.object as Stripe.Transfer
+        console.log('💸 Transfer created:', transfer.id)
         
-        // Update payment status to completed
         if (transfer.metadata?.applicationId) {
           await prisma.payment.updateMany({
             where: { 
@@ -74,16 +98,16 @@ export async function POST(request: Request) {
             },
           })
 
-          console.log('Tester payout successful:', transfer.metadata.applicationId)
+          console.log('✅ Tester payout completed:', transfer.metadata.applicationId)
         }
         break
       }
 
       case 'account.updated': {
         const account = event.data.object as Stripe.Account
+        console.log('👤 Account updated:', account.id)
         
-        // Update user's Stripe account status - Fixed: Check if metadata exists
-        if (account.metadata && account.metadata.testerId) {
+        if (account.metadata?.testerId) {
           await prisma.user.update({
             where: { id: account.metadata.testerId },
             data: {
@@ -91,18 +115,19 @@ export async function POST(request: Request) {
             },
           })
 
-          console.log('Tester Stripe account updated:', account.metadata.testerId)
+          console.log('✅ Tester account linked:', account.metadata.testerId)
         }
         break
       }
 
       default:
-        console.log('Unhandled event type:', event.type)
+        console.log('ℹ️ Unhandled event type:', event.type)
     }
 
     return NextResponse.json({ received: true })
-  } catch (error) {
-    console.error('Webhook handler error:', error)
+    
+  } catch (error: any) {
+    console.error('❌ Webhook handler error:', error)
     return NextResponse.json(
       { error: 'Webhook handler failed' },
       { status: 500 }
