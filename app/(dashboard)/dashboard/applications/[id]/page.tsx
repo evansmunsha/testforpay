@@ -1,0 +1,1 @@
+//app/(dashboard)/applications/[id]/page.tsx this is empty

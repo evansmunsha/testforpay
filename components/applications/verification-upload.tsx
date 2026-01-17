@@ -1,0 +1,1 @@
+//components/applications/verification-upload.tsx

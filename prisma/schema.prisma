@@ -1,0 +1,190 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+enum UserRole {
+  DEVELOPER
+  TESTER
+  ADMIN
+}
+
+enum JobStatus {
+  DRAFT
+  ACTIVE
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  OPTED_IN
+  VERIFIED
+  TESTING
+  COMPLETED
+  REJECTED
+}
+
+enum PaymentStatus {
+  PENDING
+  ESCROWED
+  PROCESSING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  password      String    // Hashed with bcrypt
+  name          String?
+  role          UserRole  @default(TESTER)
+  emailVerified Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Developer fields
+  stripeCustomerId String?  @unique
+  developedJobs    TestingJob[]
+  
+  // Tester fields
+  stripeAccountId  String?  @unique
+  paypalEmail      String?
+  phoneNumber      String?
+  applications     Application[]
+  deviceInfo       DeviceInfo?
+  
+  // Ratings
+  averageRating    Float?   @default(0)
+  totalRatings     Int?     @default(0)
+}
+
+model DeviceInfo {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  deviceModel    String
+  androidVersion String
+  screenSize     String?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model TestingJob {
+  id                String      @id @default(cuid())
+  developerId       String
+  developer         User        @relation(fields: [developerId], references: [id])
+  
+  // App Details
+  appName           String
+  appDescription    String      @db.Text
+  packageName       String?
+  googlePlayLink    String
+  appCategory       String?
+  
+  // Requirements
+  testersNeeded     Int         @default(10)
+  testDuration      Int         @default(14)
+  minAndroidVersion String?
+  
+  // Compensation
+  paymentPerTester  Float
+  totalBudget       Float
+  platformFee       Float
+  
+  // Status
+  status            JobStatus   @default(DRAFT)
+  publishedAt       DateTime?
+  startedAt         DateTime?
+  completedAt       DateTime?
+  
+  // Relations
+  applications      Application[]
+  payments          Payment[]
+  
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+  
+  @@index([developerId])
+  @@index([status])
+}
+
+model Application {
+  id                String              @id @default(cuid())
+  jobId             String
+  job               TestingJob          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  testerId          String
+  tester            User                @relation(fields: [testerId], references: [id])
+  
+  status            ApplicationStatus   @default(PENDING)
+  
+  // Verification
+  optInVerified     Boolean             @default(false)
+  verificationImage String?
+  verifiedAt        DateTime?
+  
+  // Testing Period
+  testingStartDate  DateTime?
+  testingEndDate    DateTime?
+  
+  // Feedback
+  feedback          String?             @db.Text
+  rating            Int?
+  
+  // Payment
+  payment           Payment?
+  
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  
+  @@unique([jobId, testerId])
+  @@index([jobId])
+  @@index([testerId])
+  @@index([status])
+}
+
+model Payment {
+  id                String        @id @default(cuid())
+  applicationId     String        @unique
+  application       Application   @relation(fields: [applicationId], references: [id])
+  jobId             String
+  job               TestingJob    @relation(fields: [jobId], references: [id])
+  
+  amount            Float
+  platformFee       Float
+  totalAmount       Float
+  
+  status            PaymentStatus @default(PENDING)
+  
+  // Stripe IDs
+  paymentIntentId   String?       @unique
+  transferId        String?       @unique
+  
+  // Timestamps
+  escrowedAt        DateTime?
+  completedAt       DateTime?
+  failedAt          DateTime?
+  
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  
+  @@index([status])
+  @@index([jobId])
+}
+
