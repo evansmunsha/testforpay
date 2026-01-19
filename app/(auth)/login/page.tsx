@@ -35,11 +35,11 @@ export default function LoginPage() {
         return
       }
 
-      // Redirect based on user role
+      // Redirect based on user role (use full page navigation to ensure cookie is sent)
       if (data.user.role === 'DEVELOPER') {
-        router.push('/dashboard')
+        window.location.href = '/dashboard'
       } else {
-        router.push('/dashboard/browse')
+        window.location.href = '/dashboard/browse'
       }
     } catch (err) {
       setError('Something went wrong. Please try again.')

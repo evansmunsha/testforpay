@@ -23,6 +23,7 @@ export async function GET() {
         role: true,
         emailVerified: true,
         createdAt: true,
+        stripeAccountId: true,
       },
     })
     

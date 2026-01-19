@@ -61,7 +61,7 @@ export async function POST(request: Request) {
         console.log('💳 Checkout completed:', session.id)
         
         if (session.metadata?.jobId) {
-          await prisma.testingJob.update({
+          const job = await prisma.testingJob.update({
             where: { id: session.metadata.jobId },
             data: {
               status: 'ACTIVE',
@@ -69,10 +69,20 @@ export async function POST(request: Request) {
             },
           })
 
+          // Create payment records for each tester spot? 
+          // Actually, we usually create them when testers apply.
+          // But we can record the developer's main payment here if we want.
+
           console.log('✅ Job activated:', session.metadata.jobId)
-        } else {
-          console.warn('⚠️ No jobId in metadata')
         }
+        break
+      }
+
+      case 'payment_intent.succeeded': {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent
+        console.log('💰 Payment intent succeeded:', paymentIntent.id)
+        // We handle activation in checkout.session.completed if using checkout,
+        // but if we use custom flow, we'd handle it here.
         break
       }
 

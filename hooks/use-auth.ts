@@ -10,6 +10,7 @@ interface User {
   role: string
   emailVerified: boolean
   createdAt: string
+  stripeAccountId: string | null
 }
 
 export function useAuth() {

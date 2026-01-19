@@ -26,65 +26,61 @@ export async function POST(request: Request) {
 
     const body = await request.json()
     const { 
-      title, 
-      description, 
+      appName, 
+      appDescription, 
       packageName, 
-      playStoreUrl, 
+      googlePlayLink, 
       planType,
       testersNeeded,
-      testDuration 
+      testDuration,
+      paymentPerTester: customPaymentPerTester
     } = body
 
     // Validation
-    if (!title || !description || !playStoreUrl) {
+    if (!appName || !appDescription || !googlePlayLink) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
 
-    // Determine pricing based on plan
-    const planPricing: Record<string, { price: number, testers: number }> = {
-      STARTER: { price: 150, testers: 20 },
-      PROFESSIONAL: { price: 250, testers: 35 },
-      ENTERPRISE: { price: 0, testers: 50 }
+    // Determine pricing
+    let finalTestersNeeded = testersNeeded || 20
+    let finalTestDuration = testDuration || 14
+    let finalPaymentPerTester = customPaymentPerTester || 7.5
+    let finalTotalBudget = finalPaymentPerTester * finalTestersNeeded
+
+    if (planType) {
+      const planPricing: Record<string, { price: number, testers: number }> = {
+        STARTER: { price: 150, testers: 20 },
+        PROFESSIONAL: { price: 250, testers: 35 },
+      }
+
+      const plan = planPricing[planType as string]
+      if (plan) {
+        finalTestersNeeded = plan.testers
+        finalTotalBudget = plan.price
+        finalPaymentPerTester = finalTotalBudget / finalTestersNeeded
+      }
     }
 
-    if (planType === 'ENTERPRISE') {
-      return NextResponse.json(
-        { error: 'Please contact sales for enterprise pricing', contactSales: true },
-        { status: 400 }
-      )
-    }
-
-    const plan = planPricing[planType]
-    if (!plan) {
-      return NextResponse.json(
-        { error: 'Invalid plan type' },
-        { status: 400 }
-      )
-    }
-
-    // Calculate amounts
-    const paymentPerTester = plan.price / plan.testers
-    const platformFeePercent = 0.15 // 15% platform fee
-    const totalBudget = plan.price
-    const platformFee = totalBudget * platformFeePercent
+    const platformFeePercent = 0.15 
+    const platformFee = finalTotalBudget * platformFeePercent
 
     // Create job in DRAFT status
     const job = await prisma.testingJob.create({
       data: {
         developerId: currentUser.userId,
-        appName: title,
-        appDescription: description,
+        appName,
+        appDescription,
         packageName: packageName || null,
-        googlePlayLink: playStoreUrl,
-        testersNeeded: testersNeeded || plan.testers,
-        testDuration: testDuration || 14,
-        paymentPerTester,
-        totalBudget,
+        googlePlayLink,
+        testersNeeded: finalTestersNeeded,
+        testDuration: finalTestDuration,
+        paymentPerTester: finalPaymentPerTester,
+        totalBudget: finalTotalBudget,
         platformFee,
-        status: 'DRAFT' // Will be ACTIVE after payment
+        status: 'DRAFT'
       }
     })
 
@@ -96,10 +92,10 @@ export async function POST(request: Request) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: `TestForPay - ${planType} Plan`,
-              description: `${plan.testers} verified testers for ${title}`,
+              name: `TestForPay - ${planType || 'Custom'} Plan`,
+              description: `${finalTestersNeeded} verified testers for ${appName}`,
             },
-            unit_amount: plan.price * 100, // Convert to cents
+            unit_amount: Math.round((finalTotalBudget + platformFee) * 100), // Total cost in cents
           },
           quantity: 1,
         },

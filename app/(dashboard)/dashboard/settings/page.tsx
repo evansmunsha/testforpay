@@ -216,60 +216,88 @@ export default function SettingsPage() {
       {user?.role === 'TESTER' && (
         <>
           {/* Payout Setup Card */}
-          <Card className="border-blue-200 bg-blue-50">
+          <Card className={user?.stripeAccountId ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-blue-600" />
+                <DollarSign className={user?.stripeAccountId ? 'h-5 w-5 text-green-600' : 'h-5 w-5 text-blue-600'} />
                 Payout Settings
               </CardTitle>
-              <CardDescription>Set up how you want to receive payments</CardDescription>
+              <CardDescription>
+                {user?.stripeAccountId 
+                  ? 'Your payout account is set up and active' 
+                  : 'Set up how you want to receive payments'}
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="bg-white p-4 rounded-lg border border-blue-200">
-                <p className="text-sm text-gray-700 mb-4">
-                  To receive payments for completed testing jobs, you need to set up your payout account with Stripe.
-                </p>
-                <ul className="text-sm text-gray-600 space-y-2 mb-4">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    Secure payment processing
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    Direct bank transfers
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    No setup fees
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-600" />
-                    Automatic payouts after testing
-                  </li>
-                </ul>
-              </div>
+              {user?.stripeAccountId ? (
+                <div className="bg-white p-4 rounded-lg border border-green-200">
+                  <div className="flex items-center gap-3 text-green-800">
+                    <CheckCircle className="h-5 w-5" />
+                    <p className="font-medium">Stripe Connect Account Linked</p>
+                  </div>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Your account (ID: {user.stripeAccountId}) is ready to receive payouts.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-4 w-full"
+                    onClick={handleStripeOnboarding}
+                    disabled={onboardingLoading}
+                  >
+                    Manage Stripe Account
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-white p-4 rounded-lg border border-blue-200">
+                    <p className="text-sm text-gray-700 mb-4">
+                      To receive payments for completed testing jobs, you need to set up your payout account with Stripe.
+                    </p>
+                    <ul className="text-sm text-gray-600 space-y-2 mb-4">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        Secure payment processing
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        Direct bank transfers
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        No setup fees
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        Automatic payouts after testing
+                      </li>
+                    </ul>
+                  </div>
 
-              <Button 
-                onClick={handleStripeOnboarding}
-                disabled={onboardingLoading}
-                size="lg"
-                className="w-full"
-              >
-                {onboardingLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Redirecting to Stripe...
-                  </>
-                ) : (
-                  <>
-                    <DollarSign className="mr-2 h-4 w-4" />
-                    Set Up Payout Account
-                  </>
-                )}
-              </Button>
+                  <Button 
+                    onClick={handleStripeOnboarding}
+                    disabled={onboardingLoading}
+                    size="lg"
+                    className="w-full"
+                  >
+                    {onboardingLoading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Redirecting to Stripe...
+                      </>
+                    ) : (
+                      <>
+                        <DollarSign className="mr-2 h-4 w-4" />
+                        Set Up Payout Account
+                      </>
+                    )}
+                  </Button>
+                </>
+              )}
 
-              <p className="text-xs text-center text-gray-500">
-                You'll be redirected to Stripe to securely set up your payout details
+              <p className="text-xs text-center text-gray-500 mt-2">
+                {user?.stripeAccountId 
+                  ? 'You can update your payout details on Stripe'
+                  : 'You\'ll be redirected to Stripe to securely set up your payout details'}
               </p>
             </CardContent>
           </Card>

@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/use-auth'
 import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { 
   Users, 
   Briefcase, 
@@ -32,6 +32,25 @@ export default function AdminDashboard() {
   const router = useRouter()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loadingStats, setLoadingStats] = useState(true)
+  const [processingPayouts, setProcessingPayouts] = useState(false)
+
+  const handleProcessPayouts = async () => {
+    setProcessingPayouts(true)
+    try {
+      const response = await fetch('/api/admin/payouts/process', { method: 'POST' })
+      const data = await response.json()
+      if (response.ok) {
+        alert(`Successfully processed ${data.processed} payouts!`)
+        fetchStats()
+      } else {
+        alert(data.error || 'Failed to process payouts')
+      }
+    } catch (error) {
+      alert('Something went wrong')
+    } finally {
+      setProcessingPayouts(false)
+    }
+  }
 
   useEffect(() => {
     if (!loading && user?.role !== 'ADMIN') {
@@ -71,9 +90,18 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900">Admin Dashboard</h2>
-        <p className="text-gray-600 mt-1">Platform overview and management</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">Admin Dashboard</h2>
+          <p className="text-gray-600 mt-1">Platform overview and management</p>
+        </div>
+        <Button 
+          onClick={handleProcessPayouts} 
+          disabled={processingPayouts}
+          className="bg-purple-600 hover:bg-purple-700"
+        >
+          {processingPayouts ? 'Processing...' : 'Process Due Payouts'}
+        </Button>
       </div>
 
       {/* Stats Grid */}

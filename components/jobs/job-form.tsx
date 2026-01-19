@@ -20,6 +20,7 @@ interface JobFormData {
   testDuration: number
   minAndroidVersion: string
   paymentPerTester: number
+  planType: 'STARTER' | 'PROFESSIONAL' | 'CUSTOM'
 }
 
 export function JobForm() {
@@ -36,6 +37,7 @@ export function JobForm() {
     testDuration: 14,
     minAndroidVersion: '',
     paymentPerTester: 7.5,
+    planType: 'STARTER',
   })
 
   const totalBudget = formData.paymentPerTester * formData.testersNeeded
@@ -62,11 +64,40 @@ export function JobForm() {
         return
       }
 
-      // Redirect to job details page
-      router.push(`/dashboard/jobs/${data.job.id}`)
+      if (data.requiresPayment && data.paymentUrl) {
+        // Redirect to Stripe Checkout
+        window.location.href = data.paymentUrl
+        return
+      }
+
+      // Redirect to job details page if no payment required (shouldn't happen with current logic)
+      router.push(`/dashboard/jobs/${data.jobId}`)
     } catch (err) {
       setError('Something went wrong. Please try again.')
       setLoading(false)
+    }
+  }
+
+  const handlePlanChange = (plan: 'STARTER' | 'PROFESSIONAL' | 'CUSTOM') => {
+    if (plan === 'STARTER') {
+      setFormData(prev => ({
+        ...prev,
+        planType: 'STARTER',
+        testersNeeded: 20,
+        paymentPerTester: 7.5, // 150 / 20
+      }))
+    } else if (plan === 'PROFESSIONAL') {
+      setFormData(prev => ({
+        ...prev,
+        planType: 'PROFESSIONAL',
+        testersNeeded: 35,
+        paymentPerTester: 7.14, // 250 / 35 approx
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        planType: 'CUSTOM',
+      }))
     }
   }
 
@@ -88,6 +119,58 @@ export function JobForm() {
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Choose a Plan</CardTitle>
+              <CardDescription>Select the best testing plan for your app</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-3 gap-4">
+                <button
+                  type="button"
+                  onClick={() => handlePlanChange('STARTER')}
+                  className={`p-4 rounded-xl border-2 text-left transition ${
+                    formData.planType === 'STARTER'
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-200'
+                  }`}
+                >
+                  <p className="font-bold text-lg">$150</p>
+                  <p className="font-semibold">Starter</p>
+                  <p className="text-xs text-gray-500 mt-1">20 Verified Testers</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePlanChange('PROFESSIONAL')}
+                  className={`p-4 rounded-xl border-2 text-left transition ${
+                    formData.planType === 'PROFESSIONAL'
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-200'
+                  }`}
+                >
+                  <p className="font-bold text-lg">$250</p>
+                  <p className="font-semibold">Professional</p>
+                  <p className="text-xs text-gray-500 mt-1">35 Verified Testers</p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handlePlanChange('CUSTOM')}
+                  className={`p-4 rounded-xl border-2 text-left transition ${
+                    formData.planType === 'CUSTOM'
+                      ? 'border-blue-600 bg-blue-50'
+                      : 'border-gray-200 hover:border-blue-200'
+                  }`}
+                >
+                  <p className="font-bold text-lg">Custom</p>
+                  <p className="font-semibold">Flexible</p>
+                  <p className="text-xs text-gray-500 mt-1">Set your own rates</p>
+                </button>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>App Information</CardTitle>
@@ -187,6 +270,7 @@ export function JobForm() {
                     value={formData.testersNeeded}
                     onChange={(e) => handleChange('testersNeeded', parseInt(e.target.value))}
                     required
+                    disabled={formData.planType !== 'CUSTOM'}
                   />
                   <p className="text-xs text-gray-500">Minimum 20 testers (Google Play requirement)</p>
                 </div>
@@ -201,6 +285,7 @@ export function JobForm() {
                     value={formData.testDuration}
                     onChange={(e) => handleChange('testDuration', parseInt(e.target.value))}
                     required
+                    disabled={formData.planType !== 'CUSTOM'}
                   />
                   <p className="text-xs text-gray-500">Minimum 14 days (Google Play requirement)</p>
                 </div>
@@ -245,6 +330,7 @@ export function JobForm() {
                   value={formData.paymentPerTester}
                   onChange={(e) => handleChange('paymentPerTester', parseFloat(e.target.value))}
                   required
+                  disabled={formData.planType !== 'CUSTOM'}
                 />
                 <p className="text-xs text-gray-500">
                   Recommended: $5-$15 per tester. Higher payments attract more testers faster.

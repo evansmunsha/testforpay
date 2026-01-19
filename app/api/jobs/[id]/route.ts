@@ -93,6 +93,11 @@ export async function PATCH(
       )
     }
 
+    // If status is being updated to ACTIVE, ensure it's paid or create checkout
+    if (body.status === 'ACTIVE' && existingJob.status === 'DRAFT') {
+      // Logic for manual publishing would go here
+    }
+
     // Update job
     const updatedJob = await prisma.testingJob.update({
       where: { id },

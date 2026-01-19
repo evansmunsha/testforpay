@@ -36,8 +36,10 @@ export default function JobsPage() {
     try {
       const response = await fetch(`/api/jobs?userId=${user?.id}`)
       const data = await response.json()
-      if (response.ok) {
+      if (response.ok && data.jobs) {
         setJobs(data.jobs)
+      } else {
+        setJobs([])
       }
     } catch (error) {
       console.error('Failed to fetch jobs:', error)
