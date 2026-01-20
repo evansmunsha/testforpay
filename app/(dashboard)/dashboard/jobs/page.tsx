@@ -82,28 +82,28 @@ export default function JobsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {paymentSuccess && (
         <Card className="bg-green-50 border-green-200">
-          <CardContent className="pt-6">
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
             <div className="flex items-center gap-3">
-              <CheckCircle className="h-6 w-6 text-green-600" />
+              <CheckCircle className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 flex-shrink-0" />
               <div>
-                <p className="font-semibold text-green-900">Payment successful!</p>
-                <p className="text-sm text-green-700">Your job is now live and visible to testers.</p>
+                <p className="font-semibold text-green-900 text-sm sm:text-base">Payment successful!</p>
+                <p className="text-xs sm:text-sm text-green-700">Your job is now live and visible to testers.</p>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">My Jobs</h2>
-          <p className="text-gray-600 mt-1">Manage your testing jobs</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">My Jobs</h2>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">Manage your testing jobs</p>
         </div>
-        <Link href="/dashboard/jobs/new">
-          <Button size="lg" className="gap-2">
+        <Link href="/dashboard/jobs/new" className="w-full sm:w-auto">
+          <Button size="lg" className="gap-2 w-full sm:w-auto">
             <Plus className="h-5 w-5" />
             Create New Job
           </Button>

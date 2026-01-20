@@ -27,8 +27,14 @@ export function DashboardNav() {
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
         <div className="flex-1 pl-12 lg:pl-0 min-w-0">
           <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">
-            {user?.role === 'DEVELOPER' ? 'Developer Dashboard' : 
-             user?.role === 'ADMIN' ? 'Admin Dashboard' : 'Tester Dashboard'}
+            <span className="sm:hidden">
+              {user?.role === 'DEVELOPER' ? 'Developer' : 
+               user?.role === 'ADMIN' ? 'Admin' : 'Tester'}
+            </span>
+            <span className="hidden sm:inline">
+              {user?.role === 'DEVELOPER' ? 'Developer Dashboard' : 
+               user?.role === 'ADMIN' ? 'Admin Dashboard' : 'Tester Dashboard'}
+            </span>
           </h1>
           <p className="text-xs sm:text-sm text-gray-600 mt-0.5 truncate hidden sm:block">
             Welcome back, {user?.name || user?.email}

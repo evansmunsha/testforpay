@@ -73,71 +73,71 @@ export default function PaymentsPage() {
     .reduce((sum, t) => sum + (isDeveloper ? t.totalAmount : t.amount), 0)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900">
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">
           {isDeveloper ? 'Payments' : 'Earnings'}
         </h2>
-        <p className="text-gray-600 mt-1">
+        <p className="text-sm sm:text-base text-gray-600 mt-1">
           {isDeveloper ? 'Track your payment history' : 'View your earnings and payouts'}
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+          <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
               {isDeveloper ? 'Total Spent' : 'Total Earned'}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">${totalAmount.toFixed(2)}</div>
-            <p className="text-xs text-gray-500 mt-1">All time (completed)</p>
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            <div className="text-xl sm:text-3xl font-bold">${totalAmount.toFixed(2)}</div>
+            <p className="text-[10px] sm:text-xs text-gray-500 mt-1">All time (completed)</p>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+          <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
               {isDeveloper ? 'Pending Escrow' : 'Pending Payout'}
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">${pendingAmount.toFixed(2)}</div>
-            <p className="text-xs text-gray-500 mt-1">Awaiting completion</p>
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            <div className="text-xl sm:text-3xl font-bold">${pendingAmount.toFixed(2)}</div>
+            <p className="text-[10px] sm:text-xs text-gray-500 mt-1">Awaiting completion</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
+        <Card className="col-span-2 md:col-span-1">
+          <CardHeader className="pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+            <CardTitle className="text-xs sm:text-sm font-medium text-gray-600">
               Transactions
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{transactions.length}</div>
-            <p className="text-xs text-gray-500 mt-1">Total count</p>
+          <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+            <div className="text-xl sm:text-3xl font-bold">{transactions.length}</div>
+            <p className="text-[10px] sm:text-xs text-gray-500 mt-1">Total count</p>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardHeader>
-          <CardTitle>Transaction History</CardTitle>
-          <CardDescription>
+        <CardHeader className="px-3 sm:px-6">
+          <CardTitle className="text-base sm:text-lg">Transaction History</CardTitle>
+          <CardDescription className="text-xs sm:text-sm">
             {isDeveloper ? 'Your payment transactions' : 'Your earnings history'}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-0 sm:px-6">
           {loading ? (
             <div className="flex justify-center py-12">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
             </div>
           ) : transactions.length === 0 ? (
-            <div className="text-center py-12 text-gray-500">
-              <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-              <p className="font-medium mb-2">No transactions yet</p>
-              <p className="text-sm">
+            <div className="text-center py-12 text-gray-500 px-4">
+              <DollarSign className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 text-gray-400" />
+              <p className="font-medium mb-2 text-sm sm:text-base">No transactions yet</p>
+              <p className="text-xs sm:text-sm">
                 {isDeveloper 
                   ? 'Create testing jobs to see payment history' 
                   : 'Complete testing jobs to see earnings'}
@@ -145,7 +145,37 @@ export default function PaymentsPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
+              {/* Mobile card view */}
+              <div className="sm:hidden space-y-3 px-3">
+                {transactions.map((t) => (
+                  <div key={t.id} className="border rounded-lg p-3 bg-gray-50">
+                    <div className="flex justify-between items-start mb-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm truncate">{t.job.appName}</p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(t.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge className={`${getStatusColor(t.status)} text-[10px]`} variant="outline">
+                        {getStatusIcon(t.status)}
+                        <span className="ml-1">{t.status}</span>
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold">
+                        ${(isDeveloper ? t.totalAmount : t.amount).toFixed(2)}
+                      </span>
+                      {isDeveloper && t.application?.tester && (
+                        <span className="text-xs text-gray-500 truncate max-w-[120px]">
+                          {t.application.tester.name || t.application.tester.email}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {/* Desktop table view */}
+              <table className="hidden sm:table w-full text-sm text-left">
                 <thead className="text-xs text-gray-700 uppercase bg-gray-50">
                   <tr>
                     <th className="px-4 py-3">Date</th>

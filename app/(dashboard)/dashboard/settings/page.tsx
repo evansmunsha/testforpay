@@ -203,10 +203,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-4 sm:space-y-6 max-w-4xl">
       <div>
-        <h2 className="text-3xl font-bold text-gray-900">Settings</h2>
-        <p className="text-gray-600 mt-1">Manage your account settings</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Settings</h2>
+        <p className="text-sm sm:text-base text-gray-600 mt-1">Manage your account settings</p>
       </div>
 
       {/* Success/Error Messages */}
