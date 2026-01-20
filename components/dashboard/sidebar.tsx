@@ -78,11 +78,6 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
       icon: Shield,
     },
     {
-      href: '/dashboard',
-      label: 'Overview',
-      icon: LayoutDashboard,
-    },
-    {
       href: '/dashboard/settings',
       label: 'Settings',
       icon: Settings,

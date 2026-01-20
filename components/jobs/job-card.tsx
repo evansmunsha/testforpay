@@ -11,7 +11,8 @@ import {
   Users, 
   Smartphone,
   CheckCircle,
-  ExternalLink
+  ExternalLink,
+  Share2
 } from 'lucide-react'
 
 interface JobCardProps {
@@ -183,6 +184,22 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             {loading ? 'Applying...' : `Apply Now • $${job.paymentPerTester.toFixed(2)}`}
           </Button>
         )}
+        <Button variant="outline" size="icon" asChild>
+          <a 
+            href={`https://wa.me/?text=${encodeURIComponent(`🎉 Earn $${job.paymentPerTester.toFixed(2)} testing "${job.appName}" app!
+
+            ✅ Test for ${job.testDuration} days\r
+            ✅ ${spotsLeft} spots left\r
+            ✅ Easy money!\r
+
+            Join TestForPay and start earning: ${typeof window !== 'undefined' ? window.location.origin : ''}/dashboard/browse`)}`}
+                        target="_blank" 
+            rel="noopener noreferrer"
+            title="Share on WhatsApp"
+          >
+            <Share2 className="h-4 w-4" />
+          </a>
+        </Button>
         <Button variant="outline" size="icon" asChild>
           <a 
             href={job.googlePlayLink} 

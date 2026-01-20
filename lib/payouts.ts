@@ -1,69 +1,149 @@
 import prisma from './prisma'
-import { transferToTester } from './stripe'
+import { stripe } from './stripe'
 
-export async function processCompletedTests() {
-  const now = new Date()
+interface PayoutResult {
+  applicationId: string
+  testerId: string
+  amount: number
+  status: 'success' | 'failed'
+  error?: string
+}
 
-  // Find all applications that are in TESTING status and have reached their end date
-  const dueApplications = await prisma.application.findMany({
+// Process payouts for all completed tests that haven't been paid
+export async function processCompletedTests(): Promise<PayoutResult[]> {
+  const results: PayoutResult[] = []
+
+  // Find all applications that are COMPLETED but payment is still PENDING
+  const pendingPayments = await prisma.payment.findMany({
     where: {
-      status: 'TESTING',
-      testingEndDate: {
-        lte: now,
+      status: 'PENDING',
+      application: {
+        status: 'COMPLETED',
       },
     },
     include: {
-      job: true,
-      tester: {
-        select: {
-          stripeAccountId: true,
+      application: {
+        include: {
+          tester: true,
+          job: true,
         },
       },
-      payment: true,
     },
   })
 
-  const results = []
+  for (const payment of pendingPayments) {
+    const { application } = payment
+    const tester = application.tester
 
-  for (const app of dueApplications) {
-    try {
-      if (!app.tester.stripeAccountId) {
-        throw new Error(`Tester ${app.testerId} has no Stripe account linked`)
-      }
-
-      if (!app.payment) {
-        throw new Error(`Application ${app.id} has no payment record`)
-      }
-
-      // 1. Mark application as COMPLETED
-      await prisma.application.update({
-        where: { id: app.id },
-        data: { status: 'COMPLETED' },
+    // Skip if tester doesn't have a Stripe account
+    if (!tester.stripeAccountId) {
+      results.push({
+        applicationId: application.id,
+        testerId: tester.id,
+        amount: payment.amount,
+        status: 'failed',
+        error: 'Tester has no connected Stripe account',
       })
+      continue
+    }
 
-      // 2. Trigger Stripe Transfer
-      const transfer = await transferToTester(
-        app.job.paymentPerTester,
-        app.tester.stripeAccountId,
-        app.id
-      )
-
-      // 3. Update Payment record (this will also be updated by webhook, but we do it here for immediacy)
-      await prisma.payment.update({
-        where: { id: app.payment.id },
-        data: {
-          status: 'COMPLETED',
-          completedAt: new Date(),
-          transferId: transfer.id,
+    try {
+      // Create a transfer to the tester's connected account
+      const transfer = await stripe.transfers.create({
+        amount: Math.round(payment.amount * 100), // Convert to cents
+        currency: 'usd',
+        destination: tester.stripeAccountId,
+        transfer_group: `job_${application.jobId}`,
+        metadata: {
+          applicationId: application.id,
+          testerId: tester.id,
+          jobId: application.jobId,
+          appName: application.job.appName,
         },
       })
 
-      results.push({ id: app.id, success: true })
+      // Update payment status
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'COMPLETED',
+          transferId: transfer.id,
+          completedAt: new Date(),
+        },
+      })
+
+      results.push({
+        applicationId: application.id,
+        testerId: tester.id,
+        amount: payment.amount,
+        status: 'success',
+      })
     } catch (error: any) {
-      console.error(`Failed to process payout for application ${app.id}:`, error.message)
-      results.push({ id: app.id, success: false, error: error.message })
+      console.error(`Payout failed for application ${application.id}:`, error)
+
+      // Mark payment as failed
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'FAILED',
+        },
+      })
+
+      results.push({
+        applicationId: application.id,
+        testerId: tester.id,
+        amount: payment.amount,
+        status: 'failed',
+        error: error.message || 'Transfer failed',
+      })
     }
   }
 
   return results
+}
+
+// Get pending payouts summary
+export async function getPendingPayoutsSummary() {
+  const pendingPayments = await prisma.payment.findMany({
+    where: {
+      status: 'PENDING',
+      application: {
+        status: 'COMPLETED',
+      },
+    },
+    include: {
+      application: {
+        include: {
+          tester: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              stripeAccountId: true,
+            },
+          },
+          job: {
+            select: {
+              id: true,
+              appName: true,
+            },
+          },
+        },
+      },
+    },
+  })
+
+  const totalAmount = pendingPayments.reduce((sum, p) => sum + p.amount, 0)
+  const testersWithStripe = pendingPayments.filter(
+    p => p.application.tester.stripeAccountId
+  ).length
+  const testersWithoutStripe = pendingPayments.length - testersWithStripe
+
+  return {
+    count: pendingPayments.length,
+    totalAmount,
+    testersWithStripe,
+    testersWithoutStripe,
+    payments: pendingPayments,
+  }
 }
