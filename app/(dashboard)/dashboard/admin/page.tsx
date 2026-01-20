@@ -195,17 +195,23 @@ export default function AdminDashboard() {
     }
   }, [user, loading, router])
 
+  // Fetch stats and initial tab data only after auth is confirmed
   useEffect(() => {
-    fetchStats()
-  }, [])
+    if (!loading && user?.role === 'ADMIN') {
+      fetchStats()
+      fetchUsers() // Load users tab by default
+    }
+  }, [loading, user])
 
   useEffect(() => {
-    if (activeTab === 'users') fetchUsers()
-    else if (activeTab === 'jobs') fetchJobs()
-    else if (activeTab === 'applications') fetchApplications()
-    else if (activeTab === 'payments') fetchPayments()
-    else if (activeTab === 'fraud') fetchFraudData()
-  }, [activeTab])
+    if (!loading && user?.role === 'ADMIN') {
+      if (activeTab === 'users') fetchUsers()
+      else if (activeTab === 'jobs') fetchJobs()
+      else if (activeTab === 'applications') fetchApplications()
+      else if (activeTab === 'payments') fetchPayments()
+      else if (activeTab === 'fraud') fetchFraudData()
+    }
+  }, [activeTab, loading, user])
 
   const fetchStats = async () => {
     try {
@@ -350,7 +356,7 @@ export default function AdminDashboard() {
     )
   }
 
-  if (loading || loadingStats) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
@@ -388,9 +394,11 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.totalUsers || 0}</div>
+            <div className="text-3xl font-bold">
+              {loadingStats ? '...' : (stats?.totalUsers ?? 0)}
+            </div>
             <p className="text-xs text-gray-500 mt-1">
-              {stats?.totalDevelopers || 0} developers • {stats?.totalTesters || 0} testers
+              {stats?.totalDevelopers ?? 0} developers • {stats?.totalTesters ?? 0} testers
             </p>
           </CardContent>
         </Card>
@@ -403,9 +411,11 @@ export default function AdminDashboard() {
             <Briefcase className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.totalJobs || 0}</div>
+            <div className="text-3xl font-bold">
+              {loadingStats ? '...' : (stats?.totalJobs ?? 0)}
+            </div>
             <p className="text-xs text-gray-500 mt-1">
-              {stats?.activeJobs || 0} active • {stats?.completedJobs || 0} completed
+              {stats?.activeJobs ?? 0} active • {stats?.completedJobs ?? 0} completed
             </p>
           </CardContent>
         </Card>
@@ -418,7 +428,9 @@ export default function AdminDashboard() {
             <TrendingUp className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats?.totalApplications || 0}</div>
+            <div className="text-3xl font-bold">
+              {loadingStats ? '...' : (stats?.totalApplications ?? 0)}
+            </div>
             <p className="text-xs text-gray-500 mt-1">All time</p>
           </CardContent>
         </Card>
@@ -431,7 +443,9 @@ export default function AdminDashboard() {
             <DollarSign className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">${stats?.totalRevenue.toFixed(2) || '0.00'}</div>
+            <div className="text-3xl font-bold">
+              ${loadingStats ? '...' : (stats?.totalRevenue?.toFixed(2) ?? '0.00')}
+            </div>
             <p className="text-xs text-gray-500 mt-1">Platform fees</p>
           </CardContent>
         </Card>
