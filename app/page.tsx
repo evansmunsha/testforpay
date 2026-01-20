@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { Mail, CheckCircle, DollarSign, Users, Clock, Shield, ArrowRight, Menu, X } from 'lucide-react';
 
 export default function LandingPage() {
@@ -39,8 +40,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <DollarSign className="h-8 w-8 text-blue-600" />
-              <span className="ml-2 text-2xl font-bold text-gray-900">TestForPay</span>
+              <Image 
+                src="/images/logo.svg" 
+                alt="TestForPay" 
+                width={180} 
+                height={40}
+                className="h-10 w-auto"
+              />
             </div>
             
             {/* Desktop Menu */}
@@ -98,61 +104,75 @@ export default function LandingPage() {
 
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
-        <div className="text-center">
-          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-            Meet Google Play's
-            <span className="text-blue-600"> Testing Requirements</span>
-            <br />in 24 Hours
-          </h1>
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-            Connect with real testers instantly. Get your 20+ opted-in testers for 14-day closed testing and publish your app to production faster.
-          </p>
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          <div className="text-center lg:text-left">
+            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+              Meet Google Play's
+              <span className="text-blue-600"> Testing Requirements</span>
+              <br />in 24 Hours
+            </h1>
+            <p className="text-xl text-gray-600 mb-8">
+              Connect with real testers instantly. Get your 20+ opted-in testers for 14-day closed testing and publish your app to production faster.
+            </p>
 
-          {/* User Type Selection */}
-          <div className="flex justify-center gap-4 mb-8">
-            <button
-              onClick={() => setUserType('developer')}
-              className={`px-8 py-3 rounded-lg font-semibold transition ${
-                userType === 'developer'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              I'm a Developer
-            </button>
-            <button
-              onClick={() => setUserType('tester')}
-              className={`px-8 py-3 rounded-lg font-semibold transition ${
-                userType === 'tester'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
-            >
-              I Want to Test Apps
-            </button>
+            {/* User Type Selection */}
+            <div className="flex justify-center lg:justify-start gap-4 mb-8">
+              <button
+                onClick={() => setUserType('developer')}
+                className={`px-8 py-3 rounded-lg font-semibold transition ${
+                  userType === 'developer'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                I'm a Developer
+              </button>
+              <button
+                onClick={() => setUserType('tester')}
+                className={`px-8 py-3 rounded-lg font-semibold transition ${
+                  userType === 'tester'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                I Want to Test Apps
+              </button>
+            </div>
+
+            {/* CTA Buttons */}
+            <div className="flex justify-center lg:justify-start gap-4 mb-4">
+              <button
+                onClick={handleGetStarted}
+                className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 font-semibold text-lg flex items-center gap-2"
+              >
+                Get Started Free <ArrowRight className="h-5 w-5" />
+              </button>
+              <button
+                onClick={handleLogin}
+                className="bg-white text-blue-600 border-2 border-blue-600 px-8 py-4 rounded-lg hover:bg-blue-50 font-semibold text-lg"
+              >
+                Sign In
+              </button>
+            </div>
+
+            <p className="text-sm text-gray-500">
+              {userType === 'developer' 
+                ? '🚀 Get 20+ testers in 24 hours • No upfront payment required'
+                : '💰 Earn $5-$15 per app test • Get paid weekly'}
+            </p>
           </div>
 
-          {/* CTA Buttons */}
-          <div className="flex justify-center gap-4 mb-4">
-            <button
-              onClick={handleGetStarted}
-              className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 font-semibold text-lg flex items-center gap-2"
-            >
-              Get Started Free <ArrowRight className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handleLogin}
-              className="bg-white text-blue-600 border-2 border-blue-600 px-8 py-4 rounded-lg hover:bg-blue-50 font-semibold text-lg"
-            >
-              Sign In
-            </button>
+          {/* Hero Image */}
+          <div className="hidden lg:block">
+            <Image 
+              src="/images/hero-main.svg" 
+              alt="TestForPay - Connect Developers with Testers" 
+              width={600} 
+              height={500}
+              className="w-full h-auto"
+              priority
+            />
           </div>
-
-          <p className="text-sm text-gray-500">
-            {userType === 'developer' 
-              ? '🚀 Get 20+ testers in 24 hours • No upfront payment required'
-              : '💰 Earn $5-$15 per app test • Get paid weekly'}
-          </p>
         </div>
       </section>
 
@@ -188,7 +208,16 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 gap-12">
             {/* For Developers */}
             <div className="bg-white rounded-xl shadow-lg p-8">
-              <h3 className="text-2xl font-bold mb-6 text-blue-600">For Developers</h3>
+              <div className="flex items-center gap-4 mb-6">
+                <Image 
+                  src="/images/hero-developer.svg" 
+                  alt="Developer" 
+                  width={60} 
+                  height={60}
+                  className="rounded-lg"
+                />
+                <h3 className="text-2xl font-bold text-blue-600">For Developers</h3>
+              </div>
               <div className="space-y-6">
                 <div className="flex gap-4">
                   <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">1</div>
@@ -229,7 +258,16 @@ export default function LandingPage() {
 
             {/* For Testers */}
             <div className="bg-white rounded-xl shadow-lg p-8">
-              <h3 className="text-2xl font-bold mb-6 text-purple-600">For Testers</h3>
+              <div className="flex items-center gap-4 mb-6">
+                <Image 
+                  src="/images/hero-tester.svg" 
+                  alt="Tester" 
+                  width={60} 
+                  height={60}
+                  className="rounded-lg"
+                />
+                <h3 className="text-2xl font-bold text-purple-600">For Testers</h3>
+              </div>
               <div className="space-y-6">
                 <div className="flex gap-4">
                   <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">1</div>
@@ -393,7 +431,7 @@ export default function LandingPage() {
             <div className="bg-white rounded-xl shadow-lg p-8 border-2 border-gray-200">
               <h3 className="text-2xl font-bold mb-2">Enterprise</h3>
               <div className="text-4xl font-bold mb-4">Custom</div>
-              <p className="text-gray-600 mb-6">For agencies & teams</p>
+              <p className="text-gray-600 mb-6">For agencies & teams coming soon</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-600" />

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { 
   LayoutDashboard, 
@@ -94,9 +95,14 @@ export function Sidebar({ userRole }: SidebarProps) {
   return (
     <aside className="w-64 bg-white border-r border-gray-200 min-h-screen">
       <div className="p-6">
-        <Link href="/" className="flex items-center gap-2">
-          <DollarSign className="h-8 w-8 text-blue-600" />
-          <span className="text-2xl font-bold text-gray-900">TestForPay</span>
+        <Link href="/" className="flex items-center">
+          <Image 
+            src="/images/logo.svg" 
+            alt="TestForPay" 
+            width={160} 
+            height={36}
+            className="h-9 w-auto"
+          />
         </Link>
       </div>
 

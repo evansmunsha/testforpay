@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -77,9 +78,13 @@ export function ApplicationCard({
         <CardHeader>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3 flex-1">
-              <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-                <User className="h-6 w-6 text-blue-600" />
-              </div>
+              <Image 
+                src="/images/default-avatar.svg" 
+                alt="Tester" 
+                width={48} 
+                height={48}
+                className="rounded-full"
+              />
               <div>
                 <CardTitle className="text-lg">
                   {application.tester.name || 'Anonymous Tester'}

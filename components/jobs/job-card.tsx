@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -44,26 +45,35 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
     <Card className="hover:shadow-lg transition-shadow">
       <CardHeader>
         <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <CardTitle className="text-xl">{job.appName}</CardTitle>
-              {job.appCategory && (
-                <Badge variant="outline" className="capitalize">
-                  {job.appCategory}
-                </Badge>
+          <div className="flex gap-4 flex-1">
+            <Image 
+              src="/images/default-app-icon.svg" 
+              alt={job.appName} 
+              width={56} 
+              height={56}
+              className="rounded-xl flex-shrink-0"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-2">
+                <CardTitle className="text-xl truncate">{job.appName}</CardTitle>
+                {job.appCategory && (
+                  <Badge variant="outline" className="capitalize flex-shrink-0">
+                    {job.appCategory}
+                  </Badge>
+                )}
+              </div>
+              <CardDescription className={expanded ? '' : 'line-clamp-2'}>
+                {job.appDescription}
+              </CardDescription>
+              {job.appDescription.length > 100 && (
+                <button
+                  onClick={() => setExpanded(!expanded)}
+                  className="text-sm text-blue-600 hover:underline mt-1"
+                >
+                  {expanded ? 'Show less' : 'Read more'}
+                </button>
               )}
             </div>
-            <CardDescription className={expanded ? '' : 'line-clamp-2'}>
-              {job.appDescription}
-            </CardDescription>
-            {job.appDescription.length > 100 && (
-              <button
-                onClick={() => setExpanded(!expanded)}
-                className="text-sm text-blue-600 hover:underline mt-1"
-              >
-                {expanded ? 'Show less' : 'Read more'}
-              </button>
-            )}
           </div>
         </div>
       </CardHeader>

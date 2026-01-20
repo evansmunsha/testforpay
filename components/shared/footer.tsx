@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import { Mail, Phone } from 'lucide-react'
 
 export function Footer() {
@@ -9,8 +10,13 @@ export function Footer() {
           {/* Brand */}
           <div className="md:col-span-1">
             <Link href="/" className="flex items-center gap-2 mb-4">
-              <img src="/icons/icon.svg" alt="TestForPay" className="h-10 w-10" />
-              <span className="text-xl font-bold">TestForPay</span>
+              <Image 
+                src="/images/logo-white.svg" 
+                alt="TestForPay" 
+                width={150} 
+                height={34}
+                className="h-8 w-auto"
+              />
             </Link>
             <p className="text-gray-400 text-sm">
               Connect with app developers who need verified Google Play testers. 
