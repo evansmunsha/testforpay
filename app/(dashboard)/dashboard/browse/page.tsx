@@ -148,24 +148,24 @@ export default function BrowsePage() {
     })
 
   return (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Browse Jobs</h2>
-        <p className="text-sm sm:text-base text-gray-600 mt-1">Find testing opportunities and start earning</p>
+        <h2 className="text-3xl font-bold text-gray-900">Browse Jobs</h2>
+        <p className="text-gray-600 mt-1">Find testing opportunities and start earning</p>
       </div>
 
       {/* Filters */}
       <Card>
-        <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
-          <div className="grid gap-4">
+        <CardContent className="pt-6">
+          <div className="grid md:grid-cols-4 gap-4">
             {/* Search */}
-            <div className="space-y-2">
+            <div className="md:col-span-2 space-y-2">
               <Label htmlFor="search">Search</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   id="search"
-                  placeholder="Search by app name..."
+                  placeholder="Search by app name or description..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -173,15 +173,14 @@ export default function BrowsePage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
-              {/* Category Filter */}
-              <div className="space-y-2">
-                <Label htmlFor="category" className="text-xs sm:text-sm">Category</Label>
-                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger id="category" className="text-xs sm:text-sm">
-                    <SelectValue placeholder="All" />
-                  </SelectTrigger>
-                  <SelectContent>
+            {/* Category Filter */}
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="productivity">Productivity</SelectItem>
                   <SelectItem value="social">Social</SelectItem>
@@ -196,14 +195,14 @@ export default function BrowsePage() {
               </Select>
             </div>
 
-              {/* Sort By */}
-              <div className="space-y-2">
-                <Label htmlFor="sort" className="text-xs sm:text-sm">Sort By</Label>
-                <Select value={sortBy} onValueChange={setSortBy}>
-                  <SelectTrigger id="sort" className="text-xs sm:text-sm">
-                    <SelectValue placeholder="Sort" />
-                  </SelectTrigger>
-                  <SelectContent>
+            {/* Sort By */}
+            <div className="space-y-2">
+              <Label htmlFor="sort">Sort By</Label>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger id="sort">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
                   <SelectItem value="newest">Newest First</SelectItem>
                   <SelectItem value="highest-pay">Highest Pay</SelectItem>
                   <SelectItem value="lowest-pay">Lowest Pay</SelectItem>
@@ -211,20 +210,19 @@ export default function BrowsePage() {
                 </SelectContent>
               </Select>
             </div>
-            </div>
           </div>
 
           {/* Additional Filters */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mt-4">
+          <div className="flex items-center gap-4 mt-4">
             <div className="flex items-center gap-2">
-              <Label htmlFor="min-payment" className="whitespace-nowrap text-xs sm:text-sm">Min $:</Label>
+              <Label htmlFor="min-payment" className="whitespace-nowrap">Min Payment:</Label>
               <Input
                 id="min-payment"
                 type="number"
                 placeholder="$0"
                 value={minPayment}
                 onChange={(e) => setMinPayment(e.target.value)}
-                className="w-20"
+                className="w-24"
                 min="0"
                 step="0.5"
               />
@@ -238,12 +236,11 @@ export default function BrowsePage() {
                 setSortBy('newest')
                 setMinPayment('')
               }}
-              className="text-xs sm:text-sm"
             >
-              Clear
+              Clear Filters
             </Button>
-            <div className="ml-auto text-xs sm:text-sm text-gray-600">
-              {filteredJobs.length} found
+            <div className="ml-auto text-sm text-gray-600">
+              {filteredJobs.length} job{filteredJobs.length !== 1 ? 's' : ''} found
             </div>
           </div>
         </CardContent>
@@ -285,27 +282,27 @@ export default function BrowsePage() {
       {/* Stats Summary */}
       {!loading && filteredJobs.length > 0 && (
         <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
-            <div className="grid grid-cols-3 gap-2 sm:gap-4 text-center">
+          <CardContent className="pt-6">
+            <div className="grid md:grid-cols-3 gap-4 text-center">
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-blue-900">
+                <p className="text-2xl font-bold text-blue-900">
                   {filteredJobs.reduce((sum, job) => sum + job.testersNeeded - job._count.applications, 0)}
                 </p>
-                <p className="text-[10px] sm:text-sm text-blue-700">Spots</p>
+                <p className="text-sm text-blue-700">Total Spots Available</p>
               </div>
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-blue-900">
-                  ${Math.max(...filteredJobs.map(job => job.paymentPerTester)).toFixed(0)}
+                <p className="text-2xl font-bold text-blue-900">
+                  ${Math.max(...filteredJobs.map(job => job.paymentPerTester)).toFixed(2)}
                 </p>
-                <p className="text-[10px] sm:text-sm text-blue-700">Highest</p>
+                <p className="text-sm text-blue-700">Highest Payment</p>
               </div>
               <div>
-                <p className="text-lg sm:text-2xl font-bold text-blue-900">
+                <p className="text-2xl font-bold text-blue-900">
                   $
                   {(filteredJobs.reduce((sum, job) => sum + job.paymentPerTester, 0) / 
-                    filteredJobs.length).toFixed(0)}
+                    filteredJobs.length).toFixed(2)}
                 </p>
-                <p className="text-[10px] sm:text-sm text-blue-700">Average</p>
+                <p className="text-sm text-blue-700">Average Payment</p>
               </div>
             </div>
           </CardContent>

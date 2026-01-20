@@ -135,7 +135,7 @@ function DeveloperDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 sm:gap-6">
+      <div className="grid md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Get Started</CardTitle>
@@ -155,7 +155,7 @@ function DeveloperDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="hidden sm:block">
+        <Card>
           <CardHeader>
             <CardTitle>How It Works</CardTitle>
             <CardDescription>Quick guide for developers</CardDescription>
@@ -184,7 +184,7 @@ function DeveloperDashboard() {
       </div>
 
       {/* Recent Activity */}
-      <div className="grid gap-4 sm:gap-6">
+      <div className="grid lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -352,7 +352,7 @@ function TesterDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid gap-4 sm:gap-6">
+      <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Start Earning</CardTitle>
@@ -372,7 +372,7 @@ function TesterDashboard() {
           </CardContent>
         </Card>
 
-        <Card className="hidden sm:block">
+        <Card>
           <CardHeader>
             <CardTitle>How It Works</CardTitle>
             <CardDescription>Quick guide for testers</CardDescription>
