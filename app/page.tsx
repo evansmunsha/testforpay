@@ -524,8 +524,13 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center mb-4">
-                <DollarSign className="h-6 w-6 text-blue-400" />
-                <span className="ml-2 text-xl font-bold text-white">TestForPay</span>
+                <Image 
+                  src="/images/logo-white.svg" 
+                  alt="TestForPay" 
+                  width={140} 
+                  height={32}
+                  className="h-8 w-auto"
+                />
               </div>
               <p className="text-sm">Making app testing simple and accessible for everyone.</p>
             </div>
