@@ -87,7 +87,7 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             </div>
             <div>
               <p className="text-sm text-gray-600">Payment</p>
-              <p className="font-bold text-green-600">${job.paymentPerTester}</p>
+              <p className="font-bold text-green-600">${job.paymentPerTester.toFixed(2)}</p>
             </div>
           </div>
 
@@ -158,7 +158,7 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              Get paid ${job.paymentPerTester}
+              Get paid ${job.paymentPerTester.toFixed(2)}
             </li>
           </ul>
         </div>
@@ -180,7 +180,7 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             disabled={loading}
             className="flex-1"
           >
-            {loading ? 'Applying...' : `Apply Now • $${job.paymentPerTester}`}
+            {loading ? 'Applying...' : `Apply Now • $${job.paymentPerTester.toFixed(2)}`}
           </Button>
         )}
         <Button variant="outline" size="icon" asChild>
