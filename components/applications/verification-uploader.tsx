@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { UploadButton } from '@uploadthing/react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Upload, CheckCircle, X, Image as ImageIcon } from 'lucide-react'
+import { Upload, CheckCircle, X, Image as ImageIcon, RefreshCw } from 'lucide-react'
 import type { OurFileRouter } from '@/app/api/uploadthing/core'
 
 interface VerificationUploaderProps {
@@ -19,7 +19,12 @@ export function VerificationUploader({
   const [uploading, setUploading] = useState(false)
   const [uploadedUrl, setUploadedUrl] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
+
+  const handleRefresh = () => {
+    window.location.reload()
+  }
 
   const handleUploadComplete = (res: any) => {
     if (res && res[0]) {
@@ -44,7 +49,7 @@ export function VerificationUploader({
       const data = await response.json()
 
       if (response.ok) {
-        alert('Verification screenshot uploaded successfully! Developer will review it shortly.')
+        setSuccess(true)
         onUploadComplete?.()
       } else {
         setError(data.error || 'Failed to upload verification')
@@ -66,14 +71,51 @@ export function VerificationUploader({
               Upload Verification Screenshot
             </h3>
             <p className="text-sm text-indigo-700">
-              Take a screenshot showing that you've opted-in to the Google Play closed test. 
-              Make sure your email or confirmation is visible.
+              Upload a screenshot proving you can access the app on Google Play.
+            </p>
+          </div>
+
+          {/* Step-by-step guide */}
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-left">
+            <p className="text-sm font-semibold text-blue-900 mb-3">What to screenshot:</p>
+            <ul className="text-sm text-blue-800 space-y-2">
+              <li className="flex gap-2">
+                <span className="text-green-600 font-bold">✓</span>
+                <span><strong>Play Store page</strong> showing the app with Install button</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-green-600 font-bold">✓</span>
+                <span><strong>Home screen</strong> showing the app installed on your phone</span>
+              </li>
+            </ul>
+            <p className="text-xs text-blue-600 mt-3">
+              Either screenshot is acceptable. This proves you have access to the closed test.
             </p>
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-600 p-3 rounded-lg mb-4">
-              {error}
+            <div className="bg-red-50 border border-red-200 p-4 rounded-lg mb-4">
+              <p className="text-red-600 font-medium mb-2">{error}</p>
+              <p className="text-sm text-red-500 mb-3">Please refresh the page and try again.</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRefresh}
+                className="text-red-600 border-red-300 hover:bg-red-50"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh Page
+              </Button>
+            </div>
+          )}
+
+          {success && (
+            <div className="bg-green-50 border border-green-200 p-4 rounded-lg mb-4">
+              <div className="flex items-center gap-2 text-green-700 font-medium mb-1">
+                <CheckCircle className="h-5 w-5" />
+                Screenshot uploaded successfully!
+              </div>
+              <p className="text-sm text-green-600">The developer will review your verification shortly.</p>
             </div>
           )}
 
@@ -128,12 +170,11 @@ export function VerificationUploader({
         </div>
 
         <div className="bg-gray-50 p-4 rounded-lg">
-          <p className="text-xs text-gray-700 font-medium mb-2">Tips for a good screenshot:</p>
+          <p className="text-xs text-gray-700 font-medium mb-2">Good screenshot examples:</p>
           <ul className="text-xs text-gray-600 space-y-1">
-            <li>• Make sure the Google Play opt-in confirmation is visible</li>
-            <li>• Include your email or account name in the screenshot</li>
-            <li>• Ensure the screenshot is clear and readable</li>
-            <li>• Don't edit or crop important information</li>
+            <li>• Play Store page with the app name and Install button visible</li>
+            <li>• Your phone home screen showing the app icon</li>
+            <li>• The app's info page showing it's installed</li>
           </ul>
         </div>
       </CardContent>

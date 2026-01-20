@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 200">
+  <!-- Step 1: Sign Up -->
+  <g transform="translate(50, 20)">
+    <circle cx="60" cy="60" r="50" fill="#dbeafe"/>
+    <circle cx="60" cy="50" r="18" fill="#2563eb"/>
+    <circle cx="60" cy="44" r="8" fill="white"/>
+    <ellipse cx="60" cy="60" rx="12" ry="8" fill="white"/>
+    <rect x="40" y="75" width="40" height="5" rx="2" fill="#2563eb"/>
+    <circle cx="60" cy="60" r="55" stroke="#2563eb" stroke-width="3" fill="none"/>
+    <circle cx="100" cy="30" r="15" fill="#2563eb"/>
+    <text x="100" y="35" font-family="Arial" font-size="14" font-weight="bold" fill="white" text-anchor="middle">1</text>
+    <text x="60" y="140" font-family="Arial" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Sign Up</text>
+    <text x="60" y="158" font-family="Arial" font-size="11" fill="#6b7280" text-anchor="middle">Create your account</text>
+  </g>
+  
+  <!-- Arrow 1 -->
+  <path d="M170 80 L220 80" stroke="#cbd5e1" stroke-width="3" fill="none" stroke-dasharray="8,4"/>
+  <polygon points="220,75 230,80 220,85" fill="#cbd5e1"/>
+  
+  <!-- Step 2: Browse/Post Jobs -->
+  <g transform="translate(230, 20)">
+    <circle cx="60" cy="60" r="50" fill="#dcfce7"/>
+    <rect x="35" y="35" width="50" height="50" rx="8" fill="#22c55e"/>
+    <rect x="42" y="42" width="36" height="8" rx="2" fill="white" opacity="0.8"/>
+    <rect x="42" y="55" width="28" height="6" rx="2" fill="white" opacity="0.6"/>
+    <rect x="42" y="66" width="32" height="6" rx="2" fill="white" opacity="0.6"/>
+    <circle cx="60" cy="60" r="55" stroke="#22c55e" stroke-width="3" fill="none"/>
+    <circle cx="100" cy="30" r="15" fill="#22c55e"/>
+    <text x="100" y="35" font-family="Arial" font-size="14" font-weight="bold" fill="white" text-anchor="middle">2</text>
+    <text x="60" y="140" font-family="Arial" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Find Jobs</text>
+    <text x="60" y="158" font-family="Arial" font-size="11" fill="#6b7280" text-anchor="middle">Browse testing jobs</text>
+  </g>
+  
+  <!-- Arrow 2 -->
+  <path d="M350 80 L400 80" stroke="#cbd5e1" stroke-width="3" fill="none" stroke-dasharray="8,4"/>
+  <polygon points="400,75 410,80 400,85" fill="#cbd5e1"/>
+  
+  <!-- Step 3: Test Apps -->
+  <g transform="translate(410, 20)">
+    <circle cx="60" cy="60" r="50" fill="#fef3c7"/>
+    <rect x="40" y="30" width="40" height="60" rx="6" fill="#f59e0b"/>
+    <rect x="45" y="38" width="30" height="45" rx="3" fill="white"/>
+    <rect x="50" y="45" width="20" height="4" rx="2" fill="#f59e0b" opacity="0.5"/>
+    <rect x="50" y="53" width="15" height="4" rx="2" fill="#f59e0b" opacity="0.5"/>
+    <circle cx="60" cy="70" r="8" fill="#22c55e"/>
+    <text x="60" y="74" font-family="Arial" font-size="10" fill="white" text-anchor="middle">✓</text>
+    <circle cx="60" cy="60" r="55" stroke="#f59e0b" stroke-width="3" fill="none"/>
+    <circle cx="100" cy="30" r="15" fill="#f59e0b"/>
+    <text x="100" y="35" font-family="Arial" font-size="14" font-weight="bold" fill="white" text-anchor="middle">3</text>
+    <text x="60" y="140" font-family="Arial" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Test Apps</text>
+    <text x="60" y="158" font-family="Arial" font-size="11" fill="#6b7280" text-anchor="middle">14 days testing period</text>
+  </g>
+  
+  <!-- Arrow 3 -->
+  <path d="M530 80 L580 80" stroke="#cbd5e1" stroke-width="3" fill="none" stroke-dasharray="8,4"/>
+  <polygon points="580,75 590,80 580,85" fill="#cbd5e1"/>
+  
+  <!-- Step 4: Get Paid -->
+  <g transform="translate(590, 20)">
+    <circle cx="60" cy="60" r="50" fill="#dcfce7"/>
+    <circle cx="60" cy="55" r="30" fill="#22c55e"/>
+    <text x="60" y="65" font-family="Arial" font-size="32" font-weight="bold" fill="white" text-anchor="middle">$</text>
+    <circle cx="60" cy="60" r="55" stroke="#22c55e" stroke-width="3" fill="none"/>
+    <circle cx="100" cy="30" r="15" fill="#22c55e"/>
+    <text x="100" y="35" font-family="Arial" font-size="14" font-weight="bold" fill="white" text-anchor="middle">4</text>
+    <text x="60" y="140" font-family="Arial" font-size="14" font-weight="bold" fill="#1e293b" text-anchor="middle">Get Paid</text>
+    <text x="60" y="158" font-family="Arial" font-size="11" fill="#6b7280" text-anchor="middle">Receive payment</text>
+  </g>
+</svg>

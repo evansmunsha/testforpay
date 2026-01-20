@@ -1,1 +1,0 @@
-//components/applications/application-status.tsx

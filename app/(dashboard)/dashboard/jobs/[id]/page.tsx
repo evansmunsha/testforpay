@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApplicationCard } from '@/components/applications/application-card'
+import { useToast } from '@/components/ui/toast-provider'
 import { 
   ArrowLeft, 
   Calendar, 
@@ -72,6 +73,7 @@ interface Application {
 export default function JobDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { toast } = useToast()
   const [job, setJob] = useState<Job | null>(null)
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
@@ -109,10 +111,10 @@ export default function JobDetailPage() {
       if (response.ok) {
         router.push('/dashboard/jobs')
       } else {
-        alert('Failed to delete job')
+        toast({ title: 'Error', description: 'Failed to delete job', variant: 'destructive' })
       }
     } catch (err) {
-      alert('Something went wrong')
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
     }
   }
 
@@ -129,11 +131,12 @@ export default function JobDetailPage() {
 
       if (response.ok) {
         fetchJob()
+        toast({ title: 'Published', description: 'Job is now live', variant: 'success' })
       } else {
-        alert('Failed to publish job')
+        toast({ title: 'Error', description: 'Failed to publish job', variant: 'destructive' })
       }
     } catch (err) {
-      alert('Something went wrong')
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
     }
   }
 
@@ -148,13 +151,13 @@ export default function JobDetailPage() {
 
       if (response.ok) {
         fetchJob()
-        alert('Application approved! Tester has been notified.')
+        toast({ title: 'Approved', description: 'Tester has been notified', variant: 'success' })
       } else {
         const data = await response.json()
-        alert(data.error || 'Failed to approve application')
+        toast({ title: 'Error', description: data.error || 'Failed to approve', variant: 'destructive' })
       }
     } catch (err) {
-      alert('Something went wrong')
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
     } finally {
       setActionLoading(false)
     }
@@ -173,12 +176,44 @@ export default function JobDetailPage() {
 
       if (response.ok) {
         fetchJob()
-        alert('Application rejected.')
+        toast({ title: 'Rejected', description: 'Application rejected', variant: 'default' })
       } else {
-        alert('Failed to reject application')
+        toast({ title: 'Error', description: 'Failed to reject application', variant: 'destructive' })
       }
     } catch (err) {
-      alert('Something went wrong')
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const handleCancel = async () => {
+    if (!confirm('Are you sure you want to cancel this job? If no testers have been approved, you will receive a full refund.')) return
+
+    setActionLoading(true)
+    try {
+      const response = await fetch(`/api/jobs/${params.id}/cancel`, {
+        method: 'POST',
+      })
+
+      const data = await response.json()
+
+      if (response.ok) {
+        const refundMessage = data.refund?.issued 
+          ? data.refund.message 
+          : data.message
+        toast({ title: 'Cancelled', description: refundMessage, variant: 'success' })
+        router.push('/dashboard/jobs')
+      } else {
+        if (data.jobCancelled) {
+          toast({ title: 'Warning', description: data.error, variant: 'warning' })
+          router.push('/dashboard/jobs')
+        } else {
+          toast({ title: 'Error', description: data.error || 'Failed to cancel job', variant: 'destructive' })
+        }
+      }
+    } catch (err) {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
     } finally {
       setActionLoading(false)
     }
@@ -197,12 +232,12 @@ export default function JobDetailPage() {
 
       if (response.ok) {
         fetchJob()
-        alert('Testing period started! Payment will be processed automatically after 14 days.')
+        toast({ title: 'Verified', description: 'Testing period started. Payment will be processed after 14 days.', variant: 'success' })
       } else {
-        alert('Failed to verify application')
+        toast({ title: 'Error', description: 'Failed to verify application', variant: 'destructive' })
       }
     } catch (err) {
-      alert('Something went wrong')
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
     } finally {
       setActionLoading(false)
     }
@@ -275,10 +310,23 @@ export default function JobDetailPage() {
               Publish Job
             </Button>
           )}
-          <Button variant="outline">
-            <Edit className="h-4 w-4 mr-2" />
-            Edit
-          </Button>
+          <Link href={`/dashboard/jobs/${job.id}/edit`}>
+            <Button variant="outline">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
+          {job.status !== 'CANCELLED' && job.status !== 'COMPLETED' && (
+            <Button 
+              variant="outline" 
+              onClick={handleCancel}
+              disabled={actionLoading}
+              className="border-orange-300 text-orange-600 hover:bg-orange-50"
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Cancel Job
+            </Button>
+          )}
           <Button variant="destructive" onClick={handleDelete}>
             <Trash2 className="h-4 w-4 mr-2" />
             Delete

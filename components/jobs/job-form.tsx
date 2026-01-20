@@ -78,6 +78,12 @@ export function JobForm() {
     }
   }
 
+  // Minimum requirements (12 testers is Google Play minimum for some apps)
+  const MIN_TESTERS = 12
+  const RECOMMENDED_TESTERS = 20
+  const MIN_DURATION = 14
+  const MIN_PAYMENT = 5
+
   const handlePlanChange = (plan: 'STARTER' | 'PROFESSIONAL' | 'CUSTOM') => {
     if (plan === 'STARTER') {
       setFormData(prev => ({
@@ -102,7 +108,12 @@ export function JobForm() {
   }
 
   const handleChange = (field: keyof JobFormData, value: string | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    // Auto-switch to CUSTOM plan when user manually changes values
+    if (field === 'testersNeeded' || field === 'paymentPerTester' || field === 'testDuration') {
+      setFormData(prev => ({ ...prev, [field]: value, planType: 'CUSTOM' }))
+    } else {
+      setFormData(prev => ({ ...prev, [field]: value }))
+    }
   }
 
   return (
@@ -265,14 +276,13 @@ export function JobForm() {
                   <Input
                     id="testersNeeded"
                     type="number"
-                    min="20"
-                    max="100"
+                    min={MIN_TESTERS}
+                    max="500"
                     value={formData.testersNeeded}
-                    onChange={(e) => handleChange('testersNeeded', parseInt(e.target.value))}
+                    onChange={(e) => handleChange('testersNeeded', Math.max(MIN_TESTERS, parseInt(e.target.value) || MIN_TESTERS))}
                     required
-                    disabled={formData.planType !== 'CUSTOM'}
                   />
-                  <p className="text-xs text-gray-500">Minimum 20 testers (Google Play requirement)</p>
+                  <p className="text-xs text-gray-500">Minimum {MIN_TESTERS} testers. Recommended: {RECOMMENDED_TESTERS}+</p>
                 </div>
 
                 <div className="space-y-2">
@@ -280,14 +290,13 @@ export function JobForm() {
                   <Input
                     id="testDuration"
                     type="number"
-                    min="14"
-                    max="30"
+                    min={MIN_DURATION}
+                    max="90"
                     value={formData.testDuration}
-                    onChange={(e) => handleChange('testDuration', parseInt(e.target.value))}
+                    onChange={(e) => handleChange('testDuration', Math.max(MIN_DURATION, parseInt(e.target.value) || MIN_DURATION))}
                     required
-                    disabled={formData.planType !== 'CUSTOM'}
                   />
-                  <p className="text-xs text-gray-500">Minimum 14 days (Google Play requirement)</p>
+                  <p className="text-xs text-gray-500">Minimum {MIN_DURATION} days (Google Play requirement)</p>
                 </div>
               </div>
 
@@ -324,16 +333,15 @@ export function JobForm() {
                 <Input
                   id="paymentPerTester"
                   type="number"
-                  min="5"
-                  max="50"
+                  min={MIN_PAYMENT}
+                  max="100"
                   step="0.50"
                   value={formData.paymentPerTester}
-                  onChange={(e) => handleChange('paymentPerTester', parseFloat(e.target.value))}
+                  onChange={(e) => handleChange('paymentPerTester', Math.max(MIN_PAYMENT, parseFloat(e.target.value) || MIN_PAYMENT))}
                   required
-                  disabled={formData.planType !== 'CUSTOM'}
                 />
                 <p className="text-xs text-gray-500">
-                  Recommended: $5-$15 per tester. Higher payments attract more testers faster.
+                  Minimum ${MIN_PAYMENT}. Higher payments attract more testers faster.
                 </p>
               </div>
             </CardContent>

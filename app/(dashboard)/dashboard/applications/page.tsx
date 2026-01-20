@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { VerificationUploader } from '@/components/applications/verification-uploader'
-import { FileText, DollarSign, Clock, Calendar, ExternalLink, Upload } from 'lucide-react'
+import { FileText, DollarSign, Clock, Calendar, ExternalLink, Upload, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
+import { FeedbackForm } from '@/components/applications/feedback-form'
 
 interface Application {
   id: string
@@ -17,6 +18,8 @@ interface Application {
   testingEndDate: string | null
   optInVerified: boolean
   verificationImage: string | null
+  feedback: string | null
+  rating: number | null
   job: {
     id: string
     appName: string
@@ -238,14 +241,32 @@ export default function ApplicationsPage() {
                     <p className="text-sm text-blue-800 font-medium">
                       ✅ Congratulations! Your application was approved.
                     </p>
-                    <p className="text-sm text-blue-800">
-                      <strong>Next steps:</strong>
-                    </p>
-                    <ol className="text-sm text-blue-800 list-decimal list-inside space-y-1">
-                      <li>Click the button below to opt-in to the Google Play test</li>
-                      <li>After opting in, upload a screenshot as proof</li>
-                    </ol>
-                    <div className="flex gap-2">
+                    <div className="bg-white border border-blue-100 rounded-lg p-3">
+                      <p className="text-sm text-blue-900 font-semibold mb-2">Next steps:</p>
+                      <ol className="text-sm text-blue-800 space-y-2">
+                        <li className="flex gap-2">
+                          <span className="font-bold">1.</span>
+                          <span>Click the link below to open the app in Google Play Store</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="font-bold">2.</span>
+                          <span>Take a <strong>screenshot of the Play Store page</strong> showing the app</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="font-bold">3.</span>
+                          <span>Install the app on your phone</span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="font-bold">4.</span>
+                          <span>Take a <strong>screenshot of the app on your home screen</strong></span>
+                        </li>
+                        <li className="flex gap-2">
+                          <span className="font-bold">5.</span>
+                          <span>Upload your screenshot(s) below</span>
+                        </li>
+                      </ol>
+                    </div>
+                    <div className="flex gap-2 pt-2">
                       <Button asChild size="sm" className="flex-1">
                         <a 
                           href={app.job.googlePlayLink} 
@@ -253,7 +274,7 @@ export default function ApplicationsPage() {
                           rel="noopener noreferrer"
                         >
                           <ExternalLink className="h-4 w-4 mr-2" />
-                          Opt-in to Google Play Test
+                          Open in Play Store
                         </a>
                       </Button>
                       <Button 
@@ -288,36 +309,58 @@ export default function ApplicationsPage() {
                 )}
 
                 {app.status === 'TESTING' && app.testingStartDate && app.testingEndDate && (
-                  <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg">
-                    <div className="space-y-2">
-                      <p className="text-sm text-purple-800 font-medium">
-                        🎯 Testing in progress
-                      </p>
-                      <div className="flex justify-between text-sm text-purple-700">
-                        <span>Started: {new Date(app.testingStartDate).toLocaleDateString()}</span>
-                        <span>Ends: {new Date(app.testingEndDate).toLocaleDateString()}</span>
-                      </div>
-                      <div className="w-full bg-purple-200 rounded-full h-2 mt-2">
-                        <div 
-                          className="bg-purple-600 h-2 rounded-full transition-all"
-                          style={{ 
-                            width: `${Math.min(
-                              ((new Date().getTime() - new Date(app.testingStartDate).getTime()) / 
-                              (new Date(app.testingEndDate).getTime() - new Date(app.testingStartDate).getTime())) * 100,
-                              100
-                            )}%` 
-                          }}
-                        />
+                  <div className="space-y-4">
+                    <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg">
+                      <div className="space-y-2">
+                        <p className="text-sm text-purple-800 font-medium">
+                          🎯 Testing in progress
+                        </p>
+                        <div className="flex justify-between text-sm text-purple-700">
+                          <span>Started: {new Date(app.testingStartDate).toLocaleDateString()}</span>
+                          <span>Ends: {new Date(app.testingEndDate).toLocaleDateString()}</span>
+                        </div>
+                        <div className="w-full bg-purple-200 rounded-full h-2 mt-2">
+                          <div 
+                            className="bg-purple-600 h-2 rounded-full transition-all"
+                            style={{ 
+                              width: `${Math.min(
+                                ((new Date().getTime() - new Date(app.testingStartDate).getTime()) / 
+                                (new Date(app.testingEndDate).getTime() - new Date(app.testingStartDate).getTime())) * 100,
+                                100
+                              )}%` 
+                            }}
+                          />
+                        </div>
                       </div>
                     </div>
+                    
+                    {/* Feedback Form for Testing */}
+                    <FeedbackForm
+                      applicationId={app.id}
+                      appName={app.job.appName}
+                      existingFeedback={app.feedback || undefined}
+                      existingRating={app.rating || undefined}
+                      onSubmit={fetchApplications}
+                    />
                   </div>
                 )}
 
                 {app.status === 'COMPLETED' && (
-                  <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
-                    <p className="text-sm text-green-800 font-medium">
-                      🎉 Testing completed! Payment of ${app.payment?.amount || 0} is being processed.
-                    </p>
+                  <div className="space-y-4">
+                    <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
+                      <p className="text-sm text-green-800 font-medium">
+                        🎉 Testing completed! Payment of ${app.payment?.amount || 0} is being processed.
+                      </p>
+                    </div>
+                    
+                    {/* Feedback Form for Completed - can still submit if not done */}
+                    <FeedbackForm
+                      applicationId={app.id}
+                      appName={app.job.appName}
+                      existingFeedback={app.feedback || undefined}
+                      existingRating={app.rating || undefined}
+                      onSubmit={fetchApplications}
+                    />
                   </div>
                 )}
 
@@ -343,9 +386,9 @@ export default function ApplicationsPage() {
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Upload Verification Screenshot</DialogTitle>
+            <DialogTitle>Verify Your Test Participation</DialogTitle>
             <DialogDescription>
-              Prove that you've opted-in to the Google Play closed test
+              Upload a screenshot from Google Play showing you've joined the closed test
             </DialogDescription>
           </DialogHeader>
           {selectedApplicationId && (

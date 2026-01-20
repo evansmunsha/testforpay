@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Briefcase, Calendar, Users, DollarSign } from 'lucide-react'
+import { Plus, Briefcase, Calendar, Users, DollarSign, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
 import { useAuth } from '@/hooks/use-auth'
 
@@ -23,14 +24,35 @@ interface Job {
 
 export default function JobsPage() {
   const { user } = useAuth()
+  const searchParams = useSearchParams()
   const [jobs, setJobs] = useState<Job[]>([])
   const [loading, setLoading] = useState(true)
+  const [paymentSuccess, setPaymentSuccess] = useState(false)
 
   useEffect(() => {
     if (user) {
+      // Check if returning from successful payment
+      if (searchParams?.get('payment') === 'success') {
+        activatePaidJobs()
+      } else {
+        fetchJobs()
+      }
+    }
+  }, [user, searchParams])
+
+  const activatePaidJobs = async () => {
+    try {
+      // Activate any DRAFT jobs that were just paid
+      await fetch('/api/jobs/activate-paid', { method: 'POST' })
+      setPaymentSuccess(true)
+      // Clear the URL param
+      window.history.replaceState({}, '', '/dashboard/jobs')
+    } catch (error) {
+      console.error('Failed to activate jobs:', error)
+    } finally {
       fetchJobs()
     }
-  }, [user])
+  }
 
   const fetchJobs = async () => {
     try {
@@ -61,6 +83,20 @@ export default function JobsPage() {
 
   return (
     <div className="space-y-6">
+      {paymentSuccess && (
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3">
+              <CheckCircle className="h-6 w-6 text-green-600" />
+              <div>
+                <p className="font-semibold text-green-900">Payment successful!</p>
+                <p className="text-sm text-green-700">Your job is now live and visible to testers.</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">My Jobs</h2>

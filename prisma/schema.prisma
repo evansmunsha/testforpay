@@ -57,6 +57,11 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   
+  // Account Status
+  suspended     Boolean   @default(false)
+  suspendedAt   DateTime?
+  suspendReason String?
+  
   // Developer fields
   stripeCustomerId String?  @unique
   developedJobs    TestingJob[]
@@ -67,6 +72,10 @@ model User {
   phoneNumber      String?
   applications     Application[]
   deviceInfo       DeviceInfo?
+  
+  // Notifications
+  pushSubscriptions PushSubscription[]
+  notifications     Notification[]
   
   // Ratings
   averageRating    Float?   @default(0)
@@ -107,6 +116,10 @@ model TestingJob {
   paymentPerTester  Float
   totalBudget       Float
   platformFee       Float
+  
+  // Payment tracking (for refunds)
+  stripeSessionId   String?     @unique
+  stripePaymentIntent String?   @unique
   
   // Status
   status            JobStatus   @default(DRAFT)
@@ -186,5 +199,36 @@ model Payment {
   
   @@index([status])
   @@index([jobId])
+}
+
+model PushSubscription {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  endpoint    String   @unique
+  p256dh      String
+  auth        String
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title       String
+  body        String
+  url         String?
+  type        String   // application_approved, testing_started, payment_received, etc.
+  read        Boolean  @default(false)
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([read])
 }
 

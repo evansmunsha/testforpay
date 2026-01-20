@@ -35,6 +35,18 @@ export async function POST(request: Request) {
       )
     }
     
+    // Check if user is suspended
+    if (user.suspended) {
+      return NextResponse.json(
+        { 
+          error: 'Account suspended',
+          reason: user.suspendReason || 'Violation of Terms of Service',
+          message: 'Your account has been suspended. Contact support@testforpay.com for assistance.'
+        },
+        { status: 403 }
+      )
+    }
+    
     // Generate token
     const token = generateToken({
       userId: user.id,

@@ -6,13 +6,17 @@ import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/components/ui/toast-provider'
 import { 
   Users, 
   Briefcase, 
   DollarSign, 
   TrendingUp,
   AlertCircle,
-  CheckCircle
+  CheckCircle,
+  Clock,
+  XCircle
 } from 'lucide-react'
 
 interface Stats {
@@ -27,12 +31,115 @@ interface Stats {
   pendingPayments: number
 }
 
+interface User {
+  id: string
+  email: string
+  name: string | null
+  role: string
+  createdAt: string
+  stripeAccountId: string | null
+  suspended: boolean
+  suspendReason: string | null
+  _count: { developedJobs: number; applications: number }
+}
+
+interface Job {
+  id: string
+  appName: string
+  status: string
+  testersNeeded: number
+  paymentPerTester: number
+  createdAt: string
+  developer: { id: string; email: string; name: string | null }
+  _count: { applications: number }
+}
+
+interface Application {
+  id: string
+  status: string
+  createdAt: string
+  job: { id: string; appName: string }
+  tester: { id: string; email: string; name: string | null }
+}
+
+interface Payment {
+  id: string
+  amount: number
+  status: string
+  createdAt: string
+  application: {
+    job: { id: string; appName: string }
+    tester: { id: string; email: string; name: string | null }
+  }
+}
+
 export default function AdminDashboard() {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const { toast } = useToast()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loadingStats, setLoadingStats] = useState(true)
   const [processingPayouts, setProcessingPayouts] = useState(false)
+
+  // Tab data
+  const [users, setUsers] = useState<User[]>([])
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [applications, setApplications] = useState<Application[]>([])
+  const [payments, setPayments] = useState<Payment[]>([])
+  const [loadingTab, setLoadingTab] = useState(false)
+  const [activeTab, setActiveTab] = useState('users')
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
+
+  const handleSuspendUser = async (userId: string, action: 'suspend' | 'unsuspend') => {
+    const reason = action === 'suspend' 
+      ? prompt('Enter suspension reason (optional):', 'Violation of Terms of Service')
+      : null
+    
+    if (action === 'suspend' && reason === null) return // User cancelled
+
+    setActionLoading(userId)
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, reason }),
+      })
+      const data = await response.json()
+      if (response.ok) {
+        toast({ title: 'Success', description: data.message, variant: 'success' })
+        fetchUsers()
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to update user', variant: 'destructive' })
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Are you sure you want to PERMANENTLY DELETE this user? This cannot be undone.')) return
+
+    setActionLoading(userId)
+    try {
+      const response = await fetch(`/api/admin/users/${userId}`, {
+        method: 'DELETE',
+      })
+      const data = await response.json()
+      if (response.ok) {
+        toast({ title: 'Deleted', description: data.message, variant: 'success' })
+        fetchUsers()
+        fetchStats()
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to delete user', variant: 'destructive' })
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
 
   const handleProcessPayouts = async () => {
     setProcessingPayouts(true)
@@ -40,13 +147,13 @@ export default function AdminDashboard() {
       const response = await fetch('/api/admin/payouts/process', { method: 'POST' })
       const data = await response.json()
       if (response.ok) {
-        alert(`Successfully processed ${data.processed} payouts!`)
+        toast({ title: 'Payouts Processed', description: `${data.processed} payouts processed`, variant: 'success' })
         fetchStats()
       } else {
-        alert(data.error || 'Failed to process payouts')
+        toast({ title: 'Error', description: data.error || 'Failed to process payouts', variant: 'destructive' })
       }
     } catch (error) {
-      alert('Something went wrong')
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
     } finally {
       setProcessingPayouts(false)
     }
@@ -62,6 +169,13 @@ export default function AdminDashboard() {
     fetchStats()
   }, [])
 
+  useEffect(() => {
+    if (activeTab === 'users') fetchUsers()
+    else if (activeTab === 'jobs') fetchJobs()
+    else if (activeTab === 'applications') fetchApplications()
+    else if (activeTab === 'payments') fetchPayments()
+  }, [activeTab])
+
   const fetchStats = async () => {
     try {
       const response = await fetch('/api/admin/stats')
@@ -74,6 +188,79 @@ export default function AdminDashboard() {
     } finally {
       setLoadingStats(false)
     }
+  }
+
+  const fetchUsers = async () => {
+    setLoadingTab(true)
+    try {
+      const response = await fetch('/api/admin/users')
+      const data = await response.json()
+      if (response.ok) setUsers(data.users)
+    } catch (error) {
+      console.error('Failed to fetch users:', error)
+    } finally {
+      setLoadingTab(false)
+    }
+  }
+
+  const fetchJobs = async () => {
+    setLoadingTab(true)
+    try {
+      const response = await fetch('/api/admin/jobs')
+      const data = await response.json()
+      if (response.ok) setJobs(data.jobs)
+    } catch (error) {
+      console.error('Failed to fetch jobs:', error)
+    } finally {
+      setLoadingTab(false)
+    }
+  }
+
+  const fetchApplications = async () => {
+    setLoadingTab(true)
+    try {
+      const response = await fetch('/api/admin/applications')
+      const data = await response.json()
+      if (response.ok) setApplications(data.applications)
+    } catch (error) {
+      console.error('Failed to fetch applications:', error)
+    } finally {
+      setLoadingTab(false)
+    }
+  }
+
+  const fetchPayments = async () => {
+    setLoadingTab(true)
+    try {
+      const response = await fetch('/api/admin/payments')
+      const data = await response.json()
+      if (response.ok) setPayments(data.payments)
+    } catch (error) {
+      console.error('Failed to fetch payments:', error)
+    } finally {
+      setLoadingTab(false)
+    }
+  }
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: any }> = {
+      ACTIVE: { variant: 'default', icon: CheckCircle },
+      COMPLETED: { variant: 'secondary', icon: CheckCircle },
+      DRAFT: { variant: 'outline', icon: Clock },
+      PENDING: { variant: 'outline', icon: Clock },
+      APPROVED: { variant: 'default', icon: CheckCircle },
+      REJECTED: { variant: 'destructive', icon: XCircle },
+      TESTING: { variant: 'default', icon: Clock },
+      PAID: { variant: 'secondary', icon: DollarSign },
+    }
+    const config = statusConfig[status] || { variant: 'outline' as const, icon: Clock }
+    const Icon = config.icon
+    return (
+      <Badge variant={config.variant} className="flex items-center gap-1">
+        <Icon className="h-3 w-3" />
+        {status}
+      </Badge>
+    )
   }
 
   if (loading || loadingStats) {
@@ -164,11 +351,11 @@ export default function AdminDashboard() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="users" className="space-y-6">
+      <Tabs defaultValue="users" className="space-y-6" onValueChange={setActiveTab}>
         <TabsList>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="jobs">Jobs</TabsTrigger>
-          <TabsTrigger value="applications">Applications</TabsTrigger>
+          <TabsTrigger value="users">Users ({stats?.totalUsers || 0})</TabsTrigger>
+          <TabsTrigger value="jobs">Jobs ({stats?.totalJobs || 0})</TabsTrigger>
+          <TabsTrigger value="applications">Applications ({stats?.totalApplications || 0})</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
         </TabsList>
 
@@ -176,13 +363,110 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>User Management</CardTitle>
-              <CardDescription>Monitor and manage platform users</CardDescription>
+              <CardDescription>All registered users on the platform</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-gray-500">
-                <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p>User management interface coming soon</p>
-              </div>
+              {loadingTab ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                </div>
+              ) : users.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>No users found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-2">Name</th>
+                        <th className="text-left py-3 px-2">Email</th>
+                        <th className="text-left py-3 px-2">Role</th>
+                        <th className="text-left py-3 px-2">Status</th>
+                        <th className="text-left py-3 px-2">Jobs/Apps</th>
+                        <th className="text-left py-3 px-2">Stripe</th>
+                        <th className="text-left py-3 px-2">Joined</th>
+                        <th className="text-left py-3 px-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.map((u) => (
+                        <tr key={u.id} className={`border-b hover:bg-gray-50 ${u.suspended ? 'bg-red-50' : ''}`}>
+                          <td className="py-3 px-2">{u.name || '-'}</td>
+                          <td className="py-3 px-2">{u.email}</td>
+                          <td className="py-3 px-2">
+                            <Badge variant={u.role === 'ADMIN' ? 'destructive' : u.role === 'DEVELOPER' ? 'default' : 'secondary'}>
+                              {u.role}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-2">
+                            {u.suspended ? (
+                              <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                                <XCircle className="h-3 w-3" />
+                                Suspended
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="flex items-center gap-1 w-fit text-green-600 border-green-300">
+                                <CheckCircle className="h-3 w-3" />
+                                Active
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="py-3 px-2">
+                            {u.role === 'DEVELOPER' ? `${u._count.developedJobs} jobs` : `${u._count.applications} apps`}
+                          </td>
+                          <td className="py-3 px-2">
+                            {u.stripeAccountId ? (
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-2 text-gray-500">
+                            {new Date(u.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-2">
+                            {u.role !== 'ADMIN' && (
+                              <div className="flex gap-1">
+                                {u.suspended ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleSuspendUser(u.id, 'unsuspend')}
+                                    disabled={actionLoading === u.id}
+                                    className="text-green-600 border-green-300 hover:bg-green-50"
+                                  >
+                                    Unsuspend
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleSuspendUser(u.id, 'suspend')}
+                                    disabled={actionLoading === u.id}
+                                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                                  >
+                                    Suspend
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleDeleteUser(u.id)}
+                                  disabled={actionLoading === u.id}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -191,13 +475,50 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Job Management</CardTitle>
-              <CardDescription>Monitor all testing jobs</CardDescription>
+              <CardDescription>All testing jobs on the platform</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-gray-500">
-                <Briefcase className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p>Job management interface coming soon</p>
-              </div>
+              {loadingTab ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                </div>
+              ) : jobs.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <Briefcase className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>No jobs found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-2">App Name</th>
+                        <th className="text-left py-3 px-2">Developer</th>
+                        <th className="text-left py-3 px-2">Status</th>
+                        <th className="text-left py-3 px-2">Testers</th>
+                        <th className="text-left py-3 px-2">Apps</th>
+                        <th className="text-left py-3 px-2">Payment</th>
+                        <th className="text-left py-3 px-2">Created</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {jobs.map((job) => (
+                        <tr key={job.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-2 font-medium">{job.appName}</td>
+                          <td className="py-3 px-2">{job.developer.name || job.developer.email}</td>
+                          <td className="py-3 px-2">{getStatusBadge(job.status)}</td>
+                          <td className="py-3 px-2">{job.testersNeeded}</td>
+                          <td className="py-3 px-2">{job._count.applications}</td>
+                          <td className="py-3 px-2">${job.paymentPerTester}</td>
+                          <td className="py-3 px-2 text-gray-500">
+                            {new Date(job.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -206,13 +527,44 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Application Monitoring</CardTitle>
-              <CardDescription>Review and moderate applications</CardDescription>
+              <CardDescription>All tester applications</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-gray-500">
-                <CheckCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p>Application monitoring interface coming soon</p>
-              </div>
+              {loadingTab ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                </div>
+              ) : applications.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>No applications found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-2">Tester</th>
+                        <th className="text-left py-3 px-2">App</th>
+                        <th className="text-left py-3 px-2">Status</th>
+                        <th className="text-left py-3 px-2">Applied</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {applications.map((app) => (
+                        <tr key={app.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-2">{app.tester.name || app.tester.email}</td>
+                          <td className="py-3 px-2">{app.job.appName}</td>
+                          <td className="py-3 px-2">{getStatusBadge(app.status)}</td>
+                          <td className="py-3 px-2 text-gray-500">
+                            {new Date(app.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -221,13 +573,48 @@ export default function AdminDashboard() {
           <Card>
             <CardHeader>
               <CardTitle>Payment Reconciliation</CardTitle>
-              <CardDescription>Track and manage all payments</CardDescription>
+              <CardDescription>All tester payments</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-12 text-gray-500">
-                <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                <p>Payment reconciliation interface coming soon</p>
-              </div>
+              {loadingTab ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                </div>
+              ) : payments.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <DollarSign className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>No payments found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-2">Tester</th>
+                        <th className="text-left py-3 px-2">App</th>
+                        <th className="text-left py-3 px-2">Amount</th>
+                        <th className="text-left py-3 px-2">Status</th>
+                        <th className="text-left py-3 px-2">Date</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {payments.map((payment) => (
+                        <tr key={payment.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-2">
+                            {payment.application?.tester?.name || payment.application?.tester?.email || '-'}
+                          </td>
+                          <td className="py-3 px-2">{payment.application?.job?.appName || '-'}</td>
+                          <td className="py-3 px-2 font-medium">${payment.amount.toFixed(2)}</td>
+                          <td className="py-3 px-2">{getStatusBadge(payment.status)}</td>
+                          <td className="py-3 px-2 text-gray-500">
+                            {new Date(payment.createdAt).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

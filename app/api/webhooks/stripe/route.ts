@@ -66,14 +66,12 @@ export async function POST(request: Request) {
             data: {
               status: 'ACTIVE',
               publishedAt: new Date(),
+              stripeSessionId: session.id,
+              stripePaymentIntent: session.payment_intent as string,
             },
           })
 
-          // Create payment records for each tester spot? 
-          // Actually, we usually create them when testers apply.
-          // But we can record the developer's main payment here if we want.
-
-          console.log('✅ Job activated:', session.metadata.jobId)
+          console.log('✅ Job activated:', session.metadata.jobId, 'PaymentIntent:', session.payment_intent)
         }
         break
       }

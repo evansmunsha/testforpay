@@ -28,12 +28,13 @@ export async function createJobPaymentIntent(
 }
 
 // Create Stripe Connect account for tester
-export async function createConnectedAccount(email: string, testerId: string) {
+export async function createConnectedAccount(email: string, testerId: string, country: string = 'ZM') {
   const account = await stripe.accounts.create({
     type: 'express',
-    country: 'US',
+    country,
     email,
     capabilities: {
+      card_payments: { requested: true },
       transfers: { requested: true },
     },
     metadata: {

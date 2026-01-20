@@ -44,25 +44,16 @@ export async function POST(request: Request) {
       )
     }
 
-    // Determine pricing
-    let finalTestersNeeded = testersNeeded || 20
-    let finalTestDuration = testDuration || 14
-    let finalPaymentPerTester = customPaymentPerTester || 7.5
+    // Minimum requirements
+    const MIN_TESTERS = 12
+    const MIN_DURATION = 14
+    const MIN_PAYMENT = 5
+
+    // Use values provided by developer (with minimums enforced)
+    let finalTestersNeeded = Math.max(MIN_TESTERS, testersNeeded || 20)
+    let finalTestDuration = Math.max(MIN_DURATION, testDuration || 14)
+    let finalPaymentPerTester = Math.max(MIN_PAYMENT, customPaymentPerTester || 7.5)
     let finalTotalBudget = finalPaymentPerTester * finalTestersNeeded
-
-    if (planType) {
-      const planPricing: Record<string, { price: number, testers: number }> = {
-        STARTER: { price: 150, testers: 20 },
-        PROFESSIONAL: { price: 250, testers: 35 },
-      }
-
-      const plan = planPricing[planType as string]
-      if (plan) {
-        finalTestersNeeded = plan.testers
-        finalTotalBudget = plan.price
-        finalPaymentPerTester = finalTotalBudget / finalTestersNeeded
-      }
-    }
 
     const platformFeePercent = 0.15 
     const platformFee = finalTotalBudget * platformFeePercent
@@ -101,8 +92,8 @@ export async function POST(request: Request) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_URL}/dashboard/jobs?payment=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_URL}/dashboard/jobs/new`,
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/jobs?payment=success`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/jobs/new`,
       client_reference_id: job.id,
       metadata: {
         jobId: job.id,
@@ -138,12 +129,20 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const status = searchParams.get('status')
 
-    // Build where clause
-    const where: any = {
-      developerId: currentUser.userId
+    // Build where clause based on user role
+    const where: any = {}
+
+    // Developers see only their own jobs
+    // Testers see all ACTIVE jobs (for browsing)
+    if (currentUser.role === 'DEVELOPER') {
+      where.developerId = currentUser.userId
+    } else if (currentUser.role === 'TESTER') {
+      // Testers can only see ACTIVE jobs
+      where.status = 'ACTIVE'
     }
 
-    if (status) {
+    // Apply status filter if provided (for developers filtering their own jobs)
+    if (status && currentUser.role === 'DEVELOPER') {
       where.status = status
     }
 
@@ -161,7 +160,7 @@ export async function GET(request: Request) {
       }
     })
 
-    return NextResponse.json(jobs)
+    return NextResponse.json({ jobs })
 
   } catch (error) {
     console.error('Jobs fetch error:', error)

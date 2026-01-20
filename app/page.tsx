@@ -506,22 +506,22 @@ export default function LandingPage() {
               <ul className="space-y-2 text-sm">
                 <li><button onClick={handleLogin} className="hover:text-white">Sign In</button></li>
                 <li><button onClick={handleGetStarted} className="hover:text-white">Sign Up</button></li>
-                <li><a href="#" className="hover:text-white">Contact</a></li>
+                <li><a href="/contact" className="hover:text-white">Contact</a></li>
               </ul>
             </div>
             
             <div>
               <h4 className="font-semibold text-white mb-4">Legal</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white">Cookie Policy</a></li>
+                <li><a href="/privacy" className="hover:text-white">Privacy Policy</a></li>
+                <li><a href="/terms" className="hover:text-white">Terms of Service</a></li>
               </ul>
             </div>
           </div>
           
           <div className="border-t border-gray-800 mt-8 pt-8 text-sm text-center">
-            © 2026 TestForPay. All rights reserved.
+            <p>© 2026 TestForPay. All rights reserved.</p>
+            <p className="mt-2">Made with ❤️ in Zambia by Evans Munsha</p>
           </div>
         </div>
       </footer>

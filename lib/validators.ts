@@ -20,10 +20,10 @@ export const createJobSchema = z.object({
   packageName: z.string().optional(),
   googlePlayLink: z.string().url('Must be a valid URL'),
   appCategory: z.string().optional(),
-  testersNeeded: z.number().min(10, 'Minimum 10 testers required').max(100),
-  testDuration: z.number().min(14, 'Minimum 14 days required').max(30),
+  testersNeeded: z.number().min(12, 'Minimum 12 testers required').max(500),
+  testDuration: z.number().min(14, 'Minimum 14 days required').max(90),
   minAndroidVersion: z.string().optional(),
-  paymentPerTester: z.number().min(5, 'Minimum $5 per tester').max(50),
+  paymentPerTester: z.number().min(5, 'Minimum $5 per tester').max(100),
 })
 
 // Application Schemas

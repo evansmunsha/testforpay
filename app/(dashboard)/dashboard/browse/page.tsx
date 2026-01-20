@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Filter, Briefcase } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
+import { useToast } from '@/components/ui/toast-provider'
 
 interface Job {
   id: string
@@ -34,6 +35,7 @@ interface Application {
 export default function BrowsePage() {
   const router = useRouter()
   const { user } = useAuth()
+  const { toast } = useToast()
   const [jobs, setJobs] = useState<Job[]>([])
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
@@ -92,14 +94,13 @@ export default function BrowsePage() {
         await fetchApplications()
         await fetchJobs()
         
-        // Show success and redirect
-        alert('Application submitted successfully! Check your applications page for next steps.')
+        toast({ title: 'Applied!', description: 'Check your applications page for next steps', variant: 'success' })
         router.push('/dashboard/applications')
       } else {
-        alert(data.error || 'Failed to apply')
+        toast({ title: 'Error', description: data.error || 'Failed to apply', variant: 'destructive' })
       }
     } catch (error) {
-      alert('Something went wrong. Please try again.')
+      toast({ title: 'Error', description: 'Something went wrong. Please try again.', variant: 'destructive' })
     } finally {
       setApplyingJobId(null)
     }

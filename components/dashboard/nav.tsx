@@ -1,6 +1,6 @@
 'use client'
 
-import { Bell, LogOut, Settings, User } from 'lucide-react'
+import { LogOut, Settings, User } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { NotificationBell } from '@/components/shared/notification-bell'
 import { useAuth } from '@/hooks/use-auth'
 import { useRouter } from 'next/navigation'
 
@@ -35,10 +36,7 @@ export function DashboardNav() {
 
         <div className="flex items-center gap-4">
           {/* Notifications */}
-          <Button variant="ghost" size="icon" className="relative">
-            <Bell className="h-5 w-5" />
-            <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full" />
-          </Button>
+          <NotificationBell />
 
           {/* User Menu */}
           <DropdownMenu>
