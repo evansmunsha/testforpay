@@ -45,7 +45,7 @@ export default function DashboardLayout({
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardNav />
         
-        <main className="flex-1 p-4 sm:p-6 pt-16 lg:pt-6">
+        <main className="flex-1 px-0 py-4 sm:py-6 pt-16 lg:pt-6">
           {children}
         </main>
       </div>
