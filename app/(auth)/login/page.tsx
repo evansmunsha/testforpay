@@ -48,15 +48,15 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
-          <CardDescription>
+    <div className="min-h-screen flex items-center justify-center px-4 pt-16 sm:pt-4 pb-4">
+      <Card className="w-full max-w-md shadow-lg">
+        <CardHeader className="space-y-1 px-4 sm:px-6 pt-6">
+          <CardTitle className="text-xl sm:text-2xl font-bold">Welcome back</CardTitle>
+          <CardDescription className="text-sm">
             Enter your credentials to access your account
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-4 sm:px-6">
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
               <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
@@ -102,7 +102,7 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <CardFooter className="flex flex-col space-y-2">
+        <CardFooter className="flex flex-col space-y-2 px-4 sm:px-6 pb-6">
           <div className="text-sm text-center text-gray-600">
             Don't have an account?{' '}
             <Link href="/signup" className="text-blue-600 hover:underline font-semibold">

@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { DashboardNav } from '@/components/dashboard/nav'
 import { useAuth } from '@/hooks/use-auth'
+import { Menu } from 'lucide-react'
 
 export default function DashboardLayout({
   children,
@@ -10,6 +12,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const { user, loading } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   if (loading) {
     return (
@@ -25,12 +28,24 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <Sidebar userRole={user.role as 'DEVELOPER' | 'TESTER' | 'ADMIN'} />
+      {/* Mobile menu button */}
+      <button
+        onClick={() => setSidebarOpen(true)}
+        className="lg:hidden fixed top-4 left-4 z-30 p-2 bg-white rounded-lg shadow-md border border-gray-200"
+      >
+        <Menu className="h-5 w-5 text-gray-600" />
+      </button>
+
+      <Sidebar 
+        userRole={user.role as 'DEVELOPER' | 'TESTER' | 'ADMIN'} 
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         <DashboardNav />
         
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-4 sm:p-6 pt-16 lg:pt-6">
           {children}
         </main>
       </div>
