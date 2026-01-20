@@ -97,14 +97,14 @@ function DeveloperDashboard() {
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Overview</h2>
-          <p className="text-gray-600 mt-1">Welcome to your developer dashboard</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Overview</h2>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">Welcome to your developer dashboard</p>
         </div>
-        <Link href="/dashboard/jobs/new">
-          <Button size="lg" className="gap-2">
+        <Link href="/dashboard/jobs/new" className="w-full sm:w-auto">
+          <Button size="lg" className="gap-2 w-full sm:w-auto">
             <Plus className="h-5 w-5" />
             Create New Job
           </Button>
@@ -112,22 +112,22 @@ function DeveloperDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {statsConfig.map((stat) => {
           const Icon = stat.icon
           return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
+            <Card key={stat.title} className="overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
                   {stat.title}
                 </CardTitle>
-                <div className={`${stat.color} p-2 rounded-lg`}>
-                  <Icon className="h-4 w-4 text-white" />
+                <div className={`${stat.color} p-1.5 sm:p-2 rounded-lg flex-shrink-0`}>
+                  <Icon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{stat.value}</div>
-                <p className="text-xs text-gray-500 mt-1">{stat.description}</p>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-xl sm:text-3xl font-bold">{stat.value}</div>
+                <p className="text-[10px] sm:text-xs text-gray-500 mt-1">{stat.description}</p>
               </CardContent>
             </Card>
           )
@@ -314,14 +314,14 @@ function TesterDashboard() {
   ]
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">Overview</h2>
-          <p className="text-gray-600 mt-1">Welcome to your tester dashboard</p>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">Overview</h2>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">Welcome to your tester dashboard</p>
         </div>
-        <Link href="/dashboard/browse">
-          <Button size="lg" className="gap-2">
+        <Link href="/dashboard/browse" className="w-full sm:w-auto">
+          <Button size="lg" className="gap-2 w-full sm:w-auto">
             Browse Jobs
             <ArrowRight className="h-5 w-5" />
           </Button>
@@ -329,22 +329,22 @@ function TesterDashboard() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {statsConfig.map((stat) => {
           const Icon = stat.icon
           return (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-gray-600">
+            <Card key={stat.title} className="overflow-hidden">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
                   {stat.title}
                 </CardTitle>
-                <div className={`${stat.color} p-2 rounded-lg`}>
-                  <Icon className="h-4 w-4 text-white" />
+                <div className={`${stat.color} p-1.5 sm:p-2 rounded-lg flex-shrink-0`}>
+                  <Icon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                 </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-3xl font-bold">{stat.value}</div>
-                <p className="text-xs text-gray-500 mt-1">{stat.description}</p>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+                <div className="text-xl sm:text-3xl font-bold">{stat.value}</div>
+                <p className="text-[10px] sm:text-xs text-gray-500 mt-1">{stat.description}</p>
               </CardContent>
             </Card>
           )
@@ -352,7 +352,7 @@ function TesterDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid md:grid-cols-2 gap-4 sm:gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Start Earning</CardTitle>

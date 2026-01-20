@@ -25,12 +25,12 @@ export function DashboardNav() {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-20">
       <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4">
-        <div className="flex-1 pl-10 lg:pl-0">
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900">
+        <div className="flex-1 pl-12 lg:pl-0 min-w-0">
+          <h1 className="text-base sm:text-xl lg:text-2xl font-bold text-gray-900 truncate">
             {user?.role === 'DEVELOPER' ? 'Developer Dashboard' : 
              user?.role === 'ADMIN' ? 'Admin Dashboard' : 'Tester Dashboard'}
           </h1>
-          <p className="text-xs sm:text-sm text-gray-600 mt-0.5 sm:mt-1 truncate">
+          <p className="text-xs sm:text-sm text-gray-600 mt-0.5 truncate hidden sm:block">
             Welcome back, {user?.name || user?.email}
           </p>
         </div>

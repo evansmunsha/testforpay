@@ -138,7 +138,7 @@ export function NotificationBell() {
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="fixed sm:absolute inset-x-4 sm:inset-x-auto sm:right-0 top-16 sm:top-auto sm:mt-2 w-auto sm:w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50 max-h-[70vh] flex flex-col">
           <div className="p-3 border-b border-gray-100 flex items-center justify-between">
             <h3 className="font-semibold text-gray-900">Notifications</h3>
             {unreadCount > 0 && (
@@ -152,7 +152,7 @@ export function NotificationBell() {
             )}
           </div>
 
-          <div className="max-h-96 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto max-h-80 sm:max-h-96">
             {notifications.length === 0 ? (
               <div className="p-6 text-center text-gray-500">
                 <Bell className="h-8 w-8 mx-auto mb-2 text-gray-300" />

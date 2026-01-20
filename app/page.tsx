@@ -1,14 +1,34 @@
 "use client"
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { Mail, CheckCircle, DollarSign, Users, Clock, Shield, ArrowRight, Menu, X } from 'lucide-react';
+import { Mail, CheckCircle, DollarSign, Users, Clock, Shield, ArrowRight, Menu, X, LayoutDashboard } from 'lucide-react';
+
+interface User {
+  id: string;
+  email: string;
+  name?: string;
+  role: 'DEVELOPER' | 'TESTER' | 'ADMIN';
+}
 
 export default function LandingPage() {
-  const [email, setEmail] = useState('');
   const [userType, setUserType] = useState('tester');
-  const [submitted, setSubmitted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    // Check if user is logged in
+    fetch('/api/auth/session')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.user) {
+          setUser(data.user);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setCheckingAuth(false));
+  }, []);
 
   const handleGetStarted = () => {
     // Store user type for signup page
@@ -24,12 +44,19 @@ export default function LandingPage() {
     }
   };
 
-  const handleJoinWaitlist = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (email && typeof window !== 'undefined') {
-      localStorage.setItem('waitlist_email', email);
-      localStorage.setItem('user_type', userType);
-      window.location.href = '/signup';
+  const handleDashboard = () => {
+    if (typeof window !== 'undefined') {
+      if (user?.role === 'TESTER') {
+        window.location.href = '/dashboard/browse';
+      } else {
+        window.location.href = '/dashboard';
+      }
+    }
+  };
+
+  const handleAdminPanel = () => {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/dashboard/admin';
     }
   };
 
@@ -54,18 +81,43 @@ export default function LandingPage() {
               <a href="#how-it-works" className="text-gray-700 hover:text-blue-600">How It Works</a>
               <a href="#pricing" className="text-gray-700 hover:text-blue-600">Pricing</a>
               <a href="#faq" className="text-gray-700 hover:text-blue-600">FAQ</a>
-              <button 
-                onClick={handleLogin}
-                className="text-gray-700 hover:text-blue-600"
-              >
-                Log In
-              </button>
-              <button 
-                onClick={handleGetStarted}
-                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
-              >
-                Get Started
-              </button>
+              
+              {checkingAuth ? (
+                <div className="w-20 h-8 bg-gray-100 rounded animate-pulse" />
+              ) : user ? (
+                <>
+                  {user.role === 'ADMIN' && (
+                    <button 
+                      onClick={handleAdminPanel}
+                      className="text-purple-600 hover:text-purple-700 font-medium"
+                    >
+                      Admin Panel
+                    </button>
+                  )}
+                  <button 
+                    onClick={handleDashboard}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Dashboard
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={handleLogin}
+                    className="text-gray-700 hover:text-blue-600"
+                  >
+                    Log In
+                  </button>
+                  <button 
+                    onClick={handleGetStarted}
+                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+                  >
+                    Get Started
+                  </button>
+                </>
+              )}
             </div>
 
             {/* Mobile Menu Button */}
@@ -85,18 +137,41 @@ export default function LandingPage() {
               <a href="#how-it-works" className="block text-gray-700">How It Works</a>
               <a href="#pricing" className="block text-gray-700">Pricing</a>
               <a href="#faq" className="block text-gray-700">FAQ</a>
-              <button 
-                onClick={handleLogin}
-                className="block w-full text-left text-gray-700"
-              >
-                Log In
-              </button>
-              <button 
-                onClick={handleGetStarted}
-                className="w-full bg-blue-600 text-white px-6 py-2 rounded-lg"
-              >
-                Get Started
-              </button>
+              
+              {user ? (
+                <>
+                  {user.role === 'ADMIN' && (
+                    <button 
+                      onClick={handleAdminPanel}
+                      className="block w-full text-left text-purple-600 font-medium"
+                    >
+                      Admin Panel
+                    </button>
+                  )}
+                  <button 
+                    onClick={handleDashboard}
+                    className="w-full bg-blue-600 text-white px-6 py-2 rounded-lg flex items-center justify-center gap-2"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    Dashboard
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={handleLogin}
+                    className="block w-full text-left text-gray-700"
+                  >
+                    Log In
+                  </button>
+                  <button 
+                    onClick={handleGetStarted}
+                    className="w-full bg-blue-600 text-white px-6 py-2 rounded-lg"
+                  >
+                    Get Started
+                  </button>
+                </>
+              )}
             </div>
           </div>
         )}
