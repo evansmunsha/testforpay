@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { PWAInstallButton } from "@/components/shared/pwa-install-button";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { ServiceWorkerRegistration } from "@/components/pwa/service-worker-registration";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -55,6 +56,7 @@ export default function RootLayout({
         <ToastProvider>
           {children}
           <PWAInstallButton />
+          <ServiceWorkerRegistration />
         </ToastProvider>
       </body>
     </html>
