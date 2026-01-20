@@ -21,8 +21,8 @@ export async function GET(request: Request) {
     
     const results = await processCompletedTests()
     
-    const successCount = results.filter(r => r.success).length
-    const failCount = results.filter(r => !r.success).length
+    const successCount = results.filter(r => r.status === 'success').length
+    const failCount = results.filter(r => r.status === 'failed').length
 
     console.log(`Payout processing complete: ${successCount} success, ${failCount} failed`)
 
