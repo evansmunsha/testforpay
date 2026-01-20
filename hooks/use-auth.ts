@@ -56,5 +56,6 @@ export function useAuth() {
     isAuthenticated: !!user,
     isDeveloper: user?.role === 'DEVELOPER',
     isTester: user?.role === 'TESTER',
+    isAdmin: user?.role === 'ADMIN',
   }
 }

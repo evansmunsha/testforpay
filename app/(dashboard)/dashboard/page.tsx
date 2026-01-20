@@ -7,9 +7,27 @@ import { Badge } from '@/components/ui/badge'
 import { Briefcase, Users, Clock, DollarSign, Plus, ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 export default function DashboardPage() {
   const { user, isDeveloper } = useAuth()
+  const router = useRouter()
+
+  // Redirect admins to admin dashboard
+  useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      router.replace('/dashboard/admin')
+    }
+  }, [user, router])
+
+  // Show loading while redirecting admin
+  if (user?.role === 'ADMIN') {
+    return (
+      <div className="flex items-center justify-center min-h-[50vh]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    )
+  }
 
   if (isDeveloper) {
     return <DeveloperDashboard />
