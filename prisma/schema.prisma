@@ -62,6 +62,12 @@ model User {
   suspendedAt   DateTime?
   suspendReason String?
   
+  // Fraud Detection
+  fraudScore    Int       @default(0)  // 0-100, higher = more suspicious
+  flagged       Boolean   @default(false)
+  lastIpAddress String?
+  signupIp      String?
+  
   // Developer fields
   stripeCustomerId String?  @unique
   developedJobs    TestingJob[]
@@ -76,6 +82,7 @@ model User {
   // Notifications
   pushSubscriptions PushSubscription[]
   notifications     Notification[]
+  fraudLogs         FraudLog[]
   
   // Ratings
   averageRating    Float?   @default(0)
@@ -152,6 +159,10 @@ model Application {
   verificationImage String?
   verifiedAt        DateTime?
   
+  // Fraud Detection
+  ipAddress         String?
+  userAgent         String?
+  
   // Testing Period
   testingStartDate  DateTime?
   testingEndDate    DateTime?
@@ -170,6 +181,7 @@ model Application {
   @@index([jobId])
   @@index([testerId])
   @@index([status])
+  @@index([ipAddress])
 }
 
 model Payment {
@@ -230,5 +242,29 @@ model Notification {
   
   @@index([userId])
   @@index([read])
+}
+
+model FraudLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  type        String   // duplicate_ip, same_device, rapid_signup, suspicious_pattern, etc.
+  severity    String   @default("low") // low, medium, high, critical
+  description String   @db.Text
+  metadata    String?  @db.Text // JSON data for additional context
+  
+  ipAddress   String?
+  resolved    Boolean  @default(false)
+  resolvedAt  DateTime?
+  resolvedBy  String?  // Admin user id
+  
+  createdAt   DateTime @default(now())
+  
+  @@index([userId])
+  @@index([type])
+  @@index([severity])
+  @@index([resolved])
+  @@index([ipAddress])
 }
 

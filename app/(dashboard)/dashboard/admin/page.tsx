@@ -16,7 +16,9 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  XCircle
+  XCircle,
+  ShieldAlert,
+  Flag
 } from 'lucide-react'
 
 interface Stats {
@@ -73,6 +75,32 @@ interface Payment {
   }
 }
 
+interface FraudStats {
+  totalFlagged: number
+  unresolvedLogs: number
+  recentHighSeverity: number
+  topSuspiciousUsers: Array<{
+    id: string
+    email: string
+    name: string | null
+    fraudScore: number
+    flagged: boolean
+    createdAt: string
+    _count: { applications: number }
+  }>
+}
+
+interface FraudLog {
+  id: string
+  type: string
+  severity: string
+  description: string
+  ipAddress: string | null
+  resolved: boolean
+  createdAt: string
+  user: { id: string; email: string; name: string | null; role: string } | null
+}
+
 export default function AdminDashboard() {
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -86,6 +114,8 @@ export default function AdminDashboard() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [applications, setApplications] = useState<Application[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
+  const [fraudStats, setFraudStats] = useState<FraudStats | null>(null)
+  const [fraudLogs, setFraudLogs] = useState<FraudLog[]>([])
   const [loadingTab, setLoadingTab] = useState(false)
   const [activeTab, setActiveTab] = useState('users')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -174,6 +204,7 @@ export default function AdminDashboard() {
     else if (activeTab === 'jobs') fetchJobs()
     else if (activeTab === 'applications') fetchApplications()
     else if (activeTab === 'payments') fetchPayments()
+    else if (activeTab === 'fraud') fetchFraudData()
   }, [activeTab])
 
   const fetchStats = async () => {
@@ -239,6 +270,62 @@ export default function AdminDashboard() {
       console.error('Failed to fetch payments:', error)
     } finally {
       setLoadingTab(false)
+    }
+  }
+
+  const fetchFraudData = async () => {
+    setLoadingTab(true)
+    try {
+      const [statsRes, logsRes] = await Promise.all([
+        fetch('/api/admin/fraud?view=stats'),
+        fetch('/api/admin/fraud?view=logs&resolved=false'),
+      ])
+      const statsData = await statsRes.json()
+      const logsData = await logsRes.json()
+      if (statsRes.ok) setFraudStats(statsData)
+      if (logsRes.ok) setFraudLogs(logsData.logs || [])
+    } catch (error) {
+      console.error('Failed to fetch fraud data:', error)
+    } finally {
+      setLoadingTab(false)
+    }
+  }
+
+  const handleResolveFraudLog = async (logId: string) => {
+    setActionLoading(logId)
+    try {
+      const response = await fetch('/api/admin/fraud', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'resolve-log', logId }),
+      })
+      if (response.ok) {
+        toast({ title: 'Resolved', description: 'Fraud log marked as resolved', variant: 'success' })
+        fetchFraudData()
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to resolve', variant: 'destructive' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleClearUserFlags = async (userId: string) => {
+    setActionLoading(userId)
+    try {
+      const response = await fetch('/api/admin/fraud', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'clear-flags', userId }),
+      })
+      if (response.ok) {
+        toast({ title: 'Cleared', description: 'User fraud flags cleared', variant: 'success' })
+        fetchFraudData()
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Failed to clear flags', variant: 'destructive' })
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -357,6 +444,10 @@ export default function AdminDashboard() {
           <TabsTrigger value="jobs">Jobs ({stats?.totalJobs || 0})</TabsTrigger>
           <TabsTrigger value="applications">Applications ({stats?.totalApplications || 0})</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="fraud" className="text-red-600">
+            <ShieldAlert className="h-4 w-4 mr-1" />
+            Fraud ({fraudStats?.unresolvedLogs || 0})
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="users">
@@ -617,6 +708,182 @@ export default function AdminDashboard() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="fraud">
+          <div className="space-y-6">
+            {/* Fraud Stats */}
+            <div className="grid md:grid-cols-4 gap-4">
+              <Card className="border-red-200">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-red-600">Flagged Users</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-700">{fraudStats?.totalFlagged || 0}</div>
+                </CardContent>
+              </Card>
+              <Card className="border-orange-200">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-orange-600">Unresolved Logs</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-orange-700">{fraudStats?.unresolvedLogs || 0}</div>
+                </CardContent>
+              </Card>
+              <Card className="border-yellow-200">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-yellow-600">High Severity (7d)</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-yellow-700">{fraudStats?.recentHighSeverity || 0}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-gray-600">Top Score</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">
+                    {fraudStats?.topSuspiciousUsers?.[0]?.fraudScore || 0}/100
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Suspicious Users */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Flag className="h-5 w-5 text-red-500" />
+                  Suspicious Users
+                </CardTitle>
+                <CardDescription>Users with high fraud scores</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {fraudStats?.topSuspiciousUsers?.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <ShieldAlert className="h-12 w-12 mx-auto mb-4 text-green-400" />
+                    <p>No suspicious users detected</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-3 px-2">User</th>
+                          <th className="text-left py-3 px-2">Fraud Score</th>
+                          <th className="text-left py-3 px-2">Applications</th>
+                          <th className="text-left py-3 px-2">Joined</th>
+                          <th className="text-left py-3 px-2">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fraudStats?.topSuspiciousUsers?.map((u) => (
+                          <tr key={u.id} className="border-b hover:bg-red-50">
+                            <td className="py-3 px-2">
+                              <div>{u.name || u.email}</div>
+                              <div className="text-xs text-gray-500">{u.email}</div>
+                            </td>
+                            <td className="py-3 px-2">
+                              <Badge variant={u.fraudScore >= 70 ? 'destructive' : u.fraudScore >= 40 ? 'secondary' : 'outline'}>
+                                {u.fraudScore}/100
+                              </Badge>
+                            </td>
+                            <td className="py-3 px-2">{u._count.applications}</td>
+                            <td className="py-3 px-2 text-gray-500">
+                              {new Date(u.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="py-3 px-2">
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleClearUserFlags(u.id)}
+                                  disabled={actionLoading === u.id}
+                                >
+                                  Clear Flags
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleSuspendUser(u.id, 'suspend')}
+                                  disabled={actionLoading === u.id}
+                                >
+                                  Suspend
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Fraud Logs */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Unresolved Fraud Logs</CardTitle>
+                <CardDescription>Detected suspicious activities</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingTab ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600" />
+                  </div>
+                ) : fraudLogs.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-400" />
+                    <p>No unresolved fraud logs</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {fraudLogs.map((log) => (
+                      <div key={log.id} className={`p-4 rounded-lg border ${
+                        log.severity === 'critical' ? 'bg-red-50 border-red-300' :
+                        log.severity === 'high' ? 'bg-orange-50 border-orange-300' :
+                        log.severity === 'medium' ? 'bg-yellow-50 border-yellow-300' :
+                        'bg-gray-50 border-gray-300'
+                      }`}>
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant={log.severity === 'critical' || log.severity === 'high' ? 'destructive' : 'secondary'}>
+                                {log.severity.toUpperCase()}
+                              </Badge>
+                              <Badge variant="outline">{log.type.replace('_', ' ')}</Badge>
+                              <span className="text-xs text-gray-500">
+                                {new Date(log.createdAt).toLocaleString()}
+                              </span>
+                            </div>
+                            <p className="mt-2 text-sm">{log.description}</p>
+                            {log.user && (
+                              <p className="mt-1 text-xs text-gray-500">
+                                User: {log.user.name || log.user.email} ({log.user.role})
+                              </p>
+                            )}
+                            {log.ipAddress && (
+                              <p className="text-xs text-gray-500">IP: {log.ipAddress}</p>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleResolveFraudLog(log.id)}
+                            disabled={actionLoading === log.id}
+                          >
+                            Mark Resolved
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
 

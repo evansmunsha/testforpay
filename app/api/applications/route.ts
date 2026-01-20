@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { sendApplicationReceivedEmail } from '@/lib/email'
+import { checkApplicationFraud } from '@/lib/fraud-detection'
 
 // GET - List user's applications
 export async function GET(request: Request) {
@@ -76,6 +77,12 @@ export async function POST(request: Request) {
       )
     }
 
+    // Get IP and User-Agent for fraud detection
+    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                      request.headers.get('x-real-ip') || 
+                      null
+    const userAgent = request.headers.get('user-agent') || null
+
     const body = await request.json()
     const { jobId } = body
 
@@ -138,12 +145,25 @@ export async function POST(request: Request) {
       )
     }
 
-    // Create application
+    // Run fraud detection
+    const fraudCheck = await checkApplicationFraud(currentUser.userId, jobId, ipAddress)
+    
+    // Block highly suspicious applications
+    if (fraudCheck.score >= 70) {
+      return NextResponse.json(
+        { error: 'Unable to process application. Please contact support.' },
+        { status: 403 }
+      )
+    }
+
+    // Create application with fraud tracking data
     const application = await prisma.application.create({
       data: {
         jobId,
         testerId: currentUser.userId,
         status: 'PENDING',
+        ipAddress,
+        userAgent,
       },
       include: {
         job: {

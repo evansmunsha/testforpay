@@ -7,6 +7,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     
+    // Get IP for fraud tracking
+    const signupIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     request.headers.get('x-real-ip') || 
+                     null
+    
     // Validate input
     const validatedData = signupSchema.parse(body)
     
@@ -25,13 +30,15 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = await hashPassword(validatedData.password)
     
-    // Create user
+    // Create user with fraud tracking
     const user = await prisma.user.create({
       data: {
         email: validatedData.email,
         password: hashedPassword,
         name: validatedData.name,
         role: validatedData.role,
+        signupIp,
+        lastIpAddress: signupIp,
       },
     })
     

@@ -188,7 +188,23 @@ export default function JobDetailPage() {
   }
 
   const handleCancel = async () => {
-    if (!confirm('Are you sure you want to cancel this job? If no testers have been approved, you will receive a full refund.')) return
+    // Calculate active testers to show in confirmation
+    const activeCount = activeApplications.length + approvedApplications.length + completedApplications.length
+    
+    const confirmMessage = activeCount > 0
+      ? `Cancel this job with ${activeCount} active tester(s)?
+
+Testers will be compensated based on their progress:
+• Completed: 100% payment
+• Testing: 75% payment
+• Verified: 50% payment
+• Opted-in: 25% payment
+• Approved only: 0%
+
+You will receive a partial refund for unused budget.`
+      : 'Are you sure you want to cancel this job? You will receive a full refund.'
+    
+    if (!confirm(confirmMessage)) return
 
     setActionLoading(true)
     try {
@@ -199,10 +215,21 @@ export default function JobDetailPage() {
       const data = await response.json()
 
       if (response.ok) {
-        const refundMessage = data.refund?.issued 
-          ? data.refund.message 
-          : data.message
-        toast({ title: 'Cancelled', description: refundMessage, variant: 'success' })
+        // Build detailed message for successful cancellation
+        let message = data.message
+        
+        if (data.cancellation?.testerPayouts?.length > 0) {
+          const paidTesters = data.cancellation.testerPayouts.filter((p: any) => p.amount > 0)
+          if (paidTesters.length > 0) {
+            message += `. ${paidTesters.length} tester(s) compensated totaling $${data.cancellation.totalPaidToTesters.toFixed(2)}`
+          }
+        }
+        
+        if (data.refund?.issued) {
+          message += `. Your refund: $${data.refund.amount.toFixed(2)}`
+        }
+        
+        toast({ title: 'Job Cancelled', description: message, variant: 'success' })
         router.push('/dashboard/jobs')
       } else {
         if (data.jobCancelled) {
