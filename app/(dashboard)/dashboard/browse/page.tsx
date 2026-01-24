@@ -7,10 +7,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, Filter, Briefcase } from 'lucide-react'
+import { Search, Filter, Briefcase, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/components/ui/toast-provider'
+import { useRealtimeJobs, useRealtimeApplications } from '@/hooks/use-real-time'
 
 interface Job {
   id: string
@@ -36,47 +37,17 @@ export default function BrowsePage() {
   const router = useRouter()
   const { user } = useAuth()
   const { toast } = useToast()
-  const [jobs, setJobs] = useState<Job[]>([])
-  const [applications, setApplications] = useState<Application[]>([])
-  const [loading, setLoading] = useState(true)
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null)
+  
+  // Real-time data fetching
+  const { data: jobs = [], loading, error, refresh } = useRealtimeJobs(undefined, 5000)
+  const { data: applications = [] } = useRealtimeApplications(undefined, 4000)
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
   const [minPayment, setMinPayment] = useState('')
-
-  useEffect(() => {
-    fetchJobs()
-    fetchApplications()
-  }, [])
-
-  const fetchJobs = async () => {
-    try {
-      const response = await fetch('/api/jobs?status=ACTIVE')
-      const data = await response.json()
-      if (response.ok) {
-        setJobs(data.jobs)
-      }
-    } catch (error) {
-      console.error('Failed to fetch jobs:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const fetchApplications = async () => {
-    try {
-      const response = await fetch('/api/applications')
-      const data = await response.json()
-      if (response.ok) {
-        setApplications(data.applications)
-      }
-    } catch (error) {
-      console.error('Failed to fetch applications:', error)
-    }
-  }
 
   const handleApply = async (jobId: string) => {
     setApplyingJobId(jobId)
@@ -90,9 +61,8 @@ export default function BrowsePage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Refresh applications and jobs
-        await fetchApplications()
-        await fetchJobs()
+        // Manually refresh to show updated application status
+        refresh()
         
         toast({ title: 'Applied!', description: 'Check your applications page for next steps', variant: 'success' })
         router.push('/dashboard/applications')
@@ -149,9 +119,21 @@ export default function BrowsePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900">Browse Jobs</h2>
-        <p className="text-gray-600 mt-1">Find testing opportunities and start earning</p>
+      <div className="flex justify-between items-start">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">Browse Jobs</h2>
+          <p className="text-gray-600 mt-1">Find testing opportunities and start earning • Updates every 5 seconds</p>
+        </div>
+        <Button 
+          variant="outline" 
+          size="sm"
+          onClick={refresh}
+          disabled={loading}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Updating...' : 'Refresh Now'}
+        </Button>
       </div>
 
       {/* Filters */}

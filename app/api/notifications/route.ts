@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
 // Get user notifications
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const currentUser = await getCurrentUser()
 
@@ -14,10 +14,22 @@ export async function GET() {
       )
     }
 
+    const { searchParams } = new URL(request.url)
+    const unreadOnly = searchParams.get('unreadOnly') === 'true'
+    const limit = parseInt(searchParams.get('limit') || '50')
+
+    const where: any = {
+      userId: currentUser.userId,
+    }
+
+    if (unreadOnly) {
+      where.read = false
+    }
+
     const notifications = await prisma.notification.findMany({
-      where: { userId: currentUser.userId },
+      where,
       orderBy: { createdAt: 'desc' },
-      take: 50,
+      take: limit,
     })
 
     const unreadCount = await prisma.notification.count({
@@ -27,7 +39,11 @@ export async function GET() {
       },
     })
 
-    return NextResponse.json({ notifications, unreadCount })
+    return NextResponse.json({ 
+      success: true,
+      notifications, 
+      unreadCount,
+    })
   } catch (error) {
     console.error('Get notifications error:', error)
     return NextResponse.json(
