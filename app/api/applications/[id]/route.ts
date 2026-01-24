@@ -118,6 +118,29 @@ export async function PATCH(
         },
       })
 
+      // Create Payment record for escrow
+      // Calculate platform fee share for this tester
+      const platformFeePerTester = application.job.platformFee / application.job.testersNeeded
+      const totalPaymentAmount = application.job.paymentPerTester + platformFeePerTester
+
+      try {
+        const payment = await prisma.payment.create({
+          data: {
+            applicationId: updatedApplication.id,
+            jobId: updatedApplication.job.id,
+            amount: application.job.paymentPerTester,
+            platformFee: platformFeePerTester,
+            totalAmount: totalPaymentAmount,
+            status: 'ESCROWED', // Funds already escrowed from developer payment
+            escrowedAt: new Date(),
+          },
+        })
+        console.log('✅ Payment record created:', payment.id, 'for application:', id)
+      } catch (paymentError) {
+        console.error('Failed to create payment record:', paymentError)
+        // Don't fail the approval if payment record creation fails, but log it
+      }
+
       // Send approval email
       try {
         await sendApplicationApprovedEmail(
@@ -155,8 +178,21 @@ export async function PATCH(
             },
           },
           job: true,
+          payment: true,
         },
       })
+
+      // Delete payment record if it exists (refund the escrow by not marking it as PROCESSING)
+      if (updatedApplication.payment) {
+        try {
+          await prisma.payment.delete({
+            where: { id: updatedApplication.payment.id },
+          })
+          console.log('💰 Payment record deleted (refunded) for rejected application:', id)
+        } catch (paymentError) {
+          console.error('Failed to delete payment record on rejection:', paymentError)
+        }
+      }
 
       return NextResponse.json({
         success: true,
@@ -188,8 +224,24 @@ export async function PATCH(
             },
           },
           job: true,
+          payment: true,
         },
       })
+
+      // Update payment status to PROCESSING (testing has started)
+      if (updatedApplication.payment) {
+        try {
+          await prisma.payment.update({
+            where: { id: updatedApplication.payment.id },
+            data: {
+              status: 'PROCESSING',
+            },
+          })
+          console.log('💰 Payment status updated to PROCESSING for application:', id)
+        } catch (paymentError) {
+          console.error('Failed to update payment status on verification:', paymentError)
+        }
+      }
 
       // Send testing started email
       try {
@@ -213,7 +265,37 @@ export async function PATCH(
       })
     }
 
-    // Handle general updates
+    // Handle completion (when testing period ends)
+    if (body.action === 'complete') {
+      const updatedApplication = await prisma.application.update({
+        where: { id },
+        data: {
+          status: 'COMPLETED',
+        },
+        include: {
+          tester: {
+            select: {
+              name: true,
+              email: true,
+            },
+          },
+          job: true,
+          payment: true,
+        },
+      })
+
+      // Payment should already exist and be in PROCESSING status
+      // It will be picked up by the cron job for actual payout
+      if (!updatedApplication.payment) {
+        console.warn('⚠️ No payment record found for completed application:', id)
+      }
+
+      return NextResponse.json({
+        success: true,
+        application: updatedApplication,
+        message: 'Application marked as completed. Payment will be processed soon.',
+      })
+    }
     const updatedApplication = await prisma.application.update({
       where: { id },
       data: body,

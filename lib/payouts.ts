@@ -13,10 +13,10 @@ interface PayoutResult {
 export async function processCompletedTests(): Promise<PayoutResult[]> {
   const results: PayoutResult[] = []
 
-  // Find all applications that are COMPLETED but payment is still PENDING
+  // Find all applications that are COMPLETED with payment in PROCESSING state (ready for payout)
   const pendingPayments = await prisma.payment.findMany({
     where: {
-      status: 'PENDING',
+      status: 'PROCESSING', // Payment must be in PROCESSING status (testing started, not escrowed)
       application: {
         status: 'COMPLETED',
       },
@@ -106,7 +106,7 @@ export async function processCompletedTests(): Promise<PayoutResult[]> {
 export async function getPendingPayoutsSummary() {
   const pendingPayments = await prisma.payment.findMany({
     where: {
-      status: 'PENDING',
+      status: 'PROCESSING', // Only PROCESSING payments (not ESCROWED, not already COMPLETED)
       application: {
         status: 'COMPLETED',
       },

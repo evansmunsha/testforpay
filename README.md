@@ -954,3 +954,30 @@ Make sure to use the Stripe Client for all requests.
 When in doubt reference the stripe docs.
 
 # testforpay
+
+
+
+
+
+1. Developer creates job → Status: DRAFT (no payment yet)
+2. Developer pays via Stripe → checkout.session.completed webhook
+3. Job status → ACTIVE, funds held in Stripe
+4. Tester applies → Application created with status PENDING
+5. Developer approves → Application status: APPROVED
+   └─ Payment created with status: ESCROWED ✅ (NEW)
+6. Tester verifies opt-in → Application status: TESTING
+   └─ Payment status: PROCESSING ✅ (NEW)
+7. Testing period ends → Application status: COMPLETED
+8. Daily cron job runs → Transfers funds to tester (Payment → COMPLETED)
+
+
+
+Remaining Considerations
+Developer Refund — If job is cancelled after payment, the money is just deleted from Payment records but not refunded to developer's Stripe account. You may need a refund handler.
+
+
+Add developer refund logic to Stripe?
+Update the Payment deletion to use REFUNDED status instead?
+Add auto-completion cron for expired tests?
+
+

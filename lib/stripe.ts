@@ -84,3 +84,13 @@ export async function getAccountBalance(stripeAccountId: string) {
 
   return balance
 }
+
+// Refund payment intent (for job cancellation)
+export async function refundPaymentIntent(paymentIntentId: string, amount?: number) {
+  const refund = await stripe.refunds.create({
+    payment_intent: paymentIntentId,
+    ...(amount && { amount: Math.round(amount * 100) }), // Partial refund if amount specified
+  })
+
+  return refund
+}

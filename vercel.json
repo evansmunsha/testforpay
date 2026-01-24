@@ -2,8 +2,12 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "crons": [
     {
+      "path": "/api/cron/auto-complete-tests",
+      "schedule": "0 2 * * *"
+    },
+    {
       "path": "/api/cron/process-payouts",
-      "schedule": "0 0 * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }

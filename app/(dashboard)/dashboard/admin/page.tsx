@@ -214,14 +214,19 @@ export default function AdminDashboard() {
   }, [activeTab, loading, user])
 
   const fetchStats = async () => {
+    setLoadingStats(true)
     try {
       const response = await fetch('/api/admin/stats')
       const data = await response.json()
+      console.log('📊 Stats response:', { status: response.status, data })
       if (response.ok) {
         setStats(data.stats)
+        console.log('✅ Stats loaded:', data.stats)
+      } else {
+        console.error('❌ Stats fetch failed:', data)
       }
     } catch (error) {
-      console.error('Failed to fetch stats:', error)
+      console.error('❌ Failed to fetch stats:', error)
     } finally {
       setLoadingStats(false)
     }
@@ -232,9 +237,12 @@ export default function AdminDashboard() {
     try {
       const response = await fetch('/api/admin/users')
       const data = await response.json()
-      if (response.ok) setUsers(data.users)
+      console.log('👥 Users response:', { status: response.status, count: data.users?.length, data })
+      if (response.ok) {
+        setUsers(data.users || [])
+      }
     } catch (error) {
-      console.error('Failed to fetch users:', error)
+      console.error('❌ Failed to fetch users:', error)
     } finally {
       setLoadingTab(false)
     }
@@ -245,9 +253,10 @@ export default function AdminDashboard() {
     try {
       const response = await fetch('/api/admin/jobs')
       const data = await response.json()
-      if (response.ok) setJobs(data.jobs)
+      console.log('📋 Jobs response:', { status: response.status, count: data.jobs?.length })
+      if (response.ok) setJobs(data.jobs || [])
     } catch (error) {
-      console.error('Failed to fetch jobs:', error)
+      console.error('❌ Failed to fetch jobs:', error)
     } finally {
       setLoadingTab(false)
     }
@@ -258,9 +267,10 @@ export default function AdminDashboard() {
     try {
       const response = await fetch('/api/admin/applications')
       const data = await response.json()
-      if (response.ok) setApplications(data.applications)
+      console.log('📝 Applications response:', { status: response.status, count: data.applications?.length })
+      if (response.ok) setApplications(data.applications || [])
     } catch (error) {
-      console.error('Failed to fetch applications:', error)
+      console.error('❌ Failed to fetch applications:', error)
     } finally {
       setLoadingTab(false)
     }
@@ -271,9 +281,10 @@ export default function AdminDashboard() {
     try {
       const response = await fetch('/api/admin/payments')
       const data = await response.json()
-      if (response.ok) setPayments(data.payments)
+      console.log('💰 Payments response:', { status: response.status, count: data.payments?.length })
+      if (response.ok) setPayments(data.payments || [])
     } catch (error) {
-      console.error('Failed to fetch payments:', error)
+      console.error('❌ Failed to fetch payments:', error)
     } finally {
       setLoadingTab(false)
     }
