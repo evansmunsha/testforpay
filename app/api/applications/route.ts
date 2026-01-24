@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { sendNotification, NotificationTemplates } from '@/lib/notifications'
 import { sendApplicationReceivedEmail } from '@/lib/email'
 import { checkApplicationFraud } from '@/lib/fraud-detection'
 
@@ -209,6 +210,24 @@ export async function POST(request: Request) {
       )
     } catch (emailError) {
       console.error('Failed to send application notification email:', emailError)
+    }
+
+    // Send push notification to developer
+    try {
+      const tester = await prisma.user.findUnique({
+        where: { id: currentUser.userId },
+        select: { name: true },
+      })
+
+      await sendNotification({
+        userId: job.developerId,
+        title: 'New Application',
+        body: `${tester?.name || 'A tester'} applied to test "${job.appName}". Review their application.`,
+        url: `/dashboard/jobs/${job.id}`,
+        type: 'new_application',
+      })
+    } catch (notifyError) {
+      console.error('Failed to send application notification:', notifyError)
     }
 
     return NextResponse.json({

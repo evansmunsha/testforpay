@@ -61,7 +61,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 via-white to-purple-50">
       {/* Navigation */}
       <nav className="bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -184,10 +184,10 @@ export default function LandingPage() {
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
               Meet Google Play's
               <span className="text-blue-600"> Testing Requirements</span>
-              <br />in 24 Hours
+              <br /> — in 24 Hours
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              Connect with real testers instantly. Get your 20+ opted-in testers for 14-day closed testing and publish your app to production faster.
+              Connect with verified real testers instantly. Get your 20+ Google-compliant opt-ins for 14-day closed testing and publish faster.
             </p>
 
             {/* User Type Selection */}
@@ -295,28 +295,28 @@ export default function LandingPage() {
               </div>
               <div className="space-y-6">
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">1</div>
+                  <div className="shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">1</div>
                   <div>
                     <h4 className="font-semibold mb-1">Post Your Testing Job</h4>
                     <p className="text-gray-600">Add your app details, Google Play closed test link, and set your budget</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">2</div>
+                  <div className="shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">2</div>
                   <div>
                     <h4 className="font-semibold mb-1">Testers Apply & Opt-In</h4>
                     <p className="text-gray-600">Real users opt-in to your closed test on Google Play</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">3</div>
+                  <div className="shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">3</div>
                   <div>
                     <h4 className="font-semibold mb-1">Verify & Track Progress</h4>
                     <p className="text-gray-600">Monitor tester activity and opt-in status in real-time</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">4</div>
+                  <div className="shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">4</div>
                   <div>
                     <h4 className="font-semibold mb-1">Publish to Production</h4>
                     <p className="text-gray-600">After 14 days, meet Google's requirements and go live!</p>
@@ -345,28 +345,28 @@ export default function LandingPage() {
               </div>
               <div className="space-y-6">
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">1</div>
+                  <div className="shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">1</div>
                   <div>
                     <h4 className="font-semibold mb-1">Browse Testing Jobs</h4>
                     <p className="text-gray-600">Find apps that match your interests and device</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">2</div>
+                  <div className="shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">2</div>
                   <div>
                     <h4 className="font-semibold mb-1">Apply & Opt-In</h4>
                     <p className="text-gray-600">Join the closed test on Google Play and verify your opt-in</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">3</div>
+                  <div className="shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">3</div>
                   <div>
                     <h4 className="font-semibold mb-1">Test for 14 Days</h4>
                     <p className="text-gray-600">Use the app naturally and provide honest feedback</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">4</div>
+                  <div className="shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">4</div>
                   <div>
                     <h4 className="font-semibold mb-1">Get Paid</h4>
                     <p className="text-gray-600">Receive payment via PayPal or bank transfer</p>

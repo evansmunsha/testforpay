@@ -118,6 +118,57 @@ Job cancellation (`app/api/jobs/[id]/route.ts`) handles:
    - `totalBudgetPaid`, `totalTesterPayouts`, `platformFeeOnPayouts`, `developerRefund`
    - `payoutDetails[]` — each tester's status and compensation
 
+### Notification System
+**Push Notifications** (`lib/notifications.ts`):
+- `sendNotification(data)` creates in-app notification + sends web push to all subscriptions
+- Uses web-push library with VAPID keys for PWA support
+- Includes fallback for invalid subscriptions (auto-removes stale endpoints)
+- All notifications include: title, body, url (navigation link), type (category)
+
+**Notification Flow:**
+1. **Job Posted** (Stripe webhook `checkout.session.completed`):
+   - 🚀 Notify **developer**: "Job Published! Your testing job is now live"
+   - 📱 Notify **all testers**: "New Job Available! New testing opportunity available"
+
+2. **Tester Applies** (`/api/applications` POST):
+   - Notify **developer**: "New Application - [Tester] applied to test [App]"
+   - Send email via Resend (parallel)
+
+3. **Application Approved** (`/api/applications/[id]` PATCH approve):
+   - 🎉 Notify **tester**: "Application Approved! Start testing now"
+   - Send email via Resend
+
+4. **Application Rejected** (`/api/applications/[id]` PATCH reject):
+   - Notify **tester**: "Application Update - Not approved this time"
+   - Delete Payment record (refund escrow)
+
+5. **Verification Approved** (`/api/applications/[id]` PATCH verify):
+   - ✅ Notify **tester**: "Verification Approved! Testing period started"
+   - 🎯 Notify **developer**: "Tester Verified! [Tester] started testing"
+   - Update Payment status to PROCESSING
+   - Send email via Resend
+
+6. **Testing Completed** (auto-completion cron `/api/cron/auto-complete-tests`):
+   - Application status: TESTING → COMPLETED
+   - Payment status: PROCESSING (ready for payout)
+   - Runs at 2 AM UTC (before payout cron at 3 AM)
+
+7. **Payment Received** (Stripe webhook `transfer.created`):
+   - 💰 Notify **tester**: "Payment Received! You've received $X for testing [App]"
+   - Payment status: PROCESSING → COMPLETED
+   - Transfer to tester's Stripe Connect account
+
+**Notification Templates** (pre-defined in `NotificationTemplates`):
+- `applicationApproved`, `applicationRejected`, `verificationApproved`
+- `testingComplete`, `paymentReceived`, `newApplication`, `newVerification`, `newFeedback`
+
+**Implementation Details:**
+- Notifications sent via `sendNotification()` in API route handlers
+- Wrapped in try-catch to not block main operation if notification fails
+- Logged for debugging: `console.error()` on failure
+- Web push requires VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY env vars
+- PushSubscription table stores endpoint + encryption keys per user
+
 ### UI Components
 - **shadcn/ui** (Radix-based): Button, Card, Input, Form, Select, Tabs, Dialog, Dropdown, etc.
 - **Lucide Icons**: Single-import pattern (e.g., `import { Users, Briefcase } from 'lucide-react'`)

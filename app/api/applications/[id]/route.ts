@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { sendNotification, NotificationTemplates } from '@/lib/notifications'
 import { 
   sendApplicationApprovedEmail, 
   sendTestingStartedEmail 
@@ -156,6 +157,19 @@ export async function PATCH(
         console.error('Failed to send approval email:', emailError)
       }
 
+      // Send push notification to tester
+      try {
+        await sendNotification({
+          userId: application.testerId,
+          title: 'Application Approved! 🎉',
+          body: `Your application to test "${application.job.appName}" has been approved. Start testing now!`,
+          url: `/dashboard/applications/${id}`,
+          type: 'application_approved',
+        })
+      } catch (notifyError) {
+        console.error('Failed to send approval notification:', notifyError)
+      }
+
       return NextResponse.json({
         success: true,
         application: updatedApplication,
@@ -192,6 +206,19 @@ export async function PATCH(
         } catch (paymentError) {
           console.error('Failed to delete payment record on rejection:', paymentError)
         }
+      }
+
+      // Send push notification to tester
+      try {
+        await sendNotification({
+          userId: application.testerId,
+          title: 'Application Update',
+          body: `Your application to test "${application.job.appName}" was not approved this time.`,
+          url: `/dashboard/applications/${id}`,
+          type: 'application_rejected',
+        })
+      } catch (notifyError) {
+        console.error('Failed to send rejection notification:', notifyError)
       }
 
       return NextResponse.json({
@@ -256,6 +283,32 @@ export async function PATCH(
         )
       } catch (emailError) {
         console.error('Failed to send testing started email:', emailError)
+      }
+
+      // Send push notification to tester
+      try {
+        await sendNotification({
+          userId: application.testerId,
+          title: 'Verification Approved! ✅',
+          body: `Your screenshot for "${application.job.appName}" has been verified. Testing period has started!`,
+          url: `/dashboard/applications/${id}`,
+          type: 'verification_approved',
+        })
+      } catch (notifyError) {
+        console.error('Failed to send verification notification:', notifyError)
+      }
+
+      // Send notification to developer that verification is done
+      try {
+        await sendNotification({
+          userId: application.job.developerId,
+          title: 'Tester Verified! 🎯',
+          body: `${application.tester.name || 'A tester'} verified and started testing "${application.job.appName}".`,
+          url: `/dashboard/jobs/${application.job.id}`,
+          type: 'tester_verified',
+        })
+      } catch (notifyError) {
+        console.error('Failed to notify developer of verification:', notifyError)
       }
 
       return NextResponse.json({
