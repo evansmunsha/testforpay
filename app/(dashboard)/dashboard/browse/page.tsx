@@ -78,12 +78,12 @@ export default function BrowsePage() {
 
   // Check if user has applied to a job
   const hasApplied = (jobId: string) => {
-    return applications.some(app => app.jobId === jobId)
+    return applications.some((app: any) => app.jobId === jobId)
   }
 
   // Filter and sort jobs
   const filteredJobs = jobs
-    .filter(job => {
+    .filter((job: Job) => {
       // Search filter
       if (searchQuery && !job.appName.toLowerCase().includes(searchQuery.toLowerCase()) &&
           !job.appDescription.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -102,7 +102,7 @@ export default function BrowsePage() {
 
       return true
     })
-    .sort((a, b) => {
+    .sort((a: Job, b: Job) => {
       switch (sortBy) {
         case 'newest':
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -249,7 +249,7 @@ export default function BrowsePage() {
         </Card>
       ) : (
         <div className="grid gap-6">
-          {filteredJobs.map((job) => (
+          {filteredJobs.map((job: Job) => (
             <JobCard
               key={job.id}
               job={job}
@@ -268,20 +268,20 @@ export default function BrowsePage() {
             <div className="grid md:grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-blue-900">
-                  {filteredJobs.reduce((sum, job) => sum + job.testersNeeded - job._count.applications, 0)}
+                  {filteredJobs.reduce((sum: number, job: Job) => sum + job.testersNeeded - job._count.applications, 0)}
                 </p>
                 <p className="text-sm text-blue-700">Total Spots Available</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-900">
-                  ${Math.max(...filteredJobs.map(job => job.paymentPerTester)).toFixed(2)}
+                  ${Math.max(...filteredJobs.map((job: Job) => job.paymentPerTester)).toFixed(2)}
                 </p>
                 <p className="text-sm text-blue-700">Highest Payment</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-900">
                   $
-                  {(filteredJobs.reduce((sum, job) => sum + job.paymentPerTester, 0) / 
+                  {(filteredJobs.reduce((sum: number, job: Job) => sum + job.paymentPerTester, 0) / 
                     filteredJobs.length).toFixed(2)}
                 </p>
                 <p className="text-sm text-blue-700">Average Payment</p>
