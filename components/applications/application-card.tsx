@@ -27,6 +27,9 @@ interface ApplicationCardProps {
     testingEndDate: string | null
     optInVerified: boolean
     verificationImage: string | null
+    verificationImage2?: string | null
+    feedback: string | null
+    rating: number | null
     tester: {
       id: string
       name: string | null
@@ -182,6 +185,17 @@ export function ApplicationCard({
                   Ends: {new Date(application.testingEndDate).toLocaleDateString()}
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* Feedback Section */}
+          {application.feedback && (
+            <div className="bg-green-50 p-3 rounded-lg">
+              <p className="text-sm font-semibold mb-2 flex items-center gap-2">
+                <span className="text-yellow-500">⭐</span>
+                {application.rating ? `Rating: ${application.rating}/5` : 'Feedback'}
+              </p>
+              <p className="text-sm text-gray-700">{application.feedback}</p>
             </div>
           )}
 

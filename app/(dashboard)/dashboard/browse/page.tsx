@@ -82,7 +82,7 @@ export default function BrowsePage() {
   }
 
   // Filter and sort jobs
-  const filteredJobs = jobs
+  const filteredJobs = (jobs || [])
     .filter((job: Job) => {
       // Search filter
       if (searchQuery && !job.appName.toLowerCase().includes(searchQuery.toLowerCase()) &&

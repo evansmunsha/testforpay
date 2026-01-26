@@ -48,9 +48,13 @@ Real testers apply. These aren't robots. They're real people with real Google Pl
 
 You get 20+ testers in 24 hours. On average, you'll have your full roster of verified testers within a day.
 
-You track everything in real-time. See which testers opted in, who's actively testing, get screenshots and feedback.
+You track everything in real-time. See which testers opted in, who's actively testing, get screenshots and feedback. Our dashboard shows live engagement metrics: app launches, features tested, session data, and more.
 
-After 14 days, you publish. You hit Google's requirements and your app goes live.
+Testers submit detailed feedback with screenshots. You collect real usage data and ratings through our built-in feedback system.
+
+After 14 days, you export your testing report. TestForPay automatically generates a comprehensive report with recruitment metrics, engagement data, tester feedback, and compliance verification. Perfect for your Google Play production access application.
+
+You publish and you're done. You've met all Google's requirements and your app goes live.
 
 ---
 
@@ -64,11 +68,15 @@ Here's what you actually get with TestForPay:
 
 24-Hour Turnaround - Not weeks. Not days. Hours. You can launch faster.
 
-Lower Costs - Only 15% platform fee. And you only pay when testers complete the full 14-day test. No hidden charges.
+Live Engagement Tracking - See real-time app launches, features tested, session data, and tester activity. Know exactly who's testing and how much.
 
-Real Feedback & Data - Testers submit verification screenshots, usage data, ratings, and feedback. You know they actually tested your app.
+Real Feedback & Data - Testers submit verification screenshots, usage data, ratings, detailed feedback with screenshots. You know they actually tested your app.
 
-Real-Time Tracking - See exactly who opted in, who's testing, progress updates, all live on your dashboard.
+Automatic Testing Reports - Export comprehensive reports with recruitment metrics, engagement stats, feedback analysis, and compliance verification. Ready to submit to Google Play.
+
+Real-Time Dashboard - See exactly who opted in, who's testing, progress updates, all live on your dashboard.
+
+Production Access Made Easy - Get a built-in questionnaire to answer all of Google's production readiness questions. Your testing report proves you met every requirement.
 
 ---
 

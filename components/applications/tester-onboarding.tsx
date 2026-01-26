@@ -214,7 +214,7 @@ Thank you for testing with us! 🙏
               className={`p-4 border-2 ${colorMap[tip.color]}`}
             >
               <div className="flex gap-3">
-                <Icon className={`w-5 h-5 flex-shrink-0 mt-0.5 ${iconColorMap[tip.color]}`} />
+                <Icon className={`w-5 h-5 shrink-0 mt-0.5 ${iconColorMap[tip.color]}`} />
                 <div>
                   <h4 className="font-semibold text-sm">{tip.title}</h4>
                   <p className="text-xs mt-1 opacity-85">{tip.description}</p>
@@ -236,7 +236,7 @@ Thank you for testing with us! 🙏
       {/* Key Reminders */}
       <Card className="p-4 border-2 border-amber-200 bg-amber-50">
         <div className="flex gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
           <div>
             <h4 className="font-semibold text-amber-900 text-sm mb-2">Important Reminders</h4>
             <ul className="text-sm text-amber-800 space-y-1">
@@ -253,7 +253,7 @@ Thank you for testing with us! 🙏
       {/* Engagement Tracking Info */}
       <Card className="p-4 border-2 border-blue-200 bg-blue-50">
         <div className="flex gap-3">
-          <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+          <CheckCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
           <div>
             <h4 className="font-semibold text-blue-900 text-sm mb-2">Automatic Engagement Tracking</h4>
             <p className="text-sm text-blue-800 mb-2">

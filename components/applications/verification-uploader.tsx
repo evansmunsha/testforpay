@@ -219,7 +219,7 @@ export function VerificationUploader({
 
         {/* Fixed submit button at bottom - always visible */}
         {uploadedUrls[0] && uploadedUrls[1] && (
-          <div className="mt-4 pt-4 border-t border-gray-200 flex-shrink-0">
+          <div className="mt-4 pt-4 border-t border-gray-200 shrink-0">
             <Button 
               onClick={handleSubmit}
               disabled={submitting}
@@ -238,7 +238,7 @@ export function VerificationUploader({
           </div>
         )}
         {(!uploadedUrls[0] || !uploadedUrls[1]) && (
-          <div className="mt-4 pt-4 border-t border-gray-200 flex-shrink-0">
+          <div className="mt-4 pt-4 border-t border-gray-200 shrink-0">
             <p className="text-center text-sm text-gray-500">
               Upload both screenshots to submit
             </p>

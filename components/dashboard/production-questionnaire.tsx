@@ -124,7 +124,7 @@ export function ProductionQuestionnaire({ jobId }: ProductionQuestionnaireProps)
     <div className="space-y-6">
       {submitted && (
         <Card className="border-green-200 bg-green-50 p-4 flex gap-3">
-          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+          <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
           <div>
             <h3 className="font-semibold text-green-900">Questionnaire Submitted</h3>
             <p className="text-sm text-green-800">Your production readiness questionnaire has been submitted to Google Play.</p>
@@ -133,7 +133,7 @@ export function ProductionQuestionnaire({ jobId }: ProductionQuestionnaireProps)
       )}
 
       <Card className="border-blue-200 bg-blue-50 p-4 flex gap-3">
-        <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
         <div className="text-sm text-blue-800">
           <p className="font-semibold mb-1">Google Play Production Access</p>
           <p>Complete this questionnaire to apply for production access on Google Play. Your answers help us understand your app's readiness and testing quality.</p>

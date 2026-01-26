@@ -28,6 +28,7 @@ export async function GET(
                 id: true,
                 name: true,
                 email: true,
+                deviceInfo: true,
               },
             },
           },

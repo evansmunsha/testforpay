@@ -56,9 +56,12 @@ interface Application {
   status: string
   createdAt: string
   testingStartDate: string | null
-  verificationImage: string | null // ✅ ADD THIS LINE
+  verificationImage: string | null
+  verificationImage2?: string | null
   testingEndDate: string | null
   optInVerified: boolean
+  feedback: string | null
+  rating: number | null
   tester: {
     id: string
     name: string | null

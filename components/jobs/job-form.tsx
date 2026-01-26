@@ -183,7 +183,7 @@ export function JobForm() {
           </div>
           <button
             onClick={clearSavedData}
-            className="text-blue-600 hover:text-blue-700 flex-shrink-0 p-1"
+            className="text-blue-600 hover:text-blue-700 shrink-0 p-1"
             title="Clear saved data"
           >
             <Trash2 className="h-5 w-5" />
