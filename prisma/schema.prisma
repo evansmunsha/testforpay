@@ -157,6 +157,7 @@ model Application {
   // Verification
   optInVerified     Boolean             @default(false)
   verificationImage String?
+  verificationImage2 String?
   verifiedAt        DateTime?
   
   // Fraud Detection

@@ -18,11 +18,11 @@ export async function POST(
 
     const { id } = await params
     const body = await request.json()
-    const { verificationImageUrl } = body
+    const { verificationImageUrl, verificationImageUrl2 } = body
 
-    if (!verificationImageUrl) {
+    if (!verificationImageUrl || !verificationImageUrl2) {
       return NextResponse.json(
-        { error: 'Verification image URL is required' },
+        { error: 'Both verification image URLs are required' },
         { status: 400 }
       )
     }
@@ -48,12 +48,13 @@ export async function POST(
       )
     }
 
-    // Update application with verification image
+    // Update application with verification images
     const updatedApplication = await prisma.application.update({
       where: { id },
       data: {
         status: 'OPTED_IN',
         verificationImage: verificationImageUrl,
+        verificationImage2: verificationImageUrl2,
       },
     })
 

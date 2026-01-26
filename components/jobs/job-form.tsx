@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertCircle, DollarSign } from 'lucide-react'
+import { AlertCircle, DollarSign, Trash2 } from 'lucide-react'
 
 interface JobFormData {
   appName: string
@@ -27,6 +27,9 @@ export function JobForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [mounted, setMounted] = useState(false)
+  const [hasStoredData, setHasStoredData] = useState(false)
+  
   const [formData, setFormData] = useState<JobFormData>({
     appName: '',
     appDescription: '',
@@ -39,6 +42,32 @@ export function JobForm() {
     paymentPerTester: 7.5,
     planType: 'STARTER',
   })
+
+  // Restore from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedData = localStorage.getItem('jobFormData')
+      if (savedData) {
+        const parsedData = JSON.parse(savedData)
+        setFormData(parsedData)
+        setHasStoredData(true)
+      }
+    } catch (err) {
+      console.error('Failed to restore form data:', err)
+    }
+    setMounted(true)
+  }, [])
+
+  // Save to localStorage whenever form data changes
+  useEffect(() => {
+    if (mounted) {
+      try {
+        localStorage.setItem('jobFormData', JSON.stringify(formData))
+      } catch (err) {
+        console.error('Failed to save form data:', err)
+      }
+    }
+  }, [formData, mounted])
 
   const totalBudget = formData.paymentPerTester * formData.testersNeeded
   const platformFee = totalBudget * 0.15
@@ -65,11 +94,15 @@ export function JobForm() {
       }
 
       if (data.requiresPayment && data.paymentUrl) {
+        // Clear saved data on successful submission (redirecting to payment)
+        localStorage.removeItem('jobFormData')
         // Redirect to Stripe Checkout
         window.location.href = data.paymentUrl
         return
       }
 
+      // Clear saved data on successful submission (redirecting to job details)
+      localStorage.removeItem('jobFormData')
       // Redirect to job details page if no payment required (shouldn't happen with current logic)
       router.push(`/dashboard/jobs/${data.jobId}`)
     } catch (err) {
@@ -116,8 +149,48 @@ export function JobForm() {
     }
   }
 
+  const clearSavedData = () => {
+    try {
+      localStorage.removeItem('jobFormData')
+      setHasStoredData(false)
+      setFormData({
+        appName: '',
+        appDescription: '',
+        packageName: '',
+        googlePlayLink: '',
+        appCategory: '',
+        testersNeeded: 20,
+        testDuration: 14,
+        minAndroidVersion: '',
+        paymentPerTester: 7.5,
+        planType: 'STARTER',
+      })
+    } catch (err) {
+      console.error('Failed to clear form data:', err)
+    }
+  }
+
   return (
     <div className="space-y-6">
+      {hasStoredData && (
+        <div className="bg-blue-50 border border-blue-200 text-blue-600 p-4 rounded-lg flex items-start gap-3 justify-between">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 mt-0.5" />
+            <div>
+              <p className="font-medium">Your draft has been restored</p>
+              <p className="text-sm">We found your previously saved form data. Continue editing or start fresh.</p>
+            </div>
+          </div>
+          <button
+            onClick={clearSavedData}
+            className="text-blue-600 hover:text-blue-700 flex-shrink-0 p-1"
+            title="Clear saved data"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
+      )}
+
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg flex items-start gap-3">
           <AlertCircle className="h-5 w-5 mt-0.5" />
