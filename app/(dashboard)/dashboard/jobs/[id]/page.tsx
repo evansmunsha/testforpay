@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { ApplicationCard } from '@/components/applications/application-card'
 import { useToast } from '@/components/ui/toast-provider'
+import { TestingReportViewer } from '@/components/jobs/testing-report-viewer'
+import { ProductionQuestionnaire } from '@/components/dashboard/production-questionnaire'
 import { 
   ArrowLeft, 
   Calendar, 
@@ -427,7 +429,7 @@ You will receive a partial refund for unused budget.`
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs defaultValue="applications" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-6">
               <TabsTrigger value="applications">
                 All ({job.applications.length})
               </TabsTrigger>
@@ -439,6 +441,12 @@ You will receive a partial refund for unused budget.`
               </TabsTrigger>
               <TabsTrigger value="completed">
                 Completed ({completedApplications.length})
+              </TabsTrigger>
+              <TabsTrigger value="report">
+                Report
+              </TabsTrigger>
+              <TabsTrigger value="production">
+                Production
               </TabsTrigger>
             </TabsList>
 
@@ -534,6 +542,14 @@ You will receive a partial refund for unused budget.`
                   />
                 ))
               )}
+            </TabsContent>
+
+            <TabsContent value="report" className="space-y-4">
+              <TestingReportViewer jobId={job.id} />
+            </TabsContent>
+
+            <TabsContent value="production" className="space-y-4">
+              <ProductionQuestionnaire jobId={job.id} />
             </TabsContent>
           </Tabs>
         </div>

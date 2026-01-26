@@ -47,6 +47,13 @@ enum PaymentStatus {
   REFUNDED
 }
 
+enum UsageEventType {
+  APP_LAUNCH
+  FEATURE_USED
+  FEEDBACK_SUBMITTED
+  SESSION_END
+}
+
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
@@ -84,6 +91,7 @@ model User {
   notifications     Notification[]
   fraudLogs         FraudLog[]
   feedbacks         Feedback[]
+  usageLogs         AppUsageLog[] @relation("UsageLogs")
   
   // Ratings
   averageRating    Float?   @default(0)
@@ -138,6 +146,7 @@ model TestingJob {
   // Relations
   applications      Application[]
   payments          Payment[]
+  questionnaire     ProductionQuestionnaire?
   
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -172,6 +181,9 @@ model Application {
   // Feedback
   feedback          String?             @db.Text
   rating            Int?
+  
+  // Engagement tracking
+  usageLogs         AppUsageLog[]
   
   // Payment
   payment           Payment?
@@ -297,5 +309,60 @@ model Feedback {
   @@index([approved])
   @@index([type])
   @@index([rating])
+}
+
+model AppUsageLog {
+  id              String    @id @default(cuid())
+  applicationId   String
+  application     Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  
+  testerId        String
+  tester          User      @relation("UsageLogs", fields: [testerId], references: [id], onDelete: Cascade)
+  
+  // Usage tracking
+  eventType       UsageEventType
+  featureName     String?   // e.g., "Login", "Payment", "Settings" - if feature_used
+  sessionDuration Int?      // Duration in seconds if session_end
+  
+  // Context
+  ipAddress       String?
+  userAgent       String?
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([applicationId])
+  @@index([testerId])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+model ProductionQuestionnaire {
+  id              String    @id @default(cuid())
+  jobId           String    @unique
+  job             TestingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  
+  developerId     String
+  
+  // Part 1: About your closed test
+  recruiterEase   String?   // very_easy, easy, moderate, difficult, very_difficult
+  engagementSummary String? @db.Text // How testers used features, consistency with expected usage
+  feedbackSummary String?   @db.Text // Summary of feedback received and how it was collected
+  
+  // Part 2: About your app
+  targetAudience  String?   @db.Text // Who is the intended audience
+  valueProposition String?  @db.Text // How app provides value (apps) or what makes it stand out (games)
+  expectedInstalls String? // first_year_installs range
+  
+  // Part 3: Production readiness
+  changesApplied  String?   @db.Text // Changes made based on closed test feedback
+  readinessCriteria String? @db.Text // How you decided app is ready for production
+  
+  submitted       Boolean   @default(false)
+  submittedAt     DateTime?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([developerId])
 }
 
