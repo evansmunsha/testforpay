@@ -83,6 +83,7 @@ model User {
   pushSubscriptions PushSubscription[]
   notifications     Notification[]
   fraudLogs         FraudLog[]
+  feedbacks         Feedback[]
   
   // Ratings
   averageRating    Float?   @default(0)
@@ -267,5 +268,34 @@ model FraudLog {
   @@index([severity])
   @@index([resolved])
   @@index([ipAddress])
+}
+
+model Feedback {
+  id              String    @id @default(cuid())
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Feedback details
+  type            String    // 'developer' or 'tester'
+  rating          Int       // 1-5 stars
+  title           String
+  message         String    @db.Text
+  
+  // Approval workflow
+  approved        Boolean   @default(false)
+  approvedAt      DateTime?
+  approvedBy      String?   // Admin user id
+  
+  // Display settings
+  displayName     String?   // Optional name to display (privacy)
+  companyName     String?   // Optional company name
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([userId])
+  @@index([approved])
+  @@index([type])
+  @@index([rating])
 }
 
