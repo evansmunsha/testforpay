@@ -181,8 +181,10 @@ model Application {
   // Feedback
   feedback          String?             @db.Text
   rating            Int?
+  feedbackSubmittedAt DateTime?
   
   // Engagement tracking
+  engagementScore   Int?                @default(0) // 0-100 score based on testing activity
   usageLogs         AppUsageLog[]
   
   // Payment

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -15,8 +15,10 @@ import {
   XCircle,
   Clock,
   AlertCircle,
-  Image as ImageIcon
+  Image as ImageIcon,
+  TrendingUp
 } from 'lucide-react'
+import { getEngagementBadgeColor, getEngagementLevel } from '@/lib/engagement-scoring'
 
 interface ApplicationCardProps {
   application: {
@@ -30,6 +32,8 @@ interface ApplicationCardProps {
     verificationImage2?: string | null
     feedback: string | null
     rating: number | null
+    engagementScore?: number | null
+    feedbackSubmittedAt?: string | null
     tester: {
       id: string
       name: string | null
@@ -56,6 +60,33 @@ export function ApplicationCard({
   loading = false 
 }: ApplicationCardProps) {
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
+  const [engagementScore, setEngagementScore] = useState<number | null>(application.engagementScore || null)
+  const [loadingScore, setLoadingScore] = useState(false)
+
+  useEffect(() => {
+    // Calculate engagement score when feedback is submitted
+    if (application.feedback && engagementScore === null && application.status === 'COMPLETED') {
+      calculateScore()
+    }
+  }, [application.feedback])
+
+  const calculateScore = async () => {
+    try {
+      setLoadingScore(true)
+      const res = await fetch(`/api/applications/${application.id}/engagement-score`, {
+        method: 'POST',
+      })
+      
+      if (res.ok) {
+        const data = await res.json()
+        setEngagementScore(data.engagementScore)
+      }
+    } catch (error) {
+      console.error('Failed to calculate engagement score:', error)
+    } finally {
+      setLoadingScore(false)
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -196,6 +227,35 @@ export function ApplicationCard({
                 {application.rating ? `Rating: ${application.rating}/5` : 'Feedback'}
               </p>
               <p className="text-sm text-gray-700">{application.feedback}</p>
+            </div>
+          )}
+
+          {/* Engagement Score */}
+          {(engagementScore !== null || application.status === 'COMPLETED' || application.status === 'TESTING') && (
+            <div className={`p-3 rounded-lg ${engagementScore !== null ? getEngagementBadgeColor(engagementScore) : 'bg-gray-50'}`}>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Engagement Score
+                </p>
+                {engagementScore !== null && (
+                  <div className="text-right">
+                    <p className="text-lg font-bold">{engagementScore}/100</p>
+                    <p className="text-xs opacity-75">{getEngagementLevel(engagementScore)}</p>
+                  </div>
+                )}
+              </div>
+              {engagementScore === null && application.status === 'COMPLETED' && (
+                <Button 
+                  onClick={calculateScore} 
+                  disabled={loadingScore} 
+                  size="sm" 
+                  variant="ghost"
+                  className="mt-2 w-full"
+                >
+                  {loadingScore ? 'Calculating...' : 'Calculate Score'}
+                </Button>
+              )}
             </div>
           )}
 

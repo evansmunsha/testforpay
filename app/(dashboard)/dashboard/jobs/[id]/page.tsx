@@ -62,6 +62,8 @@ interface Application {
   optInVerified: boolean
   feedback: string | null
   rating: number | null
+  engagementScore?: number | null
+  feedbackSubmittedAt?: string | null
   tester: {
     id: string
     name: string | null

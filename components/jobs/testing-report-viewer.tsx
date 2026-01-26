@@ -36,6 +36,9 @@ interface ReportData {
     totalSessions: number
     avgSessionDuration: number
     testingCoverage: string
+    avgEngagementScore?: number
+    excellentTesters?: number
+    goodTesters?: number
   }
   feedback: {
     testedWithFeedback: number
@@ -251,45 +254,36 @@ export function TestingReportViewer({ jobId }: TestingReportViewerProps) {
       <Card className="p-4 border-purple-200 bg-purple-50">
         <div className="flex items-center gap-2 mb-3">
           <BarChart3 className="w-5 h-5 text-purple-600" />
-          <h4 className="font-semibold text-purple-900">Engagement</h4>
+          <h4 className="font-semibold text-purple-900">Engagement Metrics</h4>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div>
-            <p className="text-sm text-purple-700">App Launches</p>
+            <p className="text-sm text-purple-700">Average Engagement Score</p>
             <p className="text-2xl font-bold text-purple-900">
-              {report.engagement.totalAppLaunches}
+              {report.engagement.avgEngagementScore || 'N/A'}
+              {typeof report.engagement.avgEngagementScore === 'number' && (
+                <span className="text-sm">/100</span>
+              )}
             </p>
           </div>
           <div>
-            <p className="text-sm text-purple-700">Features Used</p>
+            <p className="text-sm text-purple-700">Excellent Testers</p>
             <p className="text-2xl font-bold text-purple-900">
-              {report.engagement.uniqueFeaturesUsed}
+              {report.engagement.excellentTesters || 0}
             </p>
           </div>
           <div>
-            <p className="text-sm text-purple-700">Sessions</p>
+            <p className="text-sm text-purple-700">Good Testers</p>
             <p className="text-2xl font-bold text-purple-900">
-              {report.engagement.totalSessions}
+              {report.engagement.goodTesters || 0}
             </p>
           </div>
-          <div>
-            <p className="text-sm text-purple-700">Avg Session (sec)</p>
-            <p className="text-2xl font-bold text-purple-900">
-              {report.engagement.avgSessionDuration}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-purple-700">Coverage</p>
-            <p className="text-2xl font-bold text-purple-900">
-              {report.engagement.testingCoverage}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-purple-700">Feedback Submitted</p>
-            <p className="text-2xl font-bold text-purple-900">
-              {report.engagement.totalFeedbackSubmitted}
-            </p>
-          </div>
+        </div>
+        <div className="mt-4 pt-4 border-t border-purple-200">
+          <p className="text-sm text-purple-700 font-medium mb-2">Engagement Breakdown</p>
+          <p className="text-xs text-purple-700">
+            Scores are calculated based on: feedback quality, verification screenshots, testing duration, response time, and rating submission.
+          </p>
         </div>
       </Card>
 

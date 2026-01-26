@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { calculateEngagementScore } from '@/lib/engagement-scoring'
 
 export async function GET(
   request: Request,
@@ -139,7 +140,16 @@ export async function GET(
       optedIn: app.optInVerified,
       testingStarted: app.testingStartDate,
       testingEnded: app.testingEndDate,
+      engagementScore: calculateEngagementScore(app),
     }))
+
+    // Calculate engagement score statistics
+    const engagementScores = testerDetails.map(t => t.engagementScore)
+    const avgEngagementScore = engagementScores.length > 0 
+      ? Math.round(engagementScores.reduce((a, b) => a + b, 0) / engagementScores.length)
+      : 0
+    const excellentTesters = engagementScores.filter(s => s >= 85).length
+    const goodTesters = engagementScores.filter(s => s >= 70 && s < 85).length
 
     const report = {
       jobId: job.id,
@@ -171,6 +181,9 @@ export async function GET(
         avgSessionDuration,
         avgAppLaunchesPerTester: totalTestersRecruited > 0 ? (totalAppLaunches / totalTestersRecruited).toFixed(1) : 0,
         testingCoverage: `${(approvedTesters > 0 ? ((activeTesters + completedTesters) / approvedTesters * 100) : 0).toFixed(0)}%`,
+        avgEngagementScore,
+        excellentTesters,
+        goodTesters,
       },
       feedback: {
         testedWithFeedback,

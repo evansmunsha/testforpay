@@ -48,11 +48,11 @@ Real testers apply. These aren't robots. They're real people with real Google Pl
 
 You get 20+ testers in 24 hours. On average, you'll have your full roster of verified testers within a day.
 
-You track everything in real-time. See which testers opted in, who's actively testing, get screenshots and feedback. Our dashboard shows live engagement metrics: app launches, features tested, session data, and more.
+You track everything in real-time. See which testers opted in, who's actively testing, get screenshots and feedback. Our engagement scoring system automatically rates tester quality (Excellent, Good, Satisfactory) so you know exactly who's being thorough.
 
-Testers submit detailed feedback with screenshots. You collect real usage data and ratings through our built-in feedback system.
+Testers submit detailed feedback with screenshots. You collect real usage data and ratings through our built-in feedback system. We score engagement based on feedback quality, verification completeness, testing duration, and responsiveness.
 
-After 14 days, you export your testing report. TestForPay automatically generates a comprehensive report with recruitment metrics, engagement data, tester feedback, and compliance verification. Perfect for your Google Play production access application.
+After 14 days, you export your testing report. TestForPay automatically generates a comprehensive report with recruitment metrics, engagement scores (showing average tester quality), tester feedback, and compliance verification. Perfect for your Google Play production access application.
 
 You publish and you're done. You've met all Google's requirements and your app goes live.
 
@@ -68,9 +68,9 @@ Here's what you actually get with TestForPay:
 
 24-Hour Turnaround - Not weeks. Not days. Hours. You can launch faster.
 
-Live Engagement Tracking - See real-time app launches, features tested, session data, and tester activity. Know exactly who's testing and how much.
+Live Engagement Tracking - Our engagement scoring system shows tester quality (Excellent, Good, Satisfactory, etc.) based on feedback quality, verification screenshots, testing duration, and responsiveness. See exactly who's being thorough.
 
-Real Feedback & Data - Testers submit verification screenshots, usage data, ratings, detailed feedback with screenshots. You know they actually tested your app.
+Real Feedback & Data - Testers submit verification screenshots, detailed feedback with ratings. Auto-scored so you know they actually tested your app. Engagement scores prove tester quality.
 
 Automatic Testing Reports - Export comprehensive reports with recruitment metrics, engagement stats, feedback analysis, and compliance verification. Ready to submit to Google Play.
 
