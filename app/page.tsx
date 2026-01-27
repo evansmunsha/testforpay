@@ -281,13 +281,13 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold text-center mb-16">How It Works</h2>
           
-          {/* Video Section */}
+          {/* Video Section https://youtu.be/INxrn8tyxa0*/}
           <div className="mb-16 rounded-xl overflow-hidden shadow-2xl bg-black">
             <div className="relative w-full aspect-video">
               <iframe
                 width="100%"
                 height="100%"
-                src="https://www.youtube.com/embed/YOUR_VIDEO_ID?rel=0"
+                src="https://www.youtube.com/embed/INxrn8tyxa0?rel=0&modestbranding=1"
                 title="TestForPay How It Works"
                 frameBorder="0"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
