@@ -7,11 +7,11 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Search, Filter, Briefcase, RefreshCw } from 'lucide-react'
+import { Search, Briefcase, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
-import { useToast } from '@/components/ui/toast-provider'
-import { useRealtimeJobs, useRealtimeApplications } from '@/hooks/use-real-time'
+import { useToast } from '@/hooks/use-toast'
+
 
 interface Job {
   id: string
@@ -36,18 +36,101 @@ interface Application {
 export default function BrowsePage() {
   const router = useRouter()
   const { user } = useAuth()
-  const { toast } = useToast()
+  const [jobs, setJobs] = useState<Job[]>([])
+  const [applications, setApplications] = useState<Application[]>([])
+  const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null)
+  const { toast } = useToast()
   
-  // Real-time data fetching
-  const { data: jobs = [], loading, error, refresh } = useRealtimeJobs(undefined, 5000)
-  const { data: applications = [] } = useRealtimeApplications(undefined, 4000)
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
   const [minPayment, setMinPayment] = useState('')
+
+  // Initial fetch
+  useEffect(() => {
+    fetchJobs()
+    fetchApplications()
+  }, [])
+
+  // ✅ Auto-refresh every 5 seconds (real-time updates)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchJobsSilently()
+      fetchApplicationsSilently()
+    }, 5000) // 5 seconds
+
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchJobs = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/jobs?status=ACTIVE')
+      const data = await response.json()
+      
+      if (response.ok) {
+        setJobs(data.jobs || [])
+      } else {
+        console.error('Failed to fetch jobs:', data.error)
+      }
+    } catch (error) {
+      console.error('Failed to fetch jobs:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ✅ Silent fetch (doesn't show loading state)
+  const fetchJobsSilently = async () => {
+    try {
+      const response = await fetch('/api/jobs?status=ACTIVE')
+      const data = await response.json()
+      
+      if (response.ok) {
+        setJobs(data.jobs || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch jobs silently:', error)
+    }
+  }
+
+  const fetchApplications = async () => {
+    try {
+      const response = await fetch('/api/applications')
+      const data = await response.json()
+      
+      if (response.ok) {
+        setApplications(data.applications || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch applications:', error)
+    }
+  }
+
+  // ✅ Silent fetch for applications
+  const fetchApplicationsSilently = async () => {
+    try {
+      const response = await fetch('/api/applications')
+      const data = await response.json()
+      
+      if (response.ok) {
+        setApplications(data.applications || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch applications silently:', error)
+    }
+  }
+
+  // ✅ Manual refresh button
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await Promise.all([fetchJobs(), fetchApplications()])
+    setRefreshing(false)
+  }
 
   const handleApply = async (jobId: string) => {
     setApplyingJobId(jobId)
@@ -61,8 +144,9 @@ export default function BrowsePage() {
       const data = await response.json()
 
       if (response.ok) {
-        // Manually refresh to show updated application status
-        refresh()
+        // Refresh data immediately
+        await fetchApplications()
+        await fetchJobs()
         
         toast({ title: 'Applied!', description: 'Check your applications page for next steps', variant: 'success' })
         router.push('/dashboard/applications')
@@ -76,14 +160,13 @@ export default function BrowsePage() {
     }
   }
 
-  // Check if user has applied to a job
   const hasApplied = (jobId: string) => {
-    return applications.some((app: any) => app.jobId === jobId)
+    return applications.some(app => app.jobId === jobId)
   }
 
   // Filter and sort jobs
-  const filteredJobs = (jobs || [])
-    .filter((job: Job) => {
+  const filteredJobs = jobs
+    .filter(job => {
       // Search filter
       if (searchQuery && !job.appName.toLowerCase().includes(searchQuery.toLowerCase()) &&
           !job.appDescription.toLowerCase().includes(searchQuery.toLowerCase())) {
@@ -102,7 +185,7 @@ export default function BrowsePage() {
 
       return true
     })
-    .sort((a: Job, b: Job) => {
+    .sort((a, b) => {
       switch (sortBy) {
         case 'newest':
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
@@ -122,17 +205,19 @@ export default function BrowsePage() {
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Browse Jobs</h2>
-          <p className="text-gray-600 mt-1">Find testing opportunities and start earning • Updates every 5 seconds</p>
+          <p className="text-gray-600 mt-1">
+            Find testing opportunities and start earning •
+          </p>
         </div>
         <Button 
           variant="outline" 
           size="sm"
-          onClick={refresh}
-          disabled={loading}
+          onClick={handleRefresh}
+          disabled={refreshing}
           className="flex items-center gap-2"
         >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          {loading ? 'Updating...' : 'Refresh Now'}
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Updating...' : 'Refresh Now'}
         </Button>
       </div>
 
@@ -249,7 +334,7 @@ export default function BrowsePage() {
         </Card>
       ) : (
         <div className="grid gap-6">
-          {filteredJobs.map((job: Job) => (
+          {filteredJobs.map((job) => (
             <JobCard
               key={job.id}
               job={job}
@@ -268,20 +353,20 @@ export default function BrowsePage() {
             <div className="grid md:grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-blue-900">
-                  {filteredJobs.reduce((sum: number, job: Job) => sum + job.testersNeeded - job._count.applications, 0)}
+                  {filteredJobs.reduce((sum, job) => sum + job.testersNeeded - job._count.applications, 0)}
                 </p>
                 <p className="text-sm text-blue-700">Total Spots Available</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-900">
-                  ${Math.max(...filteredJobs.map((job: Job) => job.paymentPerTester)).toFixed(2)}
+                  ${Math.max(...filteredJobs.map(job => job.paymentPerTester)).toFixed(2)}
                 </p>
                 <p className="text-sm text-blue-700">Highest Payment</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-900">
                   $
-                  {(filteredJobs.reduce((sum: number, job: Job) => sum + job.paymentPerTester, 0) / 
+                  {(filteredJobs.reduce((sum, job) => sum + job.paymentPerTester, 0) / 
                     filteredJobs.length).toFixed(2)}
                 </p>
                 <p className="text-sm text-blue-700">Average Payment</p>

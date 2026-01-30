@@ -1,30 +1,27 @@
+// hooks/use-real-time.ts
 'use client'
 
+import { Application } from '@/types/application'
+import { Job } from '@/types/job'
 import { useEffect, useState, useCallback, useRef } from 'react'
 
 interface UseRealTimeOptions {
-  interval?: number // milliseconds between refreshes (default: 5000ms = 5s)
-  enabled?: boolean // whether to enable polling (default: true)
+  interval?: number
+  enabled?: boolean
   onError?: (error: Error) => void
 }
 
-/**
- * Custom hook for real-time data polling
- * Automatically refreshes data at specified intervals
- * Useful for: notifications, job updates, application status, payments
- */
 export function useRealTime<T>(
   fetchFn: () => Promise<T>,
-  options: UseRealTimeOptions = {}
+  options: UseRealTimeOptions & { initialData: T }
 ) {
-  const { interval = 5000, enabled = true, onError } = options
-  const [data, setData] = useState<T | null>(null)
+  const { interval = 5000, enabled = true, onError, initialData } = options
+  const [data, setData] = useState<T>(initialData)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
   const mountedRef = useRef(true)
 
-  // Execute fetch
   const executeRefresh = useCallback(async () => {
     if (!enabled) return
 
@@ -48,24 +45,19 @@ export function useRealTime<T>(
     }
   }, [fetchFn, enabled, onError])
 
-  // Initial fetch on mount
   useEffect(() => {
     executeRefresh()
   }, [executeRefresh])
 
-  // Set up polling interval
   useEffect(() => {
     if (!enabled) return
 
-    // Clear existing interval
     if (intervalRef.current) {
       clearInterval(intervalRef.current)
     }
 
-    // Set up new interval
     intervalRef.current = setInterval(executeRefresh, interval)
 
-    // Cleanup
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current)
@@ -73,7 +65,6 @@ export function useRealTime<T>(
     }
   }, [executeRefresh, enabled, interval])
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       mountedRef.current = false
@@ -83,7 +74,6 @@ export function useRealTime<T>(
     }
   }, [])
 
-  // Manual refresh trigger
   const refresh = useCallback(() => {
     executeRefresh()
   }, [executeRefresh])
@@ -96,115 +86,142 @@ export function useRealTime<T>(
   }
 }
 
-/**
- * Hook for real-time notifications
- * Polls notifications endpoint and triggers callbacks
- */
 export function useRealtimeNotifications(interval: number = 3000) {
   const [unreadCount, setUnreadCount] = useState(0)
   const [notifications, setNotifications] = useState<any[]>([])
   const lastCountRef = useRef(0)
 
   const fetchNotifications = useCallback(async () => {
-    try {
-      const response = await fetch('/api/notifications?unreadOnly=true')
-      if (response.ok) {
-        const data = await response.json()
-        const count = data.notifications?.length || 0
-        
-        // Only update state if count changed (avoid unnecessary re-renders)
-        if (count !== lastCountRef.current) {
-          lastCountRef.current = count
-          setUnreadCount(count)
-          setNotifications(data.notifications || [])
-          
-          // Trigger browser notification for new notifications
-          if (count > lastCountRef.current) {
-            const latest = data.notifications?.[0]
-            if (latest && Notification.permission === 'granted') {
-              new Notification(latest.title, {
-                body: latest.body,
-                icon: '/icon-192x192.png',
-              })
-            }
-          }
+    const response = await fetch('/api/notifications?unreadOnly=true')
+    if (!response.ok) return
+
+    const data = await response.json()
+    const list = Array.isArray(data.notifications) ? data.notifications : []
+    const count = list.length
+
+    const prev = lastCountRef.current
+    if (count !== prev) {
+      lastCountRef.current = count
+      setUnreadCount(count)
+      setNotifications(list)
+
+      if (count > prev) {
+        const latest = list[0]
+        if (latest && Notification.permission === 'granted') {
+          new Notification(latest.title, {
+            body: latest.body,
+            icon: '/icon-192x192.png',
+          })
         }
       }
-    } catch (error) {
-      console.error('Failed to fetch notifications:', error)
     }
   }, [])
 
-  const { refresh } = useRealTime(fetchNotifications, {
-    interval,
-    enabled: true,
-  })
+  useEffect(() => {
+    fetchNotifications()
+    const id = setInterval(fetchNotifications, interval)
+    return () => clearInterval(id)
+  }, [fetchNotifications, interval])
 
-  return {
-    unreadCount,
-    notifications,
-    refresh,
-  }
+  return { unreadCount, notifications, refresh: fetchNotifications }
 }
 
 /**
  * Hook for real-time job updates
- * Perfect for browse/jobs pages
+ * ✅ FIXED: Properly handles API response format
  */
 export function useRealtimeJobs(developerId?: string, interval: number = 5000) {
   const fetchJobs = useCallback(async () => {
-    const url = developerId ? `/api/jobs?developerId=${developerId}` : '/api/jobs?status=ACTIVE'
+    const url = developerId
+      ? `/api/jobs?developerId=${developerId}`
+      : '/api/jobs?status=ACTIVE'
+
     const response = await fetch(url)
-    if (!response.ok) throw new Error('Failed to fetch jobs')
+    if (!response.ok) {
+      throw new Error(`Failed to fetch jobs: ${response.status}`)
+    }
+    
     const data = await response.json()
-    return data.jobs
+    
+    // ✅ Your API returns { jobs: [...] }
+    if (data.jobs && Array.isArray(data.jobs)) {
+      return data.jobs
+    }
+    
+    // Fallback: if API returns array directly
+    if (Array.isArray(data)) {
+      return data
+    }
+
+    console.error('Unexpected API response format:', data)
+    return []
   }, [developerId])
 
-  return useRealTime(fetchJobs, { interval })
+  return useRealTime<Job[]>(fetchJobs, {
+    interval,
+    initialData: [],
+  })
 }
 
 /**
  * Hook for real-time application updates
- * Perfect for applications/jobs pages
+ * ✅ FIXED: Properly handles API response format
  */
 export function useRealtimeApplications(jobId?: string, interval: number = 4000) {
   const fetchApplications = useCallback(async () => {
     const url = jobId ? `/api/jobs/${jobId}/applications` : '/api/applications'
     const response = await fetch(url)
-    if (!response.ok) throw new Error('Failed to fetch applications')
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch applications: ${response.status}`)
+    }
+    
     const data = await response.json()
-    return data.applications
+
+    // Handle { applications: [...] } format
+    if (data.applications && Array.isArray(data.applications)) {
+      return data.applications
+    }
+    
+    // Fallback: if API returns array directly
+    if (Array.isArray(data)) {
+      return data
+    }
+
+    console.error('Unexpected API response format:', data)
+    return []
   }, [jobId])
 
-  return useRealTime(fetchApplications, { interval })
+  return useRealTime<Application[]>(fetchApplications, {
+    interval,
+    initialData: [],
+  })
 }
 
-/**
- * Hook for real-time payment updates
- * Perfect for payments page
- */
 export function useRealtimePayments(interval: number = 6000) {
   const fetchPayments = useCallback(async () => {
     const response = await fetch('/api/user/transactions')
     if (!response.ok) throw new Error('Failed to fetch payments')
     const data = await response.json()
-    return data.transactions
+    return data.transactions || []
   }, [])
 
-  return useRealTime(fetchPayments, { interval })
+  return useRealTime(fetchPayments, {
+    interval,
+    initialData: [],
+  })
 }
 
-/**
- * Hook for real-time stats
- * Perfect for admin/dashboard
- */
 export function useRealtimeStats(interval: number = 8000) {
   const fetchStats = useCallback(async () => {
     const response = await fetch('/api/admin/stats')
     if (!response.ok) throw new Error('Failed to fetch stats')
     const data = await response.json()
-    return data.stats
+    return data.stats || {}
   }, [])
 
-  return useRealTime(fetchStats, { interval })
+  return useRealTime(fetchStats, {
+    interval,
+    initialData: {},
+  })
 }

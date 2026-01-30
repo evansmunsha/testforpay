@@ -59,42 +59,44 @@ export async function POST(request: Request) {
   }
 }
 
+
 // Get approved feedback for landing page
 export async function GET(request: Request) {
   try {
     const url = new URL(request.url)
-    const type = url.searchParams.get('type') // 'developer' or 'tester' or null for all
-    const limit = parseInt(url.searchParams.get('limit') || '6')
+    const type = url.searchParams.get('type')
+    const limit = Math.min(parseInt(url.searchParams.get('limit') || '6', 10), 30)
 
-    const where: any = {
-      approved: true,
-    }
+    const where: any = { approved: true }
+    if (type && ['developer', 'tester'].includes(type)) where.type = type
 
-    if (type && ['developer', 'tester'].includes(type)) {
-      where.type = type
-    }
-
-    const feedback = await prisma.feedback.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-      select: {
-        id: true,
-        rating: true,
-        title: true,
-        message: true,
-        displayName: true,
-        companyName: true,
-        type: true,
-        createdAt: true,
-        user: {
-          select: {
-            name: true,
-            role: true,
+    // Hard timeout so UI never hangs
+    const feedback = await Promise.race([
+      prisma.feedback.findMany({
+        where,
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        select: {
+          id: true,
+          rating: true,
+          title: true,
+          message: true,
+          displayName: true,
+          companyName: true,
+          type: true,
+          createdAt: true,
+          user: {
+            select: {
+              name: true,
+              role: true,
+            },
           },
         },
-      },
-    })
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('DB timeout in /api/feedback')), 5000)
+      ),
+    ])
 
     return NextResponse.json({
       success: true,
@@ -103,9 +105,14 @@ export async function GET(request: Request) {
     })
   } catch (error) {
     console.error('Get feedback error:', error)
-    return NextResponse.json(
-      { error: 'Failed to fetch feedback' },
-      { status: 500 }
-    )
+
+    // Return a SAFE response so the landing page still loads
+    return NextResponse.json({
+      success: true,
+      feedback: [],
+      count: 0,
+      warning: 'Feedback temporarily unavailable',
+    })
   }
 }
+
