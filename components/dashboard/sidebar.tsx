@@ -12,7 +12,8 @@ import {
   Search,
   DollarSign,
   Shield,
-  X
+  X,
+  Trophy
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -37,6 +38,11 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
       icon: Briefcase,
     },
     {
+      href: '/dashboard/browse-testers',
+      label: 'Find Testers',
+      icon: Search,
+    },
+    {
       href: '/dashboard/payments',
       label: 'Payments',
       icon: CreditCard,
@@ -58,6 +64,11 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
       href: '/dashboard/applications',
       label: 'My Applications',
       icon: FileText,
+    },
+    {
+      href: '/dashboard/leaderboards',
+      label: 'Top Testers',
+      icon: Trophy,
     },
     {
       href: '/dashboard/payments',
@@ -144,7 +155,7 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
                     : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
                 )}
               >
-                <Icon className="h-5 w-5 flex-shrink-0" />
+                <Icon className="h-5 w-5 shrink-0" />
                 <span className="truncate">{link.label}</span>
               </Link>
             )

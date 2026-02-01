@@ -343,6 +343,46 @@ export async function PATCH(
         console.warn('⚠️ No payment record found for completed application:', id)
       }
 
+      // Update tester reputation stats based on their completed applications
+      try {
+        const completedApps = await prisma.application.findMany({
+          where: {
+            testerId: updatedApplication.testerId,
+            status: 'COMPLETED',
+          },
+          include: {
+            payment: true,
+          },
+        })
+
+        const totalTestsCompleted = completedApps.length
+        const totalEarnings = completedApps.reduce((sum, app) => sum + (app.payment?.amount || 0), 0)
+        const avgEngagementScore =
+          totalTestsCompleted > 0
+            ? completedApps.reduce((sum, app) => sum + (app.engagementScore || 0), 0) / totalTestsCompleted
+            : 0
+
+        const withRatings = completedApps.filter(app => app.rating && app.rating > 0)
+        const avgRating =
+          withRatings.length > 0
+            ? withRatings.reduce((sum, app) => sum + (app.rating || 0), 0) / withRatings.length
+            : 0
+
+        await prisma.user.update({
+          where: { id: updatedApplication.testerId },
+          data: {
+            totalTestsCompleted,
+            totalEarnings,
+            averageEngagementScore: Math.round(avgEngagementScore * 100) / 100,
+            averageRating: Math.round(avgRating * 100) / 100,
+          },
+        })
+
+        console.log(`✅ Updated reputation for tester ${updatedApplication.testerId}: ${totalTestsCompleted} tests, $${totalEarnings}`)
+      } catch (repError) {
+        console.error('⚠️ Failed to update tester reputation:', repError)
+      }
+
       return NextResponse.json({
         success: true,
         application: updatedApplication,

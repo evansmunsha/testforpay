@@ -90,6 +90,44 @@ export async function GET(request: Request) {
           console.log(`✅ Auto-completed and created payment: ${application.id}`)
         }
 
+        // Update tester reputation stats based on their completed applications
+        try {
+          const completedApps = await prisma.application.findMany({
+            where: {
+              testerId: application.testerId,
+              status: 'COMPLETED',
+            },
+            include: {
+              payment: true,
+            },
+          })
+
+          const totalTestsCompleted = completedApps.length
+          const totalEarnings = completedApps.reduce((sum, app) => sum + (app.payment?.amount || 0), 0)
+          const avgEngagementScore =
+            totalTestsCompleted > 0
+              ? completedApps.reduce((sum, app) => sum + (app.engagementScore || 0), 0) / totalTestsCompleted
+              : 0
+
+          const withRatings = completedApps.filter(app => app.rating && app.rating > 0)
+          const avgRating =
+            withRatings.length > 0
+              ? withRatings.reduce((sum, app) => sum + (app.rating || 0), 0) / withRatings.length
+              : 0
+
+          await prisma.user.update({
+            where: { id: application.testerId },
+            data: {
+              totalTestsCompleted,
+              totalEarnings,
+              averageEngagementScore: Math.round(avgEngagementScore * 100) / 100,
+              averageRating: Math.round(avgRating * 100) / 100,
+            },
+          })
+        } catch (repError) {
+          console.error('⚠️ Failed to update tester reputation for', application.testerId, ':', repError)
+        }
+
         results.push({
           applicationId: application.id,
           testerId: application.testerId,

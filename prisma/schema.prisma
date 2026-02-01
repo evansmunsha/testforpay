@@ -96,6 +96,51 @@ model User {
   // Ratings
   averageRating    Float?   @default(0)
   totalRatings     Int?     @default(0)
+  
+  // Tester Reputation (cached for performance)
+  averageEngagementScore Float?   @default(0)
+  totalTestsCompleted    Int?     @default(0)
+  totalEarnings          Float?   @default(0)
+  
+  // Developer features: Follow/Bookmark testers
+  followedTesters FollowedTester[] @relation("DeveloperFollows")
+  followedBy      FollowedTester[] @relation("TesterFollowedBy")
+  
+  // Developer features: Verify testers
+  verifiedTesters VerifiedTester[] @relation("DeveloperVerifies")
+  verifiedBy      VerifiedTester[] @relation("TesterVerifiedBy")
+}
+
+model FollowedTester {
+  id            String   @id @default(cuid())
+  developerId   String
+  developer     User     @relation("DeveloperFollows", fields: [developerId], references: [id], onDelete: Cascade)
+  
+  testerId      String
+  tester        User     @relation("TesterFollowedBy", fields: [testerId], references: [id], onDelete: Cascade)
+  
+  createdAt     DateTime @default(now())
+
+  @@unique([developerId, testerId])
+  @@index([developerId])
+  @@index([testerId])
+}
+
+model VerifiedTester {
+  id            String   @id @default(cuid())
+  developerId   String
+  developer     User     @relation("DeveloperVerifies", fields: [developerId], references: [id], onDelete: Cascade)
+  
+  testerId      String
+  tester        User     @relation("TesterVerifiedBy", fields: [testerId], references: [id], onDelete: Cascade)
+  
+  note          String?  @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([developerId, testerId])
+  @@index([developerId])
+  @@index([testerId])
 }
 
 model DeviceInfo {

@@ -36,12 +36,16 @@ export async function GET() {
     })
 
     // Get total earned (sum of all completed payments to this tester)
+    // Includes PROCESSING (waiting for payout) and COMPLETED (already paid out)
     const payments = await prisma.payment.aggregate({
       where: {
         application: {
-          testerId: currentUser.userId
+          testerId: currentUser.userId,
+          status: 'COMPLETED'  // Only count payments for completed applications
         },
-        status: 'COMPLETED'
+        status: {
+          in: ['PROCESSING', 'COMPLETED']  // Include both processing and completed payments
+        }
       },
       _sum: {
         amount: true
