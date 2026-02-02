@@ -24,7 +24,21 @@ interface Transaction {
 }
 
 export default function PaymentsPage() {
-  const { isDeveloper } = useAuth()
+  const { isDeveloper, isAdmin } = useAuth()
+    const [retrying, setRetrying] = useState<string | null>(null)
+    const handleRetry = async (paymentId: string) => {
+      setRetrying(paymentId)
+      try {
+        const response = await fetch(`/api/admin/payments/retry/${paymentId}`, { method: 'POST' })
+        if (response.ok) {
+          await fetchTransactions()
+        }
+      } catch (error) {
+        console.error('Failed to retry payment:', error)
+      } finally {
+        setRetrying(null)
+      }
+    }
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -178,6 +192,15 @@ export default function PaymentsPage() {
                             {getStatusIcon(t.status)}
                             <span className="ml-1.5">{t.status}</span>
                           </Badge>
+                          {isAdmin && t.status === 'FAILED' && (
+                            <button
+                              className="ml-2 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
+                              disabled={retrying === t.id}
+                              onClick={() => handleRetry(t.id)}
+                            >
+                              {retrying === t.id ? 'Retrying...' : 'Retry'}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
