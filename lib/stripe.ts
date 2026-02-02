@@ -1,4 +1,5 @@
 import Stripe from 'stripe'
+import { sendNotification } from './notifications'
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover',
@@ -58,22 +59,51 @@ export async function createAccountLink(accountId: string) {
 }
 
 // Transfer payment to tester
-export async function transferToTester(
-  amount: number,
-  stripeAccountId: string,
-  applicationId: string
-) {
-  const transfer = await stripe.transfers.create({
-    amount: Math.round(amount * 100), // Convert to cents
-    currency: 'usd',
-    destination: stripeAccountId,
-    metadata: {
-      applicationId,
-      type: 'tester_payout',
-    },
-  })
+export async function transferToTester({
+  amount,
+  currency = 'usd',
+  destinationAccountId,
+  metadata = {},
+  transferGroup,
+  adminUserId,
+}: {
+  amount: number
+  currency?: string
+  destinationAccountId: string
+  metadata?: Record<string, any>
+  transferGroup?: string
+  adminUserId?: string // Pass admin userId for notification
+}) {
+  // Fetch account details before transfer
+  const account = await stripe.accounts.retrieve(destinationAccountId)
+  console.log('Stripe account capabilities:', account.capabilities)
+  console.log('Stripe account requirements:', account.requirements)
 
-  return transfer
+  // Check if transfers capability is active
+  if (account.capabilities?.transfers !== 'active') {
+    // Send admin notification
+    if (adminUserId) {
+      await sendNotification({
+        userId: adminUserId,
+        title: 'Payout Failed: Stripe Capability',
+        body: `Payout to account ${destinationAccountId} failed. Reason: transfers capability not active. Requirements: ${JSON.stringify(account.requirements)}`,
+        url: '/dashboard/admin?tab=payments',
+        type: 'payout_failed',
+      })
+    }
+    throw new Error(
+      `Stripe account ${destinationAccountId} does not have active transfers capability. Requirements: ${JSON.stringify(account.requirements)}`
+    )
+  }
+
+  // Proceed with transfer
+  return await stripe.transfers.create({
+    amount,
+    currency,
+    destination: destinationAccountId,
+    metadata,
+    transfer_group: transferGroup,
+  })
 }
 
 // Get account balance
