@@ -103,7 +103,7 @@ export default function ApplicationsPage() {
     const end = new Date(endDate)
     const now = new Date()
     const diffTime = end.getTime() - now.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24) * 1000) / 1000 // Round to 3 decimals
     return diffDays
   }
 
