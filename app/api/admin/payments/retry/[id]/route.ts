@@ -2,16 +2,16 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   const currentUser = await getCurrentUser();
   if (!currentUser || currentUser.role !== 'ADMIN') {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const paymentId = params.id;
+  const { id } = await context.params;
   try {
     const payment = await prisma.payment.update({
-      where: { id: paymentId },
+      where: { id },
       data: { status: 'PROCESSING' }
     });
     return NextResponse.json({ success: true, payment });
