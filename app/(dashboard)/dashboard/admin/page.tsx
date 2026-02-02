@@ -346,6 +346,28 @@ export default function AdminDashboard() {
     }
   }
 
+
+  // Retry payout for failed payments (admin)
+  // This function must be inside the AdminDashboard component, but outside of the JSX/table rendering
+  // Place this with the other handler functions
+  const handleRetryPayout = async (paymentId: string) => {
+    setActionLoading(paymentId)
+    try {
+      const response = await fetch(`/api/admin/payments/retry/${paymentId}`, { method: 'POST' })
+      if (response.ok) {
+        await fetchPayments()
+        toast({ title: 'Retry Success', description: 'Payout retry triggered', variant: 'success' })
+      } else {
+        const data = await response.json()
+        toast({ title: 'Retry Failed', description: data.error || 'Failed to retry payout', variant: 'destructive' })
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: any }> = {
       ACTIVE: { variant: 'default', icon: CheckCircle },
@@ -742,24 +764,8 @@ export default function AdminDashboard() {
                           </td>
                         </tr>
                       ))}
-                      // Retry payout for failed payments (admin)
-                      const handleRetryPayout = async (paymentId: string) => {
-                        setActionLoading(paymentId)
-                        try {
-                          const response = await fetch(`/api/admin/payments/retry/${paymentId}`, { method: 'POST' })
-                          if (response.ok) {
-                            await fetchPayments()
-                            toast({ title: 'Retry Success', description: 'Payout retry triggered', variant: 'success' })
-                          } else {
-                            const data = await response.json()
-                            toast({ title: 'Retry Failed', description: data.error || 'Failed to retry payout', variant: 'destructive' })
-                          }
-                        } catch (error) {
-                          toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
-                        } finally {
-                          setActionLoading(null)
-                        }
-                      }
+
+  
                     </tbody>
                   </table>
                 </div>
