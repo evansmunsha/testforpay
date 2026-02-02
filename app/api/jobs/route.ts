@@ -46,7 +46,7 @@ export async function POST(request: Request) {
 
     // Minimum requirements
     const MIN_TESTERS = 12
-    const MIN_DURATION = 14
+    const MIN_DURATION = 0.001
     const MIN_PAYMENT = 5
 
     // Use values provided by developer (with minimums enforced)
