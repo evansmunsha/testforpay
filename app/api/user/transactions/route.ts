@@ -35,13 +35,10 @@ export async function GET() {
     } 
     
     if (currentUser.role === 'TESTER') {
-      // For testers, show payments related to their completed applications
+      // For testers, show payments related to their applications
       const transactions = await prisma.payment.findMany({
         where: {
-          application: { 
-            testerId: currentUser.userId,
-            status: 'COMPLETED'
-          }
+          application: { testerId: currentUser.userId }
         },
         include: {
           job: true,

@@ -181,17 +181,8 @@ export async function POST(request: Request) {
       },
     })
 
-    // Create payment record
-    await prisma.payment.create({
-      data: {
-        applicationId: application.id,
-        jobId,
-        amount: job.paymentPerTester,
-        platformFee: job.paymentPerTester * 0.15,
-        totalAmount: job.paymentPerTester * 1.15,
-        status: 'PENDING',
-      },
-    })
+    // Payment record will be created when developer approves the application
+    // This ensures funds are only escrowed for applications the developer accepts
 
     // Send notification email to developer
     try {

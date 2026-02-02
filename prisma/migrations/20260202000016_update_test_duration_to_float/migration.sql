@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "TestingJob" ALTER COLUMN "testDuration" SET DEFAULT 0.001,
+ALTER COLUMN "testDuration" SET DATA TYPE DOUBLE PRECISION;
