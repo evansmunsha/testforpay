@@ -37,6 +37,14 @@ export async function processCompletedTests(): Promise<PayoutResult[]> {
 
     // Skip if tester doesn't have a Stripe account
     if (!tester.stripeAccountId) {
+      // Mark as failed so it doesn't stay stuck in PROCESSING forever
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'FAILED',
+          failedAt: new Date(),
+        },
+      })
       results.push({
         applicationId: application.id,
         testerId: tester.id,
@@ -86,6 +94,7 @@ export async function processCompletedTests(): Promise<PayoutResult[]> {
         where: { id: payment.id },
         data: {
           status: 'FAILED',
+          failedAt: new Date(),
         },
       })
 
