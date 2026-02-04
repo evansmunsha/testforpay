@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { processPaymentById } from '@/lib/payouts'
 
 // This endpoint should be called by a cron service (e.g., Vercel Cron)
 // Runs daily to auto-complete testing applications after testing period expires
@@ -63,7 +64,7 @@ export async function GET(request: Request) {
         })
 
         // Ensure Payment record exists and is in PROCESSING status (ready for payout)
-        const payment = await prisma.payment.findUnique({
+        let payment = await prisma.payment.findUnique({
           where: { applicationId: application.id },
         })
 
@@ -76,7 +77,7 @@ export async function GET(request: Request) {
           const platformFeePerTester = job.platformFee / job.testersNeeded
           const totalPaymentAmount = job.paymentPerTester + platformFeePerTester
 
-          await prisma.payment.create({
+          payment = await prisma.payment.create({
             data: {
               applicationId: application.id,
               jobId: application.jobId,
@@ -88,6 +89,17 @@ export async function GET(request: Request) {
             },
           })
           console.log(`✅ Auto-completed and created payment: ${application.id}`)
+        }
+
+        if (payment?.status === 'PROCESSING') {
+          try {
+            const payoutResult = await processPaymentById(payment.id)
+            if (payoutResult?.status === 'failed') {
+              console.warn('⚠️ Auto-complete payout failed:', payoutResult.error)
+            }
+          } catch (payoutError) {
+            console.error('⚠️ Auto-complete payout threw an error:', payoutError)
+          }
         }
 
         // Update tester reputation stats based on their completed applications

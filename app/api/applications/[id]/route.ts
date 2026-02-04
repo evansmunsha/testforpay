@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { sendNotification, NotificationTemplates } from '@/lib/notifications'
+import { processPaymentById } from '@/lib/payouts'
 import { 
   sendApplicationApprovedEmail, 
   sendTestingStartedEmail 
@@ -341,6 +342,15 @@ export async function PATCH(
       // It will be picked up by the cron job for actual payout
       if (!updatedApplication.payment) {
         console.warn('⚠️ No payment record found for completed application:', id)
+      } else {
+        try {
+          const payoutResult = await processPaymentById(updatedApplication.payment.id)
+          if (payoutResult?.status === 'failed') {
+            console.warn('⚠️ Immediate payout attempt failed:', payoutResult.error)
+          }
+        } catch (payoutError) {
+          console.error('⚠️ Immediate payout attempt threw an error:', payoutError)
+        }
       }
 
       // Update tester reputation stats based on their completed applications
