@@ -69,6 +69,7 @@ interface Payment {
   amount: number
   status: string
   createdAt: string
+  failureReason?: string | null
   application: {
     job: { id: string; appName: string }
     tester: { id: string; email: string; name: string | null }
@@ -119,6 +120,7 @@ export default function AdminDashboard() {
   const [loadingTab, setLoadingTab] = useState(false)
   const [activeTab, setActiveTab] = useState('users')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const failedPaymentsCount = payments.filter((payment) => payment.status === 'FAILED').length
 
   const handleSuspendUser = async (userId: string, action: 'suspend' | 'unsuspend') => {
     const reason = action === 'suspend' 
@@ -714,6 +716,13 @@ export default function AdminDashboard() {
               <CardDescription>All tester payments</CardDescription>
             </CardHeader>
             <CardContent>
+              {failedPaymentsCount > 0 && (
+                <div className="mb-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  <AlertCircle className="h-4 w-4" />
+                  {failedPaymentsCount} failed payout{failedPaymentsCount === 1 ? '' : 's'} need attention. See the
+                  reason column for details.
+                </div>
+              )}
               {loadingTab ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -732,6 +741,7 @@ export default function AdminDashboard() {
                         <th className="text-left py-3 px-2">App</th>
                         <th className="text-left py-3 px-2">Amount</th>
                         <th className="text-left py-3 px-2">Status</th>
+                        <th className="text-left py-3 px-2">Reason</th>
                         <th className="text-left py-3 px-2">Date</th>
                       </tr>
                     </thead>
@@ -758,6 +768,9 @@ export default function AdminDashboard() {
                                 </Button>
                               )}
                             </div>
+                          </td>
+                          <td className="py-3 px-2 text-gray-600">
+                            {payment.failureReason || (payment.status === 'FAILED' ? 'Unknown error' : '-')}
                           </td>
                           <td className="py-3 px-2 text-gray-500">
                             {new Date(payment.createdAt).toLocaleDateString()}

@@ -28,6 +28,7 @@ export async function GET() {
                 id: true,
                 email: true,
                 name: true,
+                stripeAccountId: true,
               },
             },
           },
@@ -37,7 +38,22 @@ export async function GET() {
       take: 100,
     })
 
-    return NextResponse.json({ payments })
+    const paymentsWithReasons = payments.map((payment) => {
+      let failureReason: string | null = null
+      if (payment.status === 'FAILED') {
+        if (!payment.application?.tester?.stripeAccountId) {
+          failureReason = 'Tester has no connected Stripe account'
+        } else {
+          failureReason = 'Transfer failed. Check Stripe logs'
+        }
+      }
+      return {
+        ...payment,
+        failureReason,
+      }
+    })
+
+    return NextResponse.json({ payments: paymentsWithReasons })
   } catch (error) {
     console.error('Admin payments fetch error:', error)
     return NextResponse.json(
