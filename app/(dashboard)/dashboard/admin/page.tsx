@@ -866,9 +866,6 @@ export default function AdminDashboard() {
                 <Info className="mt-0.5 h-4 w-4 text-blue-700" />
                 <div>
                   <p className="font-medium">Payouts run only when funds are available</p>
-                  <p className="text-xs text-blue-800">
-                    Check the “Available on” date in Stripe → Balances to see exactly when incoming funds can be paid out.
-                  </p>
                 </div>
               </div>
               {loadingTab ? (
@@ -1307,3 +1304,4 @@ export default function AdminDashboard() {
     </div>
   )
 }
+

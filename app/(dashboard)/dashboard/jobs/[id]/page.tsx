@@ -494,15 +494,6 @@ You will receive a partial refund for unused budget.`
               </div>
             </div>
             <div className="flex items-start gap-2">
-              <Info className="h-4 w-4 text-blue-600 mt-0.5" />
-              <div>
-                <p className="font-medium">Funds availability</p>
-                <p className="text-xs text-gray-600">
-                  Check Stripe → Balances for the “Available on” date.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start gap-2">
               <Clock className="h-4 w-4 text-purple-600 mt-0.5" />
               <div>
                 <p className="font-medium">Tester payouts</p>
