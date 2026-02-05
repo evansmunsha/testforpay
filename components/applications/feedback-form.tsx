@@ -89,6 +89,66 @@ export function FeedbackForm({
     }
   }
 
+  const handleReport = async () => {
+    setReportMessage('')
+    try {
+      setReportLoading(true)
+      const res = await fetch(`/api/applications/${applicationId}/feedback-report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reason: reportReason,
+          details: reportDetails.trim() || null,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setReportMessage(data.error || 'Failed to submit report')
+        return
+      }
+      setReportMessage('Report submitted. Thank you.')
+      setShowReport(false)
+      setReportDetails('')
+    } catch (error) {
+      setReportMessage('Something went wrong. Please try again.')
+    } finally {
+      setReportLoading(false)
+    }
+  }
+
+  const handleFollowup = async () => {
+    setFollowupMessage('')
+    const trimmed = followupText.trim()
+    if (trimmed.length < 5) {
+      setFollowupMessage('Please write at least 5 characters.')
+      return
+    }
+    if (trimmed.length > 500) {
+      setFollowupMessage('Follow-up must be 500 characters or less.')
+      return
+    }
+    try {
+      setFollowupLoading(true)
+      const res = await fetch(`/api/applications/${applicationId}/feedback-followup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply: trimmed }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setFollowupMessage(data.error || 'Failed to send follow-up')
+        return
+      }
+      setFollowupMessage('Follow-up sent.')
+      setFollowupText('')
+      onSubmit?.()
+    } catch (error) {
+      setFollowupMessage('Something went wrong. Please try again.')
+    } finally {
+      setFollowupLoading(false)
+    }
+  }
+
   if (success || existingFeedback) {
     return (
       <Card className="bg-green-50 border-green-200">
@@ -225,66 +285,6 @@ export function FeedbackForm({
         </CardContent>
       </Card>
     )
-  }
-
-  const handleReport = async () => {
-    setReportMessage('')
-    try {
-      setReportLoading(true)
-      const res = await fetch(`/api/applications/${applicationId}/feedback-report`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          reason: reportReason,
-          details: reportDetails.trim() || null,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setReportMessage(data.error || 'Failed to submit report')
-        return
-      }
-      setReportMessage('Report submitted. Thank you.')
-      setShowReport(false)
-      setReportDetails('')
-    } catch (error) {
-      setReportMessage('Something went wrong. Please try again.')
-    } finally {
-      setReportLoading(false)
-    }
-  }
-
-  const handleFollowup = async () => {
-    setFollowupMessage('')
-    const trimmed = followupText.trim()
-    if (trimmed.length < 5) {
-      setFollowupMessage('Please write at least 5 characters.')
-      return
-    }
-    if (trimmed.length > 500) {
-      setFollowupMessage('Follow-up must be 500 characters or less.')
-      return
-    }
-    try {
-      setFollowupLoading(true)
-      const res = await fetch(`/api/applications/${applicationId}/feedback-followup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reply: trimmed }),
-      })
-      const data = await res.json()
-      if (!res.ok) {
-        setFollowupMessage(data.error || 'Failed to send follow-up')
-        return
-      }
-      setFollowupMessage('Follow-up sent.')
-      setFollowupText('')
-      onSubmit?.()
-    } catch (error) {
-      setFollowupMessage('Something went wrong. Please try again.')
-    } finally {
-      setFollowupLoading(false)
-    }
   }
 
   return (
