@@ -165,7 +165,7 @@ export async function PATCH(
           userId: application.testerId,
           title: 'Application Approved! 🎉',
           body: `Your application to test "${application.job.appName}" has been approved. Start testing now!`,
-          url: `/dashboard/applications/${id}`,
+          url: '/dashboard/applications',
           type: 'application_approved',
         })
       } catch (notifyError) {
@@ -216,7 +216,7 @@ export async function PATCH(
           userId: application.testerId,
           title: 'Application Update',
           body: `Your application to test "${application.job.appName}" was not approved this time.`,
-          url: `/dashboard/applications/${id}`,
+          url: '/dashboard/applications',
           type: 'application_rejected',
         })
       } catch (notifyError) {
@@ -294,7 +294,7 @@ export async function PATCH(
           userId: application.testerId,
           title: 'Verification Approved! ✅',
           body: `Your screenshot for "${application.job.appName}" has been verified. Testing period has started!`,
-          url: `/dashboard/applications/${id}`,
+          url: '/dashboard/applications',
           type: 'verification_approved',
         })
       } catch (notifyError) {
@@ -488,3 +488,4 @@ export async function DELETE(
     )
   }
 }
+
