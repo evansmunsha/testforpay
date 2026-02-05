@@ -200,6 +200,21 @@ function DeveloperDashboard() {
             </div>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Share Feedback</CardTitle>
+            <CardDescription>Help improve the platform</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Tell us what works and what needs improvement. Great feedback can appear on the landing page.
+            </p>
+            <Link href="/dashboard/feedback">
+              <Button className="w-full">Leave Feedback</Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Activity */}
@@ -415,6 +430,26 @@ function TesterDashboard() {
               </div>
               <p className="text-sm text-gray-600">Test for 14 days and get paid!</p>
             </div>
+            <Link href="/dashboard/tutorial">
+              <Button variant="outline" className="w-full mt-2">
+                View Full Tutorial
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Share Feedback</CardTitle>
+            <CardDescription>Help improve the platform</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Tell us what works and what needs improvement. Great feedback can appear on the landing page.
+            </p>
+            <Link href="/dashboard/feedback">
+              <Button className="w-full">Leave Feedback</Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

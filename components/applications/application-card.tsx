@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Textarea } from '@/components/ui/textarea'
 import { 
   User, 
   Mail, 
@@ -34,10 +35,15 @@ interface ApplicationCardProps {
     rating: number | null
     engagementScore?: number | null
     feedbackSubmittedAt?: string | null
+    developerReply?: string | null
+    developerReplyAt?: string | null
+    testerFollowupReply?: string | null
+    testerFollowupAt?: string | null
     tester: {
       id: string
       name: string | null
       email: string
+      muteDeveloperReplies?: boolean
       createdAt: string
       deviceInfo: {
         deviceModel: string
@@ -62,6 +68,11 @@ export function ApplicationCard({
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [engagementScore, setEngagementScore] = useState<number | null>(application.engagementScore || null)
   const [loadingScore, setLoadingScore] = useState(false)
+  const [replyText, setReplyText] = useState('')
+  const [replyError, setReplyError] = useState('')
+  const [replyLoading, setReplyLoading] = useState(false)
+  const [developerReply, setDeveloperReply] = useState<string | null>(application.developerReply || null)
+  const [developerReplyAt, setDeveloperReplyAt] = useState<string | null>(application.developerReplyAt || null)
 
   useEffect(() => {
     // Calculate engagement score when feedback is submitted
@@ -88,6 +99,43 @@ export function ApplicationCard({
     }
   }
 
+  const handleReplySubmit = async () => {
+    setReplyError('')
+    if (repliesMuted) {
+      setReplyError('Tester has muted developer replies')
+      return
+    }
+    const trimmed = replyText.trim()
+    if (trimmed.length < 5) {
+      setReplyError('Please write at least 5 characters')
+      return
+    }
+    if (trimmed.length > 500) {
+      setReplyError('Reply must be 500 characters or less')
+      return
+    }
+    try {
+      setReplyLoading(true)
+      const res = await fetch(`/api/applications/${application.id}/feedback-reply`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply: trimmed }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setReplyError(data.error || 'Failed to send reply')
+        return
+      }
+      setDeveloperReply(trimmed)
+      setDeveloperReplyAt(new Date().toISOString())
+      setReplyText('')
+    } catch (error) {
+      setReplyError('Something went wrong. Please try again.')
+    } finally {
+      setReplyLoading(false)
+    }
+  }
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'PENDING': return 'bg-yellow-100 text-yellow-800'
@@ -105,6 +153,7 @@ export function ApplicationCard({
     (new Date().getTime() - new Date(application.tester.createdAt).getTime()) / 
     (1000 * 60 * 60 * 24)
   )
+  const repliesMuted = !!application.tester?.muteDeveloperReplies
 
   return (
     <>
@@ -181,22 +230,38 @@ export function ApplicationCard({
             </div>
           )}
 
-          {/* Verification Image */}
-          {application.verificationImage && (
+          {/* Verification Images */}
+          {(application.verificationImage || application.verificationImage2) && (
             <div className="bg-indigo-50 p-3 rounded-lg">
               <p className="text-sm font-semibold mb-2 flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 text-indigo-600" />
-                Verification Screenshot
+                Verification Screenshots
               </p>
-              <div 
-                onClick={() => setImageDialogOpen(true)}
-                className="cursor-pointer hover:opacity-80 transition-opacity"
-              >
-                <img 
-                  src={application.verificationImage} 
-                  alt="Verification" 
-                  className="max-w-full h-auto rounded border border-indigo-200"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {application.verificationImage && (
+                  <div
+                    onClick={() => setImageDialogOpen(true)}
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                  >
+                    <img
+                      src={application.verificationImage}
+                      alt="Verification screenshot 1"
+                      className="max-w-full h-auto rounded border border-indigo-200"
+                    />
+                  </div>
+                )}
+                {application.verificationImage2 && (
+                  <div
+                    onClick={() => setImageDialogOpen(true)}
+                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                  >
+                    <img
+                      src={application.verificationImage2}
+                      alt="Verification screenshot 2"
+                      className="max-w-full h-auto rounded border border-indigo-200"
+                    />
+                  </div>
+                )}
               </div>
               <p className="text-xs text-indigo-700 mt-2">
                 Click to view full size
@@ -221,12 +286,74 @@ export function ApplicationCard({
 
           {/* Feedback Section */}
           {application.feedback && (
-            <div className="bg-green-50 p-3 rounded-lg">
-              <p className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <span className="text-yellow-500">⭐</span>
-                {application.rating ? `Rating: ${application.rating}/5` : 'Feedback'}
-              </p>
-              <p className="text-sm text-gray-700">{application.feedback}</p>
+            <div className="space-y-3">
+              <div className="bg-green-50 p-3 rounded-lg">
+                <p className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <span className="text-yellow-500">⭐</span>
+                  {application.rating ? `Rating: ${application.rating}/5` : 'Feedback'}
+                </p>
+                <p className="text-sm text-gray-700 whitespace-pre-wrap">{application.feedback}</p>
+              </div>
+
+              {developerReply ? (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm font-semibold text-blue-900 mb-1">Your reply</p>
+                  <p className="text-sm text-blue-800 whitespace-pre-wrap">{developerReply}</p>
+                  {developerReplyAt && (
+                    <p className="text-xs text-blue-700 mt-2">
+                      Sent {new Date(developerReplyAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              ) : repliesMuted ? (
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-800">Replies are muted</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    This tester has opted out of developer replies.
+                  </p>
+                </div>
+              ) : (
+                <div className="bg-white p-3 rounded-lg border border-blue-200">
+                  <p className="text-sm font-semibold text-blue-900 mb-1">Reply to tester</p>
+                  <p className="text-xs text-blue-700 mb-2">
+                    One reply only. Keep it short and helpful.
+                  </p>
+                  {replyError && (
+                    <div className="text-xs text-red-600 mb-2">{replyError}</div>
+                  )}
+                  <Textarea
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="Ask a clarification or say thanks..."
+                    rows={3}
+                    className="resize-none"
+                  />
+                  <div className="flex items-center justify-between mt-2">
+                    <span className="text-xs text-gray-500">{replyText.length}/500</span>
+                    <Button
+                      size="sm"
+                      onClick={handleReplySubmit}
+                      disabled={replyLoading}
+                    >
+                      {replyLoading ? 'Sending...' : 'Send reply'}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {application.testerFollowupReply && (
+                <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
+                  <p className="text-sm font-semibold text-amber-900 mb-1">Tester follow-up</p>
+                  <p className="text-sm text-amber-800 whitespace-pre-wrap">
+                    {application.testerFollowupReply}
+                  </p>
+                  {application.testerFollowupAt && (
+                    <p className="text-xs text-amber-700 mt-2">
+                      Sent {new Date(application.testerFollowupAt).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -354,15 +481,24 @@ export function ApplicationCard({
       <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Verification Screenshot</DialogTitle>
+            <DialogTitle>Verification Screenshots</DialogTitle>
           </DialogHeader>
-          {application.verificationImage && (
-            <img 
-              src={application.verificationImage} 
-              alt="Verification" 
-              className="w-full h-auto rounded"
-            />
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {application.verificationImage && (
+              <img
+                src={application.verificationImage}
+                alt="Verification screenshot 1"
+                className="w-full h-auto rounded"
+              />
+            )}
+            {application.verificationImage2 && (
+              <img
+                src={application.verificationImage2}
+                alt="Verification screenshot 2"
+                className="w-full h-auto rounded"
+              />
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

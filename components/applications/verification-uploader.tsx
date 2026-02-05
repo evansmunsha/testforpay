@@ -155,11 +155,11 @@ export function VerificationUploader({
                   }}
                 />
               ) : (
-                <div className="relative inline-block w-full max-w-sm">
+                <div className="relative inline-block">
                   <img 
                     src={uploadedUrls[0]} 
                     alt="Verification screenshot 1" 
-                    className="max-w-full h-auto rounded-lg border-2 border-green-200"
+                    className="h-36 w-36 object-cover rounded-lg border-2 border-green-200"
                   />
                   <button
                     onClick={() => removeImage(1)}
@@ -190,11 +190,11 @@ export function VerificationUploader({
                   }}
                 />
               ) : (
-                <div className="relative inline-block w-full max-w-sm">
+                <div className="relative inline-block">
                   <img 
                     src={uploadedUrls[1]} 
                     alt="Verification screenshot 2" 
-                    className="max-w-full h-auto rounded-lg border-2 border-green-200"
+                    className="h-36 w-36 object-cover rounded-lg border-2 border-green-200"
                   />
                   <button
                     onClick={() => removeImage(2)}

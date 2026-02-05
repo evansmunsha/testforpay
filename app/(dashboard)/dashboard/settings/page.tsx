@@ -43,6 +43,9 @@ export default function SettingsPage() {
     defaultCurrency: string | null
     hasEurExternalAccount: boolean
   } | null>(null)
+  const [muteReplies, setMuteReplies] = useState(false)
+  const [prefLoading, setPrefLoading] = useState(false)
+  const [prefMessage, setPrefMessage] = useState('')
 
   useEffect(() => {
     if (user) {
@@ -64,6 +67,22 @@ export default function SettingsPage() {
       }
     }
     fetchPayoutInfo()
+  }, [user?.role])
+
+  useEffect(() => {
+    if (user?.role !== 'TESTER') return
+    const fetchPreferences = async () => {
+      try {
+        const response = await fetch('/api/user/preferences')
+        const data = await response.json()
+        if (response.ok) {
+          setMuteReplies(!!data.preferences?.muteDeveloperReplies)
+        }
+      } catch (error) {
+        console.error('Failed to load preferences:', error)
+      }
+    }
+    fetchPreferences()
   }, [user?.role])
 
   const handleSaveProfile = async () => {
@@ -221,6 +240,30 @@ export default function SettingsPage() {
     } catch (error) {
       setOnboardingError('Something went wrong. Please refresh and try again.')
       setOnboardingLoading(false)
+    }
+  }
+
+  const handleMuteRepliesToggle = async (checked: boolean) => {
+    setPrefLoading(true)
+    setPrefMessage('')
+    try {
+      const response = await fetch('/api/user/preferences', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ muteDeveloperReplies: checked }),
+      })
+      const data = await response.json()
+      if (response.ok) {
+        setMuteReplies(!!data.preferences?.muteDeveloperReplies)
+        setPrefMessage(checked ? 'Replies muted.' : 'Replies enabled.')
+        setTimeout(() => setPrefMessage(''), 3000)
+      } else {
+        setPrefMessage(data.error || 'Failed to update preference')
+      }
+    } catch (error) {
+      setPrefMessage('Something went wrong')
+    } finally {
+      setPrefLoading(false)
     }
   }
 
@@ -498,6 +541,37 @@ export default function SettingsPage() {
                   ? 'You can update your payout details on Stripe'
                   : 'You\'ll be redirected to Stripe to securely set up your payout details'}
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Reply Preferences Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Feedback Replies</CardTitle>
+              <CardDescription>Control whether developers can reply to your feedback</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-medium">Allow developer replies</p>
+                  <p className="text-xs text-gray-500">
+                    When off, developers can’t send replies to your feedback.
+                  </p>
+                </div>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={!muteReplies}
+                    onChange={(e) => handleMuteRepliesToggle(!e.target.checked)}
+                    disabled={prefLoading}
+                  />
+                  {muteReplies ? 'Off' : 'On'}
+                </label>
+              </div>
+              {prefMessage && (
+                <p className="text-xs text-gray-600">{prefMessage}</p>
+              )}
             </CardContent>
           </Card>
 

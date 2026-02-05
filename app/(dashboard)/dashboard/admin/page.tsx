@@ -14,11 +14,13 @@ import {
   DollarSign, 
   TrendingUp,
   AlertCircle,
+  Info,
   CheckCircle,
   Clock,
   XCircle,
   ShieldAlert,
-  Flag
+  Flag,
+  MessageSquare
 } from 'lucide-react'
 
 interface Stats {
@@ -102,6 +104,33 @@ interface FraudLog {
   user: { id: string; email: string; name: string | null; role: string } | null
 }
 
+interface FeedbackReport {
+  id: string
+  reason: string
+  details: string | null
+  createdAt: string
+  resolvedAt: string | null
+  reporter: { id: string; email: string; name: string | null; role: string }
+  application: {
+    id: string
+    developerReply?: string | null
+    job: { id: string; appName: string; developer: { id: string; email: string; name: string | null } }
+  }
+}
+
+interface TestimonialFeedback {
+  id: string
+  type: string
+  rating: number
+  title: string
+  message: string
+  approved: boolean
+  createdAt: string
+  displayName: string | null
+  companyName: string | null
+  user: { id: string; email: string; name: string | null; role: string }
+}
+
 export default function AdminDashboard() {
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -117,10 +146,14 @@ export default function AdminDashboard() {
   const [payments, setPayments] = useState<Payment[]>([])
   const [fraudStats, setFraudStats] = useState<FraudStats | null>(null)
   const [fraudLogs, setFraudLogs] = useState<FraudLog[]>([])
+  const [feedbackReports, setFeedbackReports] = useState<FeedbackReport[]>([])
+  const [testimonials, setTestimonials] = useState<TestimonialFeedback[]>([])
+  const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'pending' | 'approved'>('pending')
   const [loadingTab, setLoadingTab] = useState(false)
   const [activeTab, setActiveTab] = useState('users')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const failedPaymentsCount = payments.filter((payment) => payment.status === 'FAILED').length
+  const unresolvedReportsCount = feedbackReports.filter((report) => !report.resolvedAt).length
 
   const handleSuspendUser = async (userId: string, action: 'suspend' | 'unsuspend') => {
     const reason = action === 'suspend' 
@@ -211,9 +244,11 @@ export default function AdminDashboard() {
       else if (activeTab === 'jobs') fetchJobs()
       else if (activeTab === 'applications') fetchApplications()
       else if (activeTab === 'payments') fetchPayments()
+      else if (activeTab === 'reports') fetchFeedbackReports()
+      else if (activeTab === 'testimonials') fetchTestimonials()
       else if (activeTab === 'fraud') fetchFraudData()
     }
-  }, [activeTab, loading, user])
+  }, [activeTab, loading, user, feedbackFilter])
 
   const fetchStats = async () => {
     setLoadingStats(true)
@@ -307,6 +342,108 @@ export default function AdminDashboard() {
       console.error('Failed to fetch fraud data:', error)
     } finally {
       setLoadingTab(false)
+    }
+  }
+
+  const fetchFeedbackReports = async () => {
+    setLoadingTab(true)
+    try {
+      const response = await fetch('/api/admin/feedback-reports?resolved=false')
+      const data = await response.json()
+      if (response.ok) {
+        setFeedbackReports(data.reports || [])
+      } else {
+        console.error('Failed to fetch reports:', data.error)
+      }
+    } catch (error) {
+      console.error('Failed to fetch reports:', error)
+    } finally {
+      setLoadingTab(false)
+    }
+  }
+
+  const fetchTestimonials = async () => {
+    setLoadingTab(true)
+    try {
+      const params = new URLSearchParams()
+      if (feedbackFilter === 'pending') params.set('approved', 'false')
+      if (feedbackFilter === 'approved') params.set('approved', 'true')
+      const response = await fetch(`/api/admin/feedback?${params.toString()}`)
+      const data = await response.json()
+      if (response.ok) {
+        setTestimonials(data.feedback || [])
+      } else {
+        console.error('Failed to fetch feedback:', data.error)
+      }
+    } catch (error) {
+      console.error('Failed to fetch feedback:', error)
+    } finally {
+      setLoadingTab(false)
+    }
+  }
+
+  const handleResolveReport = async (reportId: string) => {
+    setActionLoading(reportId)
+    try {
+      const response = await fetch(`/api/admin/feedback-reports/${reportId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolved: true }),
+      })
+      const data = await response.json()
+      if (response.ok) {
+        toast({ title: 'Resolved', description: 'Report marked as resolved', variant: 'success' })
+        fetchFeedbackReports()
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to resolve report', variant: 'destructive' })
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleToggleFeedbackApproval = async (feedbackId: string, approved: boolean) => {
+    setActionLoading(feedbackId)
+    try {
+      const response = await fetch(`/api/admin/feedback/${feedbackId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved }),
+      })
+      const data = await response.json()
+      if (response.ok) {
+        toast({ title: 'Updated', description: data.message, variant: 'success' })
+        fetchTestimonials()
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to update feedback', variant: 'destructive' })
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const handleDeleteFeedback = async (feedbackId: string) => {
+    if (!confirm('Delete this feedback permanently?')) return
+    setActionLoading(feedbackId)
+    try {
+      const response = await fetch(`/api/admin/feedback/${feedbackId}`, {
+        method: 'DELETE',
+      })
+      const data = await response.json()
+      if (response.ok) {
+        toast({ title: 'Deleted', description: data.message, variant: 'success' })
+        fetchTestimonials()
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to delete feedback', variant: 'destructive' })
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setActionLoading(null)
     }
   }
 
@@ -493,6 +630,8 @@ export default function AdminDashboard() {
           <TabsTrigger value="jobs">Jobs ({stats?.totalJobs || 0})</TabsTrigger>
           <TabsTrigger value="applications">Applications ({stats?.totalApplications || 0})</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
+          <TabsTrigger value="reports">Reports ({unresolvedReportsCount})</TabsTrigger>
+          <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
           <TabsTrigger value="fraud" className="text-red-600">
             <ShieldAlert className="h-4 w-4 mr-1" />
             Fraud ({fraudStats?.unresolvedLogs || 0})
@@ -723,6 +862,15 @@ export default function AdminDashboard() {
                   reason column for details.
                 </div>
               )}
+              <div className="mb-4 flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+                <Info className="mt-0.5 h-4 w-4 text-blue-700" />
+                <div>
+                  <p className="font-medium">Payouts run only when funds are available</p>
+                  <p className="text-xs text-blue-800">
+                    Check the “Available on” date in Stripe → Balances to see exactly when incoming funds can be paid out.
+                  </p>
+                </div>
+              </div>
               {loadingTab ? (
                 <div className="flex justify-center py-8">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
@@ -779,6 +927,182 @@ export default function AdminDashboard() {
                       ))}
 
   
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="reports">
+          <Card>
+            <CardHeader>
+              <CardTitle>Feedback Reply Reports</CardTitle>
+              <CardDescription>Reports submitted by testers about developer replies</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingTab ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                </div>
+              ) : feedbackReports.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <Flag className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>No reports found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-2">Reporter</th>
+                        <th className="text-left py-3 px-2">App</th>
+                        <th className="text-left py-3 px-2">Reason</th>
+                        <th className="text-left py-3 px-2">Reply</th>
+                        <th className="text-left py-3 px-2">Details</th>
+                        <th className="text-left py-3 px-2">Date</th>
+                        <th className="text-left py-3 px-2">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {feedbackReports.map((report) => (
+                        <tr key={report.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-2">
+                            {report.reporter.name || report.reporter.email}
+                          </td>
+                          <td className="py-3 px-2">{report.application.job.appName}</td>
+                          <td className="py-3 px-2">
+                            <Badge variant="outline">{report.reason}</Badge>
+                          </td>
+                          <td className="py-3 px-2 text-gray-600">
+                            <span className="line-clamp-2">
+                              {report.application.developerReply || '-'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-2 text-gray-600">
+                            {report.details || '-'}
+                          </td>
+                          <td className="py-3 px-2 text-gray-500">
+                            {new Date(report.createdAt).toLocaleDateString()}
+                          </td>
+                          <td className="py-3 px-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={actionLoading === report.id}
+                              onClick={() => handleResolveReport(report.id)}
+                            >
+                              {actionLoading === report.id ? 'Resolving...' : 'Resolve'}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="testimonials">
+          <Card>
+            <CardHeader>
+              <CardTitle>Testimonials & Feedback</CardTitle>
+              <CardDescription>Approve feedback to show on the landing page</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-2 mb-4">
+                <Button
+                  size="sm"
+                  variant={feedbackFilter === 'pending' ? 'default' : 'outline'}
+                  onClick={() => setFeedbackFilter('pending')}
+                >
+                  Pending
+                </Button>
+                <Button
+                  size="sm"
+                  variant={feedbackFilter === 'approved' ? 'default' : 'outline'}
+                  onClick={() => setFeedbackFilter('approved')}
+                >
+                  Approved
+                </Button>
+                <Button
+                  size="sm"
+                  variant={feedbackFilter === 'all' ? 'default' : 'outline'}
+                  onClick={() => setFeedbackFilter('all')}
+                >
+                  All
+                </Button>
+              </div>
+
+              {loadingTab ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                </div>
+              ) : testimonials.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>No feedback found</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-2">Type</th>
+                        <th className="text-left py-3 px-2">Rating</th>
+                        <th className="text-left py-3 px-2">Title</th>
+                        <th className="text-left py-3 px-2">Message</th>
+                        <th className="text-left py-3 px-2">Author</th>
+                        <th className="text-left py-3 px-2">Status</th>
+                        <th className="text-left py-3 px-2">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {testimonials.map((item) => (
+                        <tr key={item.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-2 capitalize">{item.type}</td>
+                          <td className="py-3 px-2">{item.rating}/5</td>
+                          <td className="py-3 px-2 font-medium">{item.title}</td>
+                          <td className="py-3 px-2 text-gray-600">
+                            <span className="line-clamp-2">{item.message}</span>
+                          </td>
+                          <td className="py-3 px-2">
+                            {item.displayName || item.user.name || item.user.email}
+                          </td>
+                          <td className="py-3 px-2">
+                            <Badge variant={item.approved ? 'default' : 'outline'}>
+                              {item.approved ? 'Approved' : 'Pending'}
+                            </Badge>
+                          </td>
+                          <td className="py-3 px-2">
+                            <div className="flex items-center gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={actionLoading === item.id}
+                                onClick={() => handleToggleFeedbackApproval(item.id, !item.approved)}
+                              >
+                                {actionLoading === item.id
+                                  ? 'Saving...'
+                                  : item.approved
+                                    ? 'Unapprove'
+                                    : 'Approve'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                disabled={actionLoading === item.id}
+                                onClick={() => handleDeleteFeedback(item.id)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>

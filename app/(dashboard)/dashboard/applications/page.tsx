@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { VerificationUploader } from '@/components/applications/verification-uploader'
-import { FileText, DollarSign, Clock, Calendar, ExternalLink, Upload, MessageSquare } from 'lucide-react'
+import { FileText, DollarSign, Clock, Calendar, ExternalLink, Upload, MessageSquare, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { FeedbackForm } from '@/components/applications/feedback-form'
 import { formatEur } from '@/lib/currency'
@@ -19,8 +19,13 @@ interface Application {
   testingEndDate: string | null
   optInVerified: boolean
   verificationImage: string | null
+  verificationImage2?: string | null
   feedback: string | null
   rating: number | null
+  developerReply?: string | null
+  developerReplyAt?: string | null
+  testerFollowupReply?: string | null
+  testerFollowupAt?: string | null
   job: {
     id: string
     appName: string
@@ -42,6 +47,7 @@ interface Application {
 export default function ApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
 
@@ -49,8 +55,16 @@ export default function ApplicationsPage() {
     fetchApplications()
   }, [])
 
-  const fetchApplications = async () => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchApplications(true)
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchApplications = async (silent = false) => {
     try {
+      if (!silent) setLoading(true)
       const response = await fetch('/api/applications')
       const data = await response.json()
       if (response.ok) {
@@ -59,7 +73,8 @@ export default function ApplicationsPage() {
     } catch (error) {
       console.error('Failed to fetch applications:', error)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -118,9 +133,24 @@ export default function ApplicationsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-3xl font-bold text-gray-900">My Applications</h2>
-        <p className="text-gray-600 mt-1">Track your testing applications and earnings</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-900">My Applications</h2>
+          <p className="text-gray-600 mt-1">Track your testing applications and earnings</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setRefreshing(true)
+            fetchApplications(true)
+          }}
+          disabled={refreshing}
+          className="flex items-center gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
       </div>
 
       {/* Summary Cards */}
@@ -300,12 +330,23 @@ export default function ApplicationsPage() {
                     <p className="text-sm text-indigo-800">
                       The developer is reviewing your screenshot. Testing will start once verified.
                     </p>
-                    {app.verificationImage && (
-                      <img 
-                        src={app.verificationImage} 
-                        alt="Verification" 
-                        className="max-w-xs rounded border"
-                      />
+                    {(app.verificationImage || app.verificationImage2) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {app.verificationImage && (
+                          <img 
+                            src={app.verificationImage} 
+                            alt="Verification screenshot 1" 
+                            className="max-w-xs rounded border"
+                          />
+                        )}
+                        {app.verificationImage2 && (
+                          <img 
+                            src={app.verificationImage2} 
+                            alt="Verification screenshot 2" 
+                            className="max-w-xs rounded border"
+                          />
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -342,6 +383,10 @@ export default function ApplicationsPage() {
                       appName={app.job.appName}
                       existingFeedback={app.feedback || undefined}
                       existingRating={app.rating || undefined}
+                      existingDeveloperReply={app.developerReply || undefined}
+                      existingDeveloperReplyAt={app.developerReplyAt || undefined}
+                      existingTesterFollowup={app.testerFollowupReply || undefined}
+                      existingTesterFollowupAt={app.testerFollowupAt || undefined}
                       onSubmit={fetchApplications}
                     />
                   </div>
@@ -361,6 +406,10 @@ export default function ApplicationsPage() {
                       appName={app.job.appName}
                       existingFeedback={app.feedback || undefined}
                       existingRating={app.rating || undefined}
+                      existingDeveloperReply={app.developerReply || undefined}
+                      existingDeveloperReplyAt={app.developerReplyAt || undefined}
+                      existingTesterFollowup={app.testerFollowupReply || undefined}
+                      existingTesterFollowupAt={app.testerFollowupAt || undefined}
                       onSubmit={fetchApplications}
                     />
                   </div>

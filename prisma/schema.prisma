@@ -81,6 +81,7 @@ model User {
   
   // Tester fields
   stripeAccountId  String?  @unique
+  muteDeveloperReplies Boolean @default(false)
   paypalEmail      String?
   phoneNumber      String?
   applications     Application[]
@@ -91,6 +92,7 @@ model User {
   notifications     Notification[]
   fraudLogs         FraudLog[]
   feedbacks         Feedback[]
+  feedbackReports   FeedbackReport[]
   usageLogs         AppUsageLog[] @relation("UsageLogs")
   
   // Ratings
@@ -227,6 +229,10 @@ model Application {
   feedback          String?             @db.Text
   rating            Int?
   feedbackSubmittedAt DateTime?
+  developerReply    String?             @db.Text
+  developerReplyAt  DateTime?
+  testerFollowupReply String?           @db.Text
+  testerFollowupAt  DateTime?
   
   // Engagement tracking
   engagementScore   Int?                @default(0) // 0-100 score based on testing activity
@@ -234,6 +240,7 @@ model Application {
   
   // Payment
   payment           Payment?
+  feedbackReports   FeedbackReport[]
   
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -243,6 +250,21 @@ model Application {
   @@index([testerId])
   @@index([status])
   @@index([ipAddress])
+}
+
+model FeedbackReport {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  reporterId    String
+  reporter      User        @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  reason        String
+  details       String?     @db.Text
+  createdAt     DateTime    @default(now())
+  resolvedAt    DateTime?
+
+  @@index([applicationId])
+  @@index([reporterId])
 }
 
 model Payment {
@@ -412,4 +434,3 @@ model ProductionQuestionnaire {
   
   @@index([developerId])
 }
-

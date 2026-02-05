@@ -24,6 +24,7 @@ export async function GET() {
         emailVerified: true,
         createdAt: true,
         stripeAccountId: true,
+        muteDeveloperReplies: true,
       },
     })
     

@@ -11,6 +11,7 @@ interface User {
   emailVerified: boolean
   createdAt: string
   stripeAccountId: string | null
+  muteDeveloperReplies?: boolean
 }
 
 export function useAuth() {

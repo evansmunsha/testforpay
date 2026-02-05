@@ -157,6 +157,19 @@ export function TestingReportViewer({ jobId }: TestingReportViewerProps) {
   }
 
   const isReady = report.complianceCheck.status === 'READY_FOR_PRODUCTION'
+  const completedTesters = report.recruitment.completedTesters || 0
+  const feedbackCount = report.feedback.testedWithFeedback || 0
+  const feedbackCoverage = completedTesters > 0 ? Math.round((feedbackCount / completedTesters) * 100) : 0
+  const topThemes = Object.entries(report.feedback.feedbackThemes || {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+  const avgRatingValue = typeof report.feedback.avgRating === 'number' ? report.feedback.avgRating : null
+  const needsMoreFeedback = completedTesters > 0 && feedbackCount / completedTesters < 0.6
+  const summaryHint = needsMoreFeedback
+    ? 'Consider asking testers to submit feedback so you get stronger, more reliable insights.'
+    : avgRatingValue !== null && avgRatingValue < 3.5
+      ? 'Ratings are lower than expected. Focus on the top issues before the next release.'
+      : 'Feedback volume looks healthy. Use the themes below to prioritize improvements.'
 
   return (
     <div className="space-y-6">
@@ -185,6 +198,50 @@ export function TestingReportViewer({ jobId }: TestingReportViewerProps) {
           )}
         </div>
       </div>
+
+      {/* Developer Summary */}
+      <Card className="p-4 border-emerald-200 bg-emerald-50">
+        <div className="flex items-center gap-2 mb-3">
+          <Eye className="w-5 h-5 text-emerald-700" />
+          <h4 className="font-semibold text-emerald-900">Developer Summary</h4>
+        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div>
+            <p className="text-sm text-emerald-800">Feedback Coverage</p>
+            <p className="text-2xl font-bold text-emerald-900">
+              {feedbackCoverage}%
+            </p>
+            <p className="text-xs text-emerald-800 mt-1">
+              {feedbackCount} of {completedTesters} completed
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-emerald-800">Average Rating</p>
+            <p className="text-2xl font-bold text-emerald-900">
+              {report.feedback.avgRating}
+              {report.feedback.avgRating !== 'N/A' && <span className="text-lg">/5</span>}
+            </p>
+          </div>
+          <div>
+            <p className="text-sm text-emerald-800">Top Themes</p>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {topThemes.length === 0 ? (
+                <span className="text-xs text-emerald-800">No themes yet</span>
+              ) : (
+                topThemes.map(([theme, count]) => (
+                  <span
+                    key={theme}
+                    className="px-2 py-1 bg-white text-emerald-800 text-xs rounded border border-emerald-200"
+                  >
+                    {theme} ({count})
+                  </span>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-emerald-800">{summaryHint}</p>
+      </Card>
 
       {/* Export Buttons */}
       <div className="flex gap-3">

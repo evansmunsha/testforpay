@@ -21,7 +21,9 @@ import {
   Edit,
   Trash2,
   ExternalLink,
-  AlertCircle
+  AlertCircle,
+  Info,
+  RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -64,12 +66,17 @@ interface Application {
   rating: number | null
   engagementScore?: number | null
   feedbackSubmittedAt?: string | null
+  developerReply?: string | null
+  developerReplyAt?: string | null
+  testerFollowupReply?: string | null
+  testerFollowupAt?: string | null
   tester: {
-    id: string
-    name: string | null
-    email: string
-    createdAt: string
-    deviceInfo: {
+      id: string
+      name: string | null
+      email: string
+      createdAt: string
+      muteDeveloperReplies?: boolean
+      deviceInfo: {
       deviceModel: string
       androidVersion: string
       screenSize: string | null
@@ -85,13 +92,22 @@ export default function JobDetailPage() {
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
     fetchJob()
   }, [])
 
-  const fetchJob = async () => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchJob(true)
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
+  const fetchJob = async (silent = false) => {
     try {
+      if (!silent) setLoading(true)
       const response = await fetch(`/api/jobs/${params.id}`)
       const data = await response.json()
 
@@ -103,7 +119,8 @@ export default function JobDetailPage() {
     } catch (err) {
       setError('Something went wrong')
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
+      setRefreshing(false)
     }
   }
 
@@ -317,6 +334,20 @@ You will receive a partial refund for unused budget.`
   )
   const completedApplications = job.applications.filter(app => app.status === 'COMPLETED')
   const rejectedApplications = job.applications.filter(app => app.status === 'REJECTED')
+  const isDraft = job.status === 'DRAFT'
+  const isCancelled = job.status === 'CANCELLED'
+  const isCompleted = job.status === 'COMPLETED'
+  const isActive = ['ACTIVE', 'IN_PROGRESS'].includes(job.status)
+  const paymentReceived = !isDraft && !isCancelled
+  const paymentSummary = isDraft
+    ? 'Awaiting payment. Complete checkout to publish this job.'
+    : isCancelled
+      ? 'Job cancelled. Refunds and partial payouts (if any) have been processed.'
+      : isCompleted
+        ? 'Testing completed. Payouts are being processed.'
+        : isActive
+          ? 'Payment received and held in escrow while testers work.'
+          : 'Payment status is being updated.'
 
   return (
     <div className="space-y-6">
@@ -338,6 +369,17 @@ You will receive a partial refund for unused budget.`
           </div>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setRefreshing(true)
+              fetchJob(true)
+            }}
+            disabled={refreshing}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
           {job.status === 'DRAFT' && (
             <Button onClick={handlePublish}>
               <CheckCircle className="h-4 w-4 mr-2" />
@@ -429,6 +471,49 @@ You will receive a partial refund for unused budget.`
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Payment Status</CardTitle>
+          <CardDescription>Clear view of escrow and payouts</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="text-sm">{paymentSummary}</div>
+          <div className="space-y-3 text-sm">
+            <div className="flex items-start gap-2">
+              {paymentReceived ? (
+                <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
+              ) : (
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+              )}
+              <div>
+                <p className="font-medium">Payment received</p>
+                <p className="text-xs text-gray-600">
+                  {paymentReceived ? 'Paid and held in escrow.' : 'Not paid yet.'}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <Info className="h-4 w-4 text-blue-600 mt-0.5" />
+              <div>
+                <p className="font-medium">Funds availability</p>
+                <p className="text-xs text-gray-600">
+                  Check Stripe → Balances for the “Available on” date.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2">
+              <Clock className="h-4 w-4 text-purple-600 mt-0.5" />
+              <div>
+                <p className="font-medium">Tester payouts</p>
+                <p className="text-xs text-gray-600">
+                  {isCompleted ? 'Payouts are processing.' : 'Payouts run after testing completes.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Main Content */}
       <div className="grid lg:grid-cols-3 gap-6">
