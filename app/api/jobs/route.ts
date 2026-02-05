@@ -46,12 +46,13 @@ export async function POST(request: Request) {
 
     // Minimum requirements
     const MIN_TESTERS = 12
-    const MIN_DURATION = 0.001
+    const MIN_DURATION = 14
     const MIN_PAYMENT = 5
 
     // Use values provided by developer (with minimums enforced)
     let finalTestersNeeded = Math.max(MIN_TESTERS, testersNeeded || 20)
-    let finalTestDuration = Math.max(MIN_DURATION, testDuration || 14)
+    const normalizedDuration = typeof testDuration === 'number' ? Math.trunc(testDuration) : undefined
+    let finalTestDuration = Math.max(MIN_DURATION, normalizedDuration || 14)
     let finalPaymentPerTester = Math.max(MIN_PAYMENT, customPaymentPerTester || 7.5)
     let finalTotalBudget = finalPaymentPerTester * finalTestersNeeded
 

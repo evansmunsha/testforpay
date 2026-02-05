@@ -37,7 +37,7 @@ export function JobForm() {
     googlePlayLink: '',
     appCategory: '',
     testersNeeded: 20,
-    testDuration: 0.001,
+    testDuration: 14,
     minAndroidVersion: '',
     paymentPerTester: 7.5,
     planType: 'STARTER',
@@ -114,7 +114,7 @@ export function JobForm() {
   // Minimum requirements (12 testers is Google Play minimum for some apps)
   const MIN_TESTERS = 12
   const RECOMMENDED_TESTERS = 20
-  const MIN_DURATION = 0.001
+  const MIN_DURATION = 14
   const MIN_PAYMENT = 5
 
   const handlePlanChange = (plan: 'STARTER' | 'PROFESSIONAL' | 'CUSTOM') => {
@@ -160,7 +160,7 @@ export function JobForm() {
         googlePlayLink: '',
         appCategory: '',
         testersNeeded: 20,
-        testDuration: 0.001,
+        testDuration: 14,
         minAndroidVersion: '',
         paymentPerTester: 7.5,
         planType: 'STARTER',
@@ -363,14 +363,14 @@ export function JobForm() {
                   <Input
                     id="testDuration"
                     type="number"
-                    min="0.001"
-                    step="0.001"
+                    min={MIN_DURATION}
+                    step="1"
                     max="90"
                     value={formData.testDuration}
-                    onChange={(e) => handleChange('testDuration', Math.max(MIN_DURATION, parseFloat(e.target.value) || MIN_DURATION))}
+                    onChange={(e) => handleChange('testDuration', Math.max(MIN_DURATION, parseInt(e.target.value, 10) || MIN_DURATION))}
                     required
                   />
-                  <p className="text-xs text-gray-500">Minimum 1 minute for testing</p>
+                  <p className="text-xs text-gray-500">Minimum 14 days for testing</p>
                 </div>
               </div>
 

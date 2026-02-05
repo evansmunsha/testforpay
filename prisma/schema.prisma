@@ -172,7 +172,7 @@ model TestingJob {
   
   // Requirements
   testersNeeded     Int         @default(10)
-  testDuration      Float       @default(0.001)
+  testDuration      Int         @default(14)
   minAndroidVersion String?
   
   // Compensation
