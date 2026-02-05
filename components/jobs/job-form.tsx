@@ -219,7 +219,7 @@ export function JobForm() {
                       : 'border-gray-200 hover:border-blue-200'
                   }`}
                 >
-                  <p className="font-bold text-lg">$150</p>
+                  <p className="font-bold text-lg">€150</p>
                   <p className="font-semibold">Starter</p>
                   <p className="text-xs text-gray-500 mt-1">20 Verified Testers</p>
                 </button>
@@ -233,7 +233,7 @@ export function JobForm() {
                       : 'border-gray-200 hover:border-blue-200'
                   }`}
                 >
-                  <p className="font-bold text-lg">$250</p>
+                  <p className="font-bold text-lg">€250</p>
                   <p className="font-semibold">Professional</p>
                   <p className="text-xs text-gray-500 mt-1">35 Verified Testers</p>
                 </button>
@@ -403,7 +403,7 @@ export function JobForm() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="paymentPerTester">Payment Per Tester (USD) *</Label>
+                <Label htmlFor="paymentPerTester">Payment Per Tester (EUR) *</Label>
                 <Input
                   id="paymentPerTester"
                   type="number"
@@ -415,7 +415,7 @@ export function JobForm() {
                   required
                 />
                 <p className="text-xs text-gray-500">
-                  Minimum ${MIN_PAYMENT}. Higher payments attract more testers faster.
+                  Minimum €{MIN_PAYMENT}. Higher payments attract more testers faster.
                 </p>
               </div>
             </CardContent>
@@ -440,7 +440,7 @@ export function JobForm() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Payment per tester</span>
-                  <span className="font-medium">${formData.paymentPerTester.toFixed(2)}</span>
+                  <span className="font-medium">€{formData.paymentPerTester.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Test duration</span>
@@ -449,18 +449,18 @@ export function JobForm() {
                 <div className="border-t pt-3 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Tester payments</span>
-                    <span className="font-medium">${totalBudget.toFixed(2)}</span>
+                    <span className="font-medium">€{totalBudget.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Platform fee (15%)</span>
-                    <span className="font-medium">${platformFee.toFixed(2)}</span>
+                    <span className="font-medium">€{platformFee.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="border-t pt-3">
                   <div className="flex justify-between">
                     <span className="font-semibold text-lg">Total Cost</span>
                     <span className="font-bold text-2xl text-blue-600">
-                      ${totalCost.toFixed(2)}
+                      €{totalCost.toFixed(2)}
                     </span>
                   </div>
                 </div>

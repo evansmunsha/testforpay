@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Star, TrendingUp, Briefcase, DollarSign, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { TesterActions } from '@/components/applications/tester-actions'
+import { formatEur } from '@/lib/currency'
 
 interface TesterProfile {
   id: string
@@ -128,7 +129,7 @@ export default function TesterProfilePage() {
                   <span className="text-sm font-medium">Total Earned</span>
                 </div>
                 <p className="text-2xl font-bold text-green-600">
-                  ${(profile.totalEarnings || 0).toFixed(2)}
+                  {formatEur(profile.totalEarnings || 0)}
                 </p>
               </div>
 
@@ -162,11 +163,11 @@ export default function TesterProfilePage() {
                   <span className="text-sm font-medium">Avg Earnings/Test</span>
                 </div>
                 <p className="text-2xl font-bold">
-                  ${
+                  {formatEur(
                     profile.totalTestsCompleted
-                      ? ((profile.totalEarnings || 0) / profile.totalTestsCompleted).toFixed(2)
-                      : '0.00'
-                  }
+                      ? (profile.totalEarnings || 0) / profile.totalTestsCompleted
+                      : 0
+                  )}
                 </p>
               </div>
             </div>

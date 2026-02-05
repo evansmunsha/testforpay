@@ -198,7 +198,7 @@ export async function PATCH(
             existingJob.stripePaymentIntent,
             developerRefund // Refund only the unused amount
           )
-          console.log('💰 Developer refund processed:', refund.id, 'Amount: $' + developerRefund)
+          console.log('💰 Developer refund processed:', refund.id, 'Amount: €' + developerRefund)
         } catch (refundError) {
           console.error('Failed to refund developer:', refundError)
           // Log but don't fail the cancellation
@@ -217,9 +217,9 @@ export async function PATCH(
       })
 
       console.log(`📋 Job cancelled with partial refunds:
-        - Total tester payouts: $${totalTesterPayouts}
-        - Platform fee (15%): $${platformFeeOnPayouts}
-        - Developer refund: $${developerRefund}
+        - Total tester payouts: €${totalTesterPayouts}
+        - Platform fee (15%): €${platformFeeOnPayouts}
+        - Developer refund: €${developerRefund}
         - Testers paid: ${payoutDetails.length}
       `)
 

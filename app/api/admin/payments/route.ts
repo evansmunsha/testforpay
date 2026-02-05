@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { stripe } from '@/lib/stripe'
 
 export async function GET() {
   try {
@@ -38,20 +39,38 @@ export async function GET() {
       take: 100,
     })
 
-    const paymentsWithReasons = payments.map((payment) => {
+    const paymentsWithReasons = await Promise.all(payments.map(async (payment) => {
       let failureReason: string | null = null
       if (payment.status === 'FAILED') {
-        if (!payment.application?.tester?.stripeAccountId) {
+        const stripeAccountId = payment.application?.tester?.stripeAccountId
+        if (!stripeAccountId) {
           failureReason = 'Tester has no connected Stripe account'
         } else {
-          failureReason = 'Transfer failed. Check Stripe logs'
+          try {
+            const account = await stripe.accounts.retrieve(stripeAccountId, {
+              expand: ['external_accounts'],
+            })
+            const externalAccounts = account.external_accounts?.data ?? []
+            const hasEurExternalAccount = externalAccounts.some((external) => {
+              if (!('currency' in external)) return false
+              return external.currency?.toLowerCase() === 'eur'
+            })
+            const defaultCurrency = account.default_currency?.toLowerCase()
+            if (!hasEurExternalAccount && defaultCurrency !== 'eur') {
+              failureReason = `EUR payout not configured (country: ${account.country || 'unknown'})`
+            } else {
+              failureReason = 'Transfer failed. Check Stripe logs'
+            }
+          } catch (error) {
+            failureReason = 'Transfer failed. Check Stripe logs'
+          }
         }
       }
       return {
         ...payment,
         failureReason,
       }
-    })
+    }))
 
     return NextResponse.json({ payments: paymentsWithReasons })
   } catch (error) {

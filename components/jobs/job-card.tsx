@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Share2
 } from 'lucide-react'
+import { formatEur } from '@/lib/currency'
 
 interface JobCardProps {
   job: {
@@ -52,13 +53,13 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
               alt={job.appName} 
               width={56} 
               height={56}
-              className="rounded-xl flex-shrink-0"
+              className="rounded-xl shrink-0"
             />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-2">
                 <CardTitle className="text-xl truncate">{job.appName}</CardTitle>
                 {job.appCategory && (
-                  <Badge variant="outline" className="capitalize flex-shrink-0">
+                  <Badge variant="outline" className="capitalize shrink-0">
                     {job.appCategory}
                   </Badge>
                 )}
@@ -88,7 +89,7 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             </div>
             <div>
               <p className="text-sm text-gray-600">Payment</p>
-              <p className="font-bold text-green-600">${job.paymentPerTester.toFixed(2)}</p>
+              <p className="font-bold text-green-600">{formatEur(job.paymentPerTester)}</p>
             </div>
           </div>
 
@@ -159,7 +160,7 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              Get paid ${job.paymentPerTester.toFixed(2)}
+              Get paid {formatEur(job.paymentPerTester)}
             </li>
           </ul>
         </div>
@@ -181,12 +182,12 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             disabled={loading}
             className="flex-1"
           >
-            {loading ? 'Applying...' : `Apply Now • $${job.paymentPerTester.toFixed(2)}`}
+            {loading ? 'Applying...' : `Apply Now • ${formatEur(job.paymentPerTester)}`}
           </Button>
         )}
         <Button variant="outline" size="icon" asChild>
           <a 
-            href={`https://wa.me/?text=${encodeURIComponent(`🎉 Earn $${job.paymentPerTester.toFixed(2)} testing "${job.appName}" app!
+            href={`https://wa.me/?text=${encodeURIComponent(`🎉 Earn ${formatEur(job.paymentPerTester)} testing "${job.appName}" app!
 
             ✅ Test for ${job.testDuration} days\r
             ✅ ${spotsLeft} spots left\r

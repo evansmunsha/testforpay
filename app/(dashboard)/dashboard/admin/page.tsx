@@ -479,7 +479,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              ${loadingStats ? '...' : (stats?.totalRevenue?.toFixed(2) ?? '0.00')}
+              €{loadingStats ? '...' : (stats?.totalRevenue?.toFixed(2) ?? '0.00')}
             </div>
             <p className="text-xs text-gray-500 mt-1">Platform fees</p>
           </CardContent>
@@ -649,7 +649,7 @@ export default function AdminDashboard() {
                           <td className="py-3 px-2">{getStatusBadge(job.status)}</td>
                           <td className="py-3 px-2">{job.testersNeeded}</td>
                           <td className="py-3 px-2">{job._count.applications}</td>
-                          <td className="py-3 px-2">${job.paymentPerTester}</td>
+                          <td className="py-3 px-2">€{job.paymentPerTester}</td>
                           <td className="py-3 px-2 text-gray-500">
                             {new Date(job.createdAt).toLocaleDateString()}
                           </td>
@@ -752,7 +752,7 @@ export default function AdminDashboard() {
                             {payment.application?.tester?.name || payment.application?.tester?.email || '-'}
                           </td>
                           <td className="py-3 px-2">{payment.application?.job?.appName || '-'}</td>
-                          <td className="py-3 px-2 font-medium">${payment.amount.toFixed(2)}</td>
+                          <td className="py-3 px-2 font-medium">€{payment.amount.toFixed(2)}</td>
                           <td className="py-3 px-2">
                             <div className="flex items-center gap-2">
                               {getStatusBadge(payment.status)}

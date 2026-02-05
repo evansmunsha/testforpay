@@ -145,13 +145,14 @@ export async function PATCH(
 
       // Send approval email
       try {
+        const testerPaymentEur = application.job.paymentPerTester
         await sendApplicationApprovedEmail(
           application.tester.email,
           {
             testerName: application.tester.name || 'Tester',
             appName: application.job.appName,
             googlePlayLink: application.job.googlePlayLink,
-            payment: application.job.paymentPerTester,
+            payment: Math.round(testerPaymentEur * 100) / 100,
           }
         )
       } catch (emailError) {
@@ -273,13 +274,14 @@ export async function PATCH(
 
       // Send testing started email
       try {
+        const testerPaymentEur = application.job.paymentPerTester
         await sendTestingStartedEmail(
           application.tester.email,
           {
             testerName: application.tester.name || 'Tester',
             appName: application.job.appName,
             endDate: testingEndDate.toLocaleDateString(),
-            payment: application.job.paymentPerTester,
+            payment: Math.round(testerPaymentEur * 100) / 100,
           }
         )
       } catch (emailError) {

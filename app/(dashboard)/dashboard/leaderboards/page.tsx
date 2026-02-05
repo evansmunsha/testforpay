@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight, Trophy, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
+import { formatEur } from '@/lib/currency'
 
 export default function LeaderboardPage() {
   const [page, setPage] = useState(0)
@@ -140,7 +141,7 @@ export default function LeaderboardPage() {
                           {tester.totalTestsCompleted || 0}
                         </td>
                         <td className="py-4 px-4 text-right font-medium text-green-600">
-                          ${(tester.totalEarnings || 0).toFixed(2)}
+                          {formatEur(tester.totalEarnings || 0)}
                         </td>
                         <td className="py-4 px-4 text-right">
                           <div className="flex items-center justify-end gap-1">

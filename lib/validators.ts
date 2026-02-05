@@ -23,7 +23,7 @@ export const createJobSchema = z.object({
   testersNeeded: z.number().min(12, 'Minimum 12 testers required').max(500),
   testDuration: z.number().min(0.001, 'Minimum 1 minute required').max(90),
   minAndroidVersion: z.string().optional(),
-  paymentPerTester: z.number().min(5, 'Minimum $5 per tester').max(100),
+  paymentPerTester: z.number().min(5, 'Minimum €5 per tester').max(100),
 })
 
 // Application Schemas

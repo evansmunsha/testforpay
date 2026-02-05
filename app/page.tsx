@@ -234,7 +234,7 @@ export default function LandingPage() {
             <p className="text-sm text-gray-500">
               {userType === 'developer' 
                 ? '🚀 Get 20+ testers in 24 hours • No upfront payment required'
-                : '💰 Earn $5-$15 per app test • Get paid weekly'}
+                : '💰 Earn €5-€15 per app test • Get paid weekly'}
             </p>
           </div>
 
@@ -463,7 +463,7 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="bg-white rounded-xl shadow-lg p-8 border-2 border-gray-200">
               <h3 className="text-2xl font-bold mb-2">Starter</h3>
-              <div className="text-4xl font-bold mb-4">$150</div>
+              <div className="text-4xl font-bold mb-4">€150</div>
               <p className="text-gray-600 mb-6">Perfect for indie developers</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-2">
@@ -496,7 +496,7 @@ export default function LandingPage() {
                 Most Popular
               </div>
               <h3 className="text-2xl font-bold mb-2 text-white">Professional</h3>
-              <div className="text-4xl font-bold mb-4 text-white">$250</div>
+              <div className="text-4xl font-bold mb-4 text-white">€250</div>
               <p className="text-blue-100 mb-6">For serious developers</p>
               <ul className="space-y-3 mb-8 text-white">
                 <li className="flex items-center gap-2">

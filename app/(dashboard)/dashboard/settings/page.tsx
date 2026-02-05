@@ -37,12 +37,34 @@ export default function SettingsPage() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState('')
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [payoutInfo, setPayoutInfo] = useState<{
+    hasStripeAccount: boolean
+    country: string | null
+    defaultCurrency: string | null
+    hasEurExternalAccount: boolean
+  } | null>(null)
 
   useEffect(() => {
     if (user) {
       setName(user.name || '')
     }
   }, [user])
+
+  useEffect(() => {
+    if (user?.role !== 'TESTER') return
+    const fetchPayoutInfo = async () => {
+      try {
+        const response = await fetch('/api/payments/payout-requirements')
+        const data = await response.json()
+        if (response.ok) {
+          setPayoutInfo(data)
+        }
+      } catch (error) {
+        console.error('Failed to load payout requirements:', error)
+      }
+    }
+    fetchPayoutInfo()
+  }, [user?.role])
 
   const handleSaveProfile = async () => {
     setSaving(true)
@@ -202,6 +224,17 @@ export default function SettingsPage() {
     }
   }
 
+  const payoutCountryLabel = payoutInfo?.country ? `Your Stripe country is ${payoutInfo.country}. ` : ''
+  const hasEurPayout =
+    !!payoutInfo?.hasStripeAccount &&
+    (payoutInfo?.hasEurExternalAccount || payoutInfo?.defaultCurrency?.toLowerCase() === 'eur')
+  const payoutBannerTitle = hasEurPayout ? 'EUR payout ready' : 'EUR payout required'
+  const payoutBannerBody = payoutInfo?.hasStripeAccount
+    ? (hasEurPayout
+        ? `${payoutCountryLabel}Payouts are sent in EUR and your account is ready to receive EUR.`
+        : `${payoutCountryLabel}Payouts are sent in EUR. Add a EUR payout method in Stripe to avoid failed transfers.`)
+    : 'Payouts are sent in EUR. During Stripe setup, add a EUR payout method for your country to receive payments.'
+
   return (
     <div className="space-y-6 max-w-4xl">
       <div>
@@ -347,6 +380,20 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div
+                className={`rounded-lg border p-3 text-sm ${
+                  hasEurPayout ? 'border-green-200 bg-green-50 text-green-800' : 'border-amber-200 bg-amber-50 text-amber-800'
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  {hasEurPayout ? <CheckCircle className="h-4 w-4 mt-0.5" /> : <AlertTriangle className="h-4 w-4 mt-0.5" />}
+                  <div>
+                    <p className="font-medium">{payoutBannerTitle}</p>
+                    <p className="text-xs mt-1">{payoutBannerBody}</p>
+                  </div>
+                </div>
+              </div>
+
               {user?.stripeAccountId ? (
                 <div className="bg-white p-4 rounded-lg border border-green-200">
                   <div className="flex items-center gap-3 text-green-800">

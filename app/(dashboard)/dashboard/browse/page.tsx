@@ -11,6 +11,7 @@ import { Search, Briefcase, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
+import { formatEur } from '@/lib/currency'
 
 
 interface Job {
@@ -49,6 +50,8 @@ export default function BrowsePage() {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [sortBy, setSortBy] = useState('newest')
   const [minPayment, setMinPayment] = useState('')
+  const parsedMinPayment = minPayment ? parseFloat(minPayment) : NaN
+  const minPaymentValue = Number.isFinite(parsedMinPayment) ? parsedMinPayment : null
 
   // Initial fetch
   useEffect(() => {
@@ -179,7 +182,7 @@ export default function BrowsePage() {
       }
 
       // Minimum payment filter
-      if (minPayment && job.paymentPerTester < parseFloat(minPayment)) {
+      if (minPaymentValue !== null && job.paymentPerTester < minPaymentValue) {
         return false
       }
 
@@ -206,7 +209,7 @@ export default function BrowsePage() {
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Browse Jobs</h2>
           <p className="text-gray-600 mt-1">
-            Find testing opportunities and start earning $
+            Find testing opportunities and start earning €
           </p>
         </div>
         <Button 
@@ -286,7 +289,7 @@ export default function BrowsePage() {
               <Input
                 id="min-payment"
                 type="number"
-                placeholder="$0"
+                placeholder="€0"
                 value={minPayment}
                 onChange={(e) => setMinPayment(e.target.value)}
                 className="w-24"
@@ -359,15 +362,16 @@ export default function BrowsePage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-900">
-                  ${Math.max(...filteredJobs.map(job => job.paymentPerTester)).toFixed(2)}
+                  {formatEur(Math.max(...filteredJobs.map(job => job.paymentPerTester)))}
                 </p>
                 <p className="text-sm text-blue-700">Highest Payment</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-900">
-                  $
-                  {(filteredJobs.reduce((sum, job) => sum + job.paymentPerTester, 0) / 
-                    filteredJobs.length).toFixed(2)}
+                  {formatEur(
+                    filteredJobs.reduce((sum, job) => sum + job.paymentPerTester, 0) / 
+                      filteredJobs.length
+                  )}
                 </p>
                 <p className="text-sm text-blue-700">Average Payment</p>
               </div>

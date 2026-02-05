@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
+import { sendNotification } from '@/lib/notifications'
 
 // POST - Cancel a job with flexible partial refund policy
 export async function POST(
@@ -178,10 +179,40 @@ export async function POST(
 
         if (stripeAccountId && payout.amount > 0) {
           try {
+            const account = await stripe.accounts.retrieve(stripeAccountId, {
+              expand: ['external_accounts'],
+            })
+            const externalAccounts = account.external_accounts?.data ?? []
+            const hasEurExternalAccount = externalAccounts.some((external) => {
+              if (!('currency' in external)) return false
+              return external.currency?.toLowerCase() === 'eur'
+            })
+            const defaultCurrency = account.default_currency?.toLowerCase()
+
+            if (!hasEurExternalAccount && defaultCurrency !== 'eur') {
+              try {
+                await sendNotification({
+                  userId: payout.testerId,
+                  title: 'Payout Setup Required',
+                  body: 'We couldn’t send your payout because your Stripe account isn’t set up to receive EUR. Please add a EUR payout method to continue.',
+                  url: '/dashboard/settings',
+                  type: 'payout_setup_required',
+                })
+              } catch (notifyError) {
+                console.error('Failed to notify tester about payout setup:', notifyError)
+              }
+              payoutResults.push({ 
+                testerId: payout.testerId, 
+                success: false, 
+                error: `Payout account not configured for EUR (country: ${account.country || 'unknown'})`
+              })
+              continue
+            }
+
             // Create Stripe transfer to tester
             const transfer = await stripe.transfers.create({
               amount: Math.round(payout.amount * 100), // Convert to cents
-              currency: 'usd',
+              currency: 'eur',
               destination: stripeAccountId,
               metadata: {
                 jobId: job.id,
@@ -206,7 +237,7 @@ export async function POST(
             }
 
             payoutResults.push({ testerId: payout.testerId, success: true })
-            console.log(`Partial payout to tester ${payout.testerId}: $${payout.amount.toFixed(2)} (${payout.percentage}%)`)
+            console.log(`Partial payout to tester ${payout.testerId}: €${payout.amount.toFixed(2)} (${payout.percentage}%)`)
           } catch (error: any) {
             console.error(`Failed to pay tester ${payout.testerId}:`, error.message)
             payoutResults.push({ testerId: payout.testerId, success: false, error: error.message })
@@ -237,7 +268,7 @@ export async function POST(
 
           refundIssued = true
           refundId = refund.id
-          console.log(`Partial refund to developer: $${developerRefund.toFixed(2)}`)
+          console.log(`Partial refund to developer: €${developerRefund.toFixed(2)}`)
         } catch (stripeError: any) {
           console.error('Stripe refund error:', stripeError.message)
         }
@@ -294,7 +325,7 @@ export async function POST(
         amount: developerRefund > 0 ? developerRefund : 0,
         refundId: refundId,
         message: refundIssued
-          ? `Partial refund of $${developerRefund.toFixed(2)} has been processed.`
+          ? `Partial refund of €${developerRefund.toFixed(2)} has been processed.`
           : developerRefund <= 0
             ? 'No refund - all budget used for tester compensation'
             : job.status === 'DRAFT'

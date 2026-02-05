@@ -14,7 +14,7 @@ export async function createJobPaymentIntent(
 ) {
   const paymentIntent = await stripe.paymentIntents.create({
     amount: Math.round(amount * 100), // Convert to cents
-    currency: 'usd',
+    currency: 'eur',
     metadata: {
       jobId,
       developerId,
@@ -61,7 +61,7 @@ export async function createAccountLink(accountId: string) {
 // Transfer payment to tester
 export async function transferToTester({
   amount,
-  currency = 'usd',
+  currency = 'eur',
   destinationAccountId,
   metadata = {},
   transferGroup,

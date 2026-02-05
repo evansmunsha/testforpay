@@ -5,6 +5,7 @@ import { stripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { sendNotification, NotificationTemplates } from '@/lib/notifications'
 import Stripe from 'stripe'
+import { formatEur } from '@/lib/currency'
 
 // This is CRITICAL for Stripe webhooks
 export const runtime = 'nodejs'
@@ -101,7 +102,7 @@ export async function POST(request: Request) {
               sendNotification({
                 userId: tester.id,
                 title: 'New Job Available! 📱',
-                body: `New testing opportunity: "${job.appName}" - $${job.paymentPerTester.toFixed(2)} per tester`,
+                body: `New testing opportunity: "${job.appName}" - ${formatEur(job.paymentPerTester)} per tester`,
                 url: `/dashboard/browse?jobId=${job.id}`,
                 type: 'new_job_posted',
               }).catch(err => console.error(`Failed to notify tester ${tester.id}:`, err))
@@ -168,7 +169,7 @@ export async function POST(request: Request) {
               await sendNotification({
                 userId: payments[0].application.tester.id,
                 title: 'Payment Received! 💰',
-                body: `You've received $${payments[0].amount.toFixed(2)} for testing "${payments[0].application.job.appName}".`,
+                body: `You've received ${formatEur(payments[0].amount)} for testing "${payments[0].application.job.appName}".`,
                 url: `/dashboard/payments`,
                 type: 'payment_received',
               })

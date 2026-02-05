@@ -228,12 +228,12 @@ You will receive a partial refund for unused budget.`
         if (data.cancellation?.testerPayouts?.length > 0) {
           const paidTesters = data.cancellation.testerPayouts.filter((p: any) => p.amount > 0)
           if (paidTesters.length > 0) {
-            message += `. ${paidTesters.length} tester(s) compensated totaling $${data.cancellation.totalPaidToTesters.toFixed(2)}`
+            message += `. ${paidTesters.length} tester(s) compensated totaling €${data.cancellation.totalPaidToTesters.toFixed(2)}`
           }
         }
         
         if (data.refund?.issued) {
-          message += `. Your refund: $${data.refund.amount.toFixed(2)}`
+          message += `. Your refund: €${data.refund.amount.toFixed(2)}`
         }
         
         toast({ title: 'Job Cancelled', description: message, variant: 'success' })
@@ -411,7 +411,7 @@ You will receive a partial refund for unused budget.`
             <DollarSign className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${job.paymentPerTester}</div>
+            <div className="text-2xl font-bold">€{job.paymentPerTester}</div>
             <p className="text-xs text-gray-500 mt-1">Payment amount</p>
           </CardContent>
         </Card>
@@ -424,7 +424,7 @@ You will receive a partial refund for unused budget.`
             <DollarSign className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${(job.totalBudget + job.platformFee).toFixed(2)}</div>
+            <div className="text-2xl font-bold">€{(job.totalBudget + job.platformFee).toFixed(2)}</div>
             <p className="text-xs text-gray-500 mt-1">Including fees</p>
           </CardContent>
         </Card>
@@ -625,17 +625,17 @@ You will receive a partial refund for unused budget.`
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Tester payments</span>
-                <span className="font-medium">${job.totalBudget.toFixed(2)}</span>
+                <span className="font-medium">€{job.totalBudget.toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Platform fee (15%)</span>
-                <span className="font-medium">${job.platformFee.toFixed(2)}</span>
+                <span className="font-medium">€{job.platformFee.toFixed(2)}</span>
               </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between">
                   <span className="font-semibold">Total</span>
                   <span className="font-bold text-lg">
-                    ${(job.totalBudget + job.platformFee).toFixed(2)}
+                    €{(job.totalBudget + job.platformFee).toFixed(2)}
                   </span>
                 </div>
               </div>

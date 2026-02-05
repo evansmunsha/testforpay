@@ -264,7 +264,7 @@ export default function EditJobPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Payment per Tester</span>
-                    <span className="font-medium">${job.paymentPerTester}</span>
+                    <span className="font-medium">€{job.paymentPerTester}</span>
                   </div>
                 </div>
 

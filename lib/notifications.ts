@@ -97,13 +97,13 @@ export const NotificationTemplates = {
 
   testingComplete: (appName: string, amount: number) => ({
     title: 'Testing Complete! 💰',
-    body: `You've completed testing "${appName}". $${amount.toFixed(2)} will be sent to your account.`,
+    body: `You've completed testing "${appName}". €${amount.toFixed(2)} will be sent to your account.`,
     type: 'testing_complete',
   }),
 
   paymentReceived: (amount: number) => ({
     title: 'Payment Received! 🎊',
-    body: `You've received a payment of $${amount.toFixed(2)} for completed testing.`,
+    body: `You've received a payment of €${amount.toFixed(2)} for completed testing.`,
     type: 'payment_received',
   }),
 

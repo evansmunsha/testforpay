@@ -1,6 +1,7 @@
 'use client'
 
 import { useAuth } from '@/hooks/use-auth'
+import { formatEur } from '@/lib/currency'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -107,7 +108,7 @@ function DeveloperDashboard() {
     },
     {
       title: 'Total Spent',
-      value: loading ? '...' : `$${stats.totalSpent}`,
+      value: loading ? '...' : formatEur(stats.totalSpent),
       icon: DollarSign,
       description: 'All time',
       color: 'bg-purple-500',
@@ -139,7 +140,7 @@ function DeveloperDashboard() {
                 <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
                   {stat.title}
                 </CardTitle>
-                <div className={`${stat.color} p-1.5 sm:p-2 rounded-lg flex-shrink-0`}>
+                <div className={`${stat.color} p-1.5 sm:p-2 rounded-lg shrink-0`}>
                   <Icon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                 </div>
               </CardHeader>
@@ -324,7 +325,7 @@ function TesterDashboard() {
     },
     {
       title: 'Total Earned',
-      value: loading ? '...' : `$${stats.totalEarned}`,
+      value: loading ? '...' : formatEur(stats.totalEarned),
       icon: DollarSign,
       description: 'All time',
       color: 'bg-purple-500',
@@ -356,7 +357,7 @@ function TesterDashboard() {
                 <CardTitle className="text-xs sm:text-sm font-medium text-gray-600 truncate">
                   {stat.title}
                 </CardTitle>
-                <div className={`${stat.color} p-1.5 sm:p-2 rounded-lg flex-shrink-0`}>
+                <div className={`${stat.color} p-1.5 sm:p-2 rounded-lg shrink-0`}>
                   <Icon className="h-3 w-3 sm:h-4 sm:w-4 text-white" />
                 </div>
               </CardHeader>
@@ -379,7 +380,7 @@ function TesterDashboard() {
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-600">
               Browse available testing jobs and start earning money by testing apps. 
-              Earn $5-$15 per app!
+              Earn €5-€15 per app!
             </p>
             <Link href="/dashboard/browse">
               <Button className="w-full gap-2">

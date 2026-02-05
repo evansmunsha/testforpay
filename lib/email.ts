@@ -30,7 +30,7 @@ export async function sendApplicationApprovedEmail(
             <li>Opt-in to the Google Play closed test using the link below</li>
             <li>Upload a screenshot to verify your opt-in</li>
             <li>Test the app for 14 days</li>
-            <li>Get paid $${data.payment}</li>
+            <li>Get paid €${data.payment}</li>
           </ol>
         </div>
         
@@ -102,7 +102,7 @@ export async function sendTestingStartedEmail(
         
         <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <p><strong>Testing ends:</strong> ${data.endDate}</p>
-          <p><strong>Payment:</strong> $${data.payment}</p>
+          <p><strong>Payment:</strong> €${data.payment}</p>
           <p style="margin-top: 15px; color: #166534;">
             Just use the app naturally and provide honest feedback. 
             Payment will be processed automatically after 14 days.
@@ -133,7 +133,7 @@ export async function sendTestingCompletedEmail(
         
         <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h2 style="margin-top: 0; color: #166534;">Payment Processing</h2>
-          <p>Your payment of <strong>$${data.payment}</strong> is being processed and will arrive in your bank account within 2-3 business days.</p>
+          <p>Your payment of <strong>€${data.payment}</strong> is being processed and will arrive in your bank account within 2-3 business days.</p>
         </div>
         
         <p>Thank you for being a valuable tester! Look for more opportunities in your dashboard.</p>
@@ -162,7 +162,7 @@ export async function sendPaymentConfirmationEmail(
         <p>Your payment for <strong>${data.appName}</strong> has been processed successfully.</p>
         
         <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p style="margin: 5px 0;"><strong>Amount:</strong> $${data.amount}</p>
+          <p style="margin: 5px 0;"><strong>Amount:</strong> €${data.amount}</p>
           <p style="margin: 5px 0;"><strong>Testers:</strong> ${data.testersCount}</p>
           <p style="margin: 5px 0;"><strong>Status:</strong> Active and accepting applications</p>
         </div>

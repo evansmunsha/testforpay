@@ -1,6 +1,7 @@
 import prisma from './prisma'
 import { stripe } from './stripe'
 import type { Prisma } from '@/generated/prisma/client'
+import { sendNotification } from './notifications'
 
 interface PayoutResult {
   applicationId: string
@@ -45,11 +46,50 @@ async function processPaymentForPayout(payment: NonNullable<PaymentWithContext>)
   }
 
   try {
+    const account = await stripe.accounts.retrieve(tester.stripeAccountId, {
+      expand: ['external_accounts'],
+    })
+
+    const externalAccounts = account.external_accounts?.data ?? []
+    const hasEurExternalAccount = externalAccounts.some((external) => {
+      if (!('currency' in external)) return false
+      return external.currency?.toLowerCase() === 'eur'
+    })
+    const defaultCurrency = account.default_currency?.toLowerCase()
+
+    if (!hasEurExternalAccount && defaultCurrency !== 'eur') {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'FAILED',
+          failedAt: new Date(),
+        },
+      })
+      try {
+        await sendNotification({
+          userId: tester.id,
+          title: 'Payout Setup Required',
+          body: 'We couldn’t send your payout because your Stripe account isn’t set up to receive EUR. Please add a EUR payout method to continue.',
+          url: '/dashboard/settings',
+          type: 'payout_setup_required',
+        })
+      } catch (notifyError) {
+        console.error('Failed to notify tester about payout setup:', notifyError)
+      }
+      return {
+        applicationId: application.id,
+        testerId: tester.id,
+        amount: payment.amount,
+        status: 'failed',
+        error: `Tester payout account not configured for EUR (country: ${account.country || 'unknown'})`,
+      }
+    }
+
     // Create a transfer to the tester's connected account
     const transfer = await stripe.transfers.create(
       {
         amount: Math.round(payment.amount * 100), // Convert to cents
-        currency: 'usd',
+        currency: 'eur',
         destination: tester.stripeAccountId,
         transfer_group: `job_${application.jobId}`,
         metadata: {

@@ -81,7 +81,7 @@ export async function POST(request: Request) {
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: 'eur',
             product_data: {
               name: `TestForPay - ${planType || 'Custom'} Plan`,
               description: `${finalTestersNeeded} verified testers for ${appName}`,

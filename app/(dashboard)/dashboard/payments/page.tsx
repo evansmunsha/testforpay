@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DollarSign, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Badge } from '@/components/ui/badge'
+import { formatEur } from '@/lib/currency'
 
 interface Transaction {
   id: string
@@ -105,7 +106,9 @@ export default function PaymentsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">${totalAmount.toFixed(2)}</div>
+            <div className="text-3xl font-bold">
+              {formatEur(totalAmount)}
+            </div>
             <p className="text-xs text-gray-500 mt-1">All time (completed)</p>
           </CardContent>
         </Card>
@@ -117,7 +120,9 @@ export default function PaymentsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">${pendingAmount.toFixed(2)}</div>
+            <div className="text-3xl font-bold">
+              {formatEur(pendingAmount)}
+            </div>
             <p className="text-xs text-gray-500 mt-1">Awaiting completion</p>
           </CardContent>
         </Card>
@@ -184,7 +189,7 @@ export default function PaymentsPage() {
                         </td>
                       )}
                       <td className="px-4 py-4 font-bold">
-                        ${(isDeveloper ? t.totalAmount : t.amount).toFixed(2)}
+                        {formatEur(isDeveloper ? t.totalAmount : t.amount)}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">

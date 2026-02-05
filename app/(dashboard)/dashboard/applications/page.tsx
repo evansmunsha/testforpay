@@ -9,6 +9,7 @@ import { VerificationUploader } from '@/components/applications/verification-upl
 import { FileText, DollarSign, Clock, Calendar, ExternalLink, Upload, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { FeedbackForm } from '@/components/applications/feedback-form'
+import { formatEur } from '@/lib/currency'
 
 interface Application {
   id: string
@@ -161,10 +162,11 @@ export default function ApplicationsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">
-              ${applications
-                .filter(app => app.status === 'COMPLETED')
-                .reduce((sum, app) => sum + (app.payment?.amount || 0), 0)
-                .toFixed(2)}
+              {formatEur(
+                applications
+                  .filter(app => app.status === 'COMPLETED')
+                  .reduce((sum, app) => sum + (app.payment?.amount || 0), 0)
+              )}
             </div>
           </CardContent>
         </Card>
@@ -201,7 +203,7 @@ export default function ApplicationsPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-green-600">
-                      ${app.job.paymentPerTester}
+                      {formatEur(app.job.paymentPerTester)}
                     </p>
                     <p className="text-xs text-gray-500">Payment</p>
                   </div>
@@ -349,7 +351,7 @@ export default function ApplicationsPage() {
                   <div className="space-y-4">
                     <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
                       <p className="text-sm text-green-800 font-medium">
-                        🎉 Testing completed! Payment of ${app.payment?.amount || 0} is being processed.
+                        🎉 Testing completed! Payment of {formatEur(app.payment?.amount || 0)} is being processed.
                       </p>
                     </div>
                     
