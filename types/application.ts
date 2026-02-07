@@ -1,3 +1,5 @@
+import type { Cents } from './money'
+
 export type ApplicationStatus = 
   | 'PENDING' 
   | 'APPROVED' 
@@ -28,7 +30,8 @@ export interface ApplicationWithDetails extends Application {
     appName: string
     appDescription: string
     googlePlayLink: string
-    paymentPerTester: number
+    /** Payment per tester in integer cents (EUR). */
+    paymentPerTester: Cents
     testDuration: number
   }
   tester: {
@@ -36,7 +39,8 @@ export interface ApplicationWithDetails extends Application {
     email: string
   }
   payment: {
-    amount: number
+    /** Amount in integer cents (EUR). */
+    amount: Cents
     status: string
   } | null
 }

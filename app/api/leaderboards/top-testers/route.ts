@@ -22,10 +22,8 @@ export async function GET(request: Request) {
       select: {
         id: true,
         name: true,
-        email: true,
         averageEngagementScore: true,
         totalTestsCompleted: true,
-        totalEarnings: true,
         averageRating: true,
         createdAt: true,
       },

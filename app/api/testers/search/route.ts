@@ -1,12 +1,30 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
 
 /**
  * GET /api/testers/search?q=john
- * Search for testers by name or email
+ * Search for testers by name
  */
 export async function GET(request: Request) {
   try {
+    const currentUser = await getCurrentUser()
+
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      )
+    }
+
+    // SECURITY: Limit tester search to developers/admins to prevent public scraping.
+    if (currentUser.role !== 'DEVELOPER' && currentUser.role !== 'ADMIN') {
+      return NextResponse.json(
+        { error: 'Not authorized' },
+        { status: 403 }
+      )
+    }
+
     const { searchParams } = new URL(request.url)
     const query = searchParams.get('q') || ''
     const limit = parseInt(searchParams.get('limit') || '20')
@@ -24,13 +42,11 @@ export async function GET(request: Request) {
         suspended: false,
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
-          { email: { contains: query, mode: 'insensitive' } },
         ],
       },
       select: {
         id: true,
         name: true,
-        email: true,
         averageEngagementScore: true,
         totalTestsCompleted: true,
         averageRating: true,

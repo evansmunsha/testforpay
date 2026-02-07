@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ChevronLeft, ChevronRight, Trophy, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
-import { formatEur } from '@/lib/currency'
 
 export default function LeaderboardPage() {
   const [page, setPage] = useState(0)
@@ -100,7 +99,6 @@ export default function LeaderboardPage() {
                       <th className="text-left py-3 px-4 font-semibold">Tester</th>
                       <th className="text-right py-3 px-4 font-semibold">Engagement</th>
                       <th className="text-right py-3 px-4 font-semibold">Tests</th>
-                      <th className="text-right py-3 px-4 font-semibold">Earned</th>
                       <th className="text-right py-3 px-4 font-semibold">Rating</th>
                     </tr>
                   </thead>
@@ -125,7 +123,6 @@ export default function LeaderboardPage() {
                           >
                             {tester.name || 'Anonymous Tester'}
                           </Link>
-                          <p className="text-xs text-gray-500">{tester.email}</p>
                         </td>
                         <td className="py-4 px-4 text-right">
                           <div className="flex items-center justify-end gap-2">
@@ -139,9 +136,6 @@ export default function LeaderboardPage() {
                         </td>
                         <td className="py-4 px-4 text-right font-medium">
                           {tester.totalTestsCompleted || 0}
-                        </td>
-                        <td className="py-4 px-4 text-right font-medium text-green-600">
-                          {formatEur(tester.totalEarnings || 0)}
                         </td>
                         <td className="py-4 px-4 text-right">
                           <div className="flex items-center justify-end gap-1">

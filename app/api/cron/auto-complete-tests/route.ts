@@ -22,8 +22,20 @@ export async function GET(request: Request) {
     // Verify the request is from a valid cron service
     const authHeader = request.headers.get('authorization')
     const cronSecret = process.env.CRON_SECRET
+    const isProduction = process.env.NODE_ENV === 'production'
 
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+    // SECURITY: In production, require a cron secret unconditionally.
+    // This prevents public triggering if the env var is missing or misconfigured.
+    if (isProduction && !cronSecret) {
+      return NextResponse.json({ error: 'Cron secret not configured' }, { status: 500 })
+    }
+    if (isProduction) {
+      if (authHeader !== `Bearer ${cronSecret}`) {
+        console.log('❌ Cron auth failed - invalid or missing token')
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      }
+    } else if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+      // Preserve current non-production behavior (only enforce when set)
       console.log('❌ Cron auth failed - invalid or missing token')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -55,26 +67,53 @@ export async function GET(request: Request) {
           (now.getTime() - application.testingEndDate!.getTime()) / (1000 * 60 * 60 * 24)
         )
 
-        // Auto-complete the application
-        await prisma.application.update({
-          where: { id: application.id },
+        // Auto-complete the application (guard against double runs)
+        const updated = await prisma.application.updateMany({
+          where: { id: application.id, status: 'TESTING' },
           data: {
             status: 'COMPLETED',
           },
         })
+
+        const alreadyCompleted = updated.count === 0
 
         // Ensure Payment record exists and is in PROCESSING status (ready for payout)
         let payment = await prisma.payment.findUnique({
           where: { applicationId: application.id },
         })
 
-        if (payment && payment.status === 'PROCESSING') {
-          // Payment already in correct status, ready for cron/process-payouts
+        if (payment && payment.status === 'ESCROWED' && !payment.transferId) {
+          const moved = await prisma.payment.updateMany({
+            where: {
+              id: payment.id,
+              status: 'ESCROWED',
+              transferId: null,
+            },
+            data: { status: 'PROCESSING' },
+          })
+          if (moved.count === 0) {
+            const fresh = await prisma.payment.findUnique({
+              where: { id: payment.id },
+              select: { status: true, transferId: true },
+            })
+            console.warn('⚠️ Payment not moved to PROCESSING:', {
+              paymentId: payment.id,
+              status: fresh?.status,
+              transferId: fresh?.transferId,
+            })
+          }
+          payment = await prisma.payment.findUnique({
+            where: { applicationId: application.id },
+          })
+        }
+
+        if (payment && payment.status === 'PROCESSING' && !payment.transferId) {
+          // Payment now in correct status, ready for cron/process-payouts
           console.log(`✅ Application auto-completed and payment ready for payout: ${application.id}`)
         } else if (!payment) {
           // Create payment record if it doesn't exist (shouldn't happen normally)
           const job = application.job
-          const platformFeePerTester = job.platformFee / job.testersNeeded
+          const platformFeePerTester = Math.round(job.platformFee / job.testersNeeded)
           const totalPaymentAmount = job.paymentPerTester + platformFeePerTester
 
           payment = await prisma.payment.create({
@@ -85,13 +124,12 @@ export async function GET(request: Request) {
               platformFee: platformFeePerTester,
               totalAmount: totalPaymentAmount,
               status: 'PROCESSING', // Ready for payout
-              escrowedAt: new Date(),
             },
           })
           console.log(`✅ Auto-completed and created payment: ${application.id}`)
         }
 
-        if (payment?.status === 'PROCESSING') {
+        if (payment?.status === 'PROCESSING' && !payment.transferId) {
           try {
             const payoutResult = await processPaymentById(payment.id)
             if (payoutResult?.status === 'failed') {
@@ -100,6 +138,14 @@ export async function GET(request: Request) {
           } catch (payoutError) {
             console.error('⚠️ Auto-complete payout threw an error:', payoutError)
           }
+        } else if (payment) {
+          console.log('ℹ️ Skipping payout - payment not payout-ready:', {
+            applicationId: application.id,
+            paymentId: payment.id,
+            status: payment.status,
+            transferId: payment.transferId,
+            alreadyCompleted,
+          })
         }
 
         // Update tester reputation stats based on their completed applications
@@ -190,3 +236,4 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return GET(request)
 }
+

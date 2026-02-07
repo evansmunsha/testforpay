@@ -89,6 +89,36 @@ export async function DELETE(request: Request) {
       }
     }
 
+    // Delete dependent payments before deleting applications/jobs to avoid FK errors.
+    // SECURITY/INTEGRITY: Payments reference applications/jobs without cascade.
+    if (user.role === 'TESTER') {
+      const testerApplications = await prisma.application.findMany({
+        where: { testerId: currentUser.userId },
+        select: { id: true },
+      })
+
+      const applicationIds = testerApplications.map(app => app.id)
+      if (applicationIds.length > 0) {
+        await prisma.payment.deleteMany({
+          where: { applicationId: { in: applicationIds } },
+        })
+      }
+    }
+
+    if (user.role === 'DEVELOPER') {
+      const developerJobs = await prisma.testingJob.findMany({
+        where: { developerId: currentUser.userId },
+        select: { id: true },
+      })
+
+      const jobIds = developerJobs.map(job => job.id)
+      if (jobIds.length > 0) {
+        await prisma.payment.deleteMany({
+          where: { jobId: { in: jobIds } },
+        })
+      }
+    }
+
     // Delete user's applications first (foreign key constraint)
     await prisma.application.deleteMany({
       where: { testerId: currentUser.userId },
@@ -108,7 +138,8 @@ export async function DELETE(request: Request) {
 
     // Clear the session cookie
     const cookieStore = await cookies()
-    cookieStore.delete('session')
+    // Auth uses "auth-token"; clear it so the user is logged out immediately.
+    cookieStore.delete('auth-token')
 
     return NextResponse.json({
       success: true,

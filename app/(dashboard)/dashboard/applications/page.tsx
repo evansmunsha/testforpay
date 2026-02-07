@@ -9,7 +9,8 @@ import { VerificationUploader } from '@/components/applications/verification-upl
 import { FileText, DollarSign, Clock, Calendar, ExternalLink, Upload, MessageSquare, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { FeedbackForm } from '@/components/applications/feedback-form'
-import { formatEur } from '@/lib/currency'
+import { formatEurFromCents } from '@/lib/currency'
+import type { Cents } from '@/types/money'
 
 interface Application {
   id: string
@@ -31,7 +32,8 @@ interface Application {
     appName: string
     appDescription: string
     googlePlayLink: string
-    paymentPerTester: number
+    /** Payment per tester in integer cents (EUR). */
+    paymentPerTester: Cents
     testDuration: number
     developer: {
       name: string | null
@@ -39,7 +41,8 @@ interface Application {
     }
   }
   payment: {
-    amount: number
+    /** Amount in integer cents (EUR). */
+    amount: Cents
     status: string
   } | null
 }
@@ -192,7 +195,7 @@ export default function ApplicationsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">
-              {formatEur(
+              {formatEurFromCents(
                 applications
                   .filter(app => app.status === 'COMPLETED')
                   .reduce((sum, app) => sum + (app.payment?.amount || 0), 0)
@@ -233,7 +236,7 @@ export default function ApplicationsPage() {
                   </div>
                   <div className="text-right">
                     <p className="text-2xl font-bold text-green-600">
-                      {formatEur(app.job.paymentPerTester)}
+                      {formatEurFromCents(app.job.paymentPerTester)}
                     </p>
                     <p className="text-xs text-gray-500">Payment</p>
                   </div>
@@ -396,7 +399,7 @@ export default function ApplicationsPage() {
                   <div className="space-y-4">
                     <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
                       <p className="text-sm text-green-800 font-medium">
-                        🎉 Testing completed! Payment of {formatEur(app.payment?.amount || 0)} is being processed.
+                        🎉 Testing completed! Payment of {formatEurFromCents(app.payment?.amount || 0)} is being processed.
                       </p>
                     </div>
                     

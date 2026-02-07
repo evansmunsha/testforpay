@@ -1,3 +1,5 @@
+import type { Cents } from './money'
+
 export type JobStatus = 'DRAFT' | 'ACTIVE' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
 
 export interface Job {
@@ -10,9 +12,12 @@ export interface Job {
   testersNeeded: number
   testDuration: number
   minAndroidVersion: string | null
-  paymentPerTester: number
-  totalBudget: number
-  platformFee: number
+  /** Payment per tester in integer cents (EUR). */
+  paymentPerTester: Cents
+  /** Total tester budget in integer cents (EUR). */
+  totalBudget: Cents
+  /** Platform fee in integer cents (EUR). */
+  platformFee: Cents
   status: JobStatus
   publishedAt: string | null
   createdAt: string
@@ -29,6 +34,7 @@ export interface CreateJobInput {
   testersNeeded: number
   testDuration: number
   minAndroidVersion?: string
+  /** Payment per tester in euros (will be converted to cents server-side). */
   paymentPerTester: number
 }
 

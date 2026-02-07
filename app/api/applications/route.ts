@@ -78,6 +78,19 @@ export async function POST(request: Request) {
       )
     }
 
+    // SECURITY: Require verified email for critical actions.
+    const tester = await prisma.user.findUnique({
+      where: { id: currentUser.userId },
+      select: { emailVerified: true },
+    })
+
+    if (!tester?.emailVerified) {
+      return NextResponse.json(
+        { error: 'Please verify your email to apply' },
+        { status: 403 }
+      )
+    }
+
     // Get IP and User-Agent for fraud detection
     const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
                       request.headers.get('x-real-ip') || 
@@ -121,31 +134,6 @@ export async function POST(request: Request) {
       )
     }
 
-    // Check if job is full
-    if (job._count.applications >= job.testersNeeded) {
-      return NextResponse.json(
-        { error: 'This job has reached maximum testers' },
-        { status: 400 }
-      )
-    }
-
-    // Check if user already applied
-    const existingApplication = await prisma.application.findUnique({
-      where: {
-        jobId_testerId: {
-          jobId,
-          testerId: currentUser.userId,
-        },
-      },
-    })
-
-    if (existingApplication) {
-      return NextResponse.json(
-        { error: 'You have already applied to this job' },
-        { status: 400 }
-      )
-    }
-
     // Run fraud detection
     const fraudCheck = await checkApplicationFraud(currentUser.userId, jobId, ipAddress)
     
@@ -158,27 +146,63 @@ export async function POST(request: Request) {
     }
 
     // Create application with fraud tracking data
-    const application = await prisma.application.create({
-      data: {
-        jobId,
-        testerId: currentUser.userId,
-        status: 'PENDING',
-        ipAddress,
-        userAgent,
-      },
-      include: {
-        job: {
-          include: {
-            developer: {
-              select: {
-                id: true,
-                name: true,
-                email: true,
+    // SECURITY: Guard against race conditions so we never exceed testersNeeded.
+    const application = await prisma.$transaction(async (tx) => {
+      // Lock job row to serialize capacity checks.
+      await tx.$executeRaw`SELECT id FROM "TestingJob" WHERE id = ${jobId} FOR UPDATE`
+
+      const latestJob = await tx.testingJob.findUnique({
+        where: { id: jobId },
+        select: { status: true, testersNeeded: true },
+      })
+
+      if (!latestJob || latestJob.status !== 'ACTIVE') {
+        throw new Error('JOB_NOT_ACTIVE')
+      }
+
+      const existingApplication = await tx.application.findUnique({
+        where: {
+          jobId_testerId: {
+            jobId,
+            testerId: currentUser.userId,
+          },
+        },
+      })
+
+      if (existingApplication) {
+        throw new Error('ALREADY_APPLIED')
+      }
+
+      const currentCount = await tx.application.count({
+        where: { jobId },
+      })
+
+      if (currentCount >= latestJob.testersNeeded) {
+        throw new Error('JOB_FULL')
+      }
+
+      return tx.application.create({
+        data: {
+          jobId,
+          testerId: currentUser.userId,
+          status: 'PENDING',
+          ipAddress,
+          userAgent,
+        },
+        include: {
+          job: {
+            include: {
+              developer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
               },
             },
           },
         },
-      },
+      })
     })
 
     // Payment record will be created when developer approves the application
@@ -227,6 +251,26 @@ export async function POST(request: Request) {
       message: 'Application submitted successfully',
     })
   } catch (error) {
+    if (error instanceof Error) {
+      if (error.message === 'JOB_FULL') {
+        return NextResponse.json(
+          { error: 'This job has reached maximum testers' },
+          { status: 400 }
+        )
+      }
+      if (error.message === 'ALREADY_APPLIED') {
+        return NextResponse.json(
+          { error: 'You have already applied to this job' },
+          { status: 400 }
+        )
+      }
+      if (error.message === 'JOB_NOT_ACTIVE') {
+        return NextResponse.json(
+          { error: 'This job is not accepting applications' },
+          { status: 400 }
+        )
+      }
+    }
     console.error('Create application error:', error)
     return NextResponse.json(
       { error: 'Failed to submit application' },

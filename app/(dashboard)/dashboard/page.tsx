@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/hooks/use-auth'
-import { formatEur } from '@/lib/currency'
+import { formatEurFromCents } from '@/lib/currency'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -108,7 +108,7 @@ function DeveloperDashboard() {
     },
     {
       title: 'Total Spent',
-      value: loading ? '...' : formatEur(stats.totalSpent),
+      value: loading ? '...' : formatEurFromCents(stats.totalSpent),
       icon: DollarSign,
       description: 'All time',
       color: 'bg-purple-500',
@@ -340,7 +340,7 @@ function TesterDashboard() {
     },
     {
       title: 'Total Earned',
-      value: loading ? '...' : formatEur(stats.totalEarned),
+      value: loading ? '...' : formatEurFromCents(stats.totalEarned),
       icon: DollarSign,
       description: 'All time',
       color: 'bg-purple-500',

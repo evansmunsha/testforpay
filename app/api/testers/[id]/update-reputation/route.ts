@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { getCurrentUser } from '@/lib/auth'
 
 /**
  * POST /api/testers/[id]/update-reputation
@@ -10,6 +11,26 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authHeader = request.headers.get('authorization')
+    const internalSecret = process.env.INTERNAL_REPUTATION_SECRET
+
+    let isAllowed = false
+    const currentUser = await getCurrentUser().catch(() => null)
+    if (currentUser?.role === 'ADMIN') {
+      isAllowed = true
+    }
+
+    if (!isAllowed && internalSecret && authHeader === `Bearer ${internalSecret}`) {
+      isAllowed = true
+    }
+
+    if (!isAllowed) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      )
+    }
+
     const { id } = await params
 
     // Verify tester exists

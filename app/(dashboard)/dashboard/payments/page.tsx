@@ -5,12 +5,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { DollarSign, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Badge } from '@/components/ui/badge'
-import { formatEur } from '@/lib/currency'
+import { formatEurFromCents } from '@/lib/currency'
+import type { Cents } from '@/types/money'
+import { Button } from '@/components/ui/button'
 
 interface Transaction {
   id: string
-  amount: number
-  totalAmount: number
+  /** Amount in integer cents (EUR). */
+  amount: Cents
+  /** Total amount in integer cents (EUR). */
+  totalAmount: Cents
   status: string
   createdAt: string
   job: {
@@ -26,38 +30,58 @@ interface Transaction {
 
 export default function PaymentsPage() {
   const { isDeveloper, isAdmin } = useAuth()
-    const [retrying, setRetrying] = useState<string | null>(null)
-    const handleRetry = async (paymentId: string) => {
-      setRetrying(paymentId)
-      try {
-        const response = await fetch(`/api/admin/payments/retry/${paymentId}`, { method: 'POST' })
-        if (response.ok) {
-          await fetchTransactions()
-        }
-      } catch (error) {
-        console.error('Failed to retry payment:', error)
-      } finally {
-        setRetrying(null)
-      }
-    }
+  const [retrying, setRetrying] = useState<string | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(0)
+  const limit = 50
+  const [pagination, setPagination] = useState<{
+    total: number
+    limit: number
+    offset: number
+    hasMore: boolean
+  } | null>(null)
+  const [summary, setSummary] = useState<{
+    totalSpent?: Cents
+    totalEarned?: Cents
+    pending?: Cents
+  } | null>(null)
 
   useEffect(() => {
-    fetchTransactions()
+    fetchTransactions(0, false)
   }, [])
 
-  const fetchTransactions = async () => {
+  const fetchTransactions = async (nextPage = 0, append = false) => {
     try {
-      const response = await fetch('/api/user/transactions')
+      const offset = nextPage * limit
+      const response = await fetch(`/api/user/transactions?limit=${limit}&offset=${offset}`)
       const data = await response.json()
       if (response.ok) {
-        setTransactions(data.transactions)
+        setTransactions((prev) => append ? [...prev, ...data.transactions] : data.transactions)
+        if (data.pagination) setPagination(data.pagination)
+        if (data.summary) setSummary(data.summary)
       }
     } catch (error) {
       console.error('Failed to fetch transactions:', error)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
+    }
+  }
+
+  const handleRetry = async (paymentId: string) => {
+    setRetrying(paymentId)
+    try {
+      const response = await fetch(`/api/admin/payments/retry/${paymentId}`, { method: 'POST' })
+      if (response.ok) {
+        setPage(0)
+        await fetchTransactions(0, false)
+      }
+    } catch (error) {
+      console.error('Failed to retry payment:', error)
+    } finally {
+      setRetrying(null)
     }
   }
 
@@ -79,13 +103,19 @@ export default function PaymentsPage() {
     }
   }
 
-  const totalAmount = transactions
+  const computedTotalAmount = transactions
     .filter(t => t.status === 'COMPLETED')
     .reduce((sum, t) => sum + (isDeveloper ? t.totalAmount : t.amount), 0)
 
-  const pendingAmount = transactions
+  const computedPendingAmount = transactions
     .filter(t => t.status === 'PENDING')
     .reduce((sum, t) => sum + (isDeveloper ? t.totalAmount : t.amount), 0)
+
+  const totalAmount = summary
+    ? (isDeveloper ? (summary.totalSpent || 0) : (summary.totalEarned || 0))
+    : computedTotalAmount
+
+  const pendingAmount = summary ? (summary.pending || 0) : computedPendingAmount
 
   return (
     <div className="space-y-6">
@@ -107,7 +137,7 @@ export default function PaymentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {formatEur(totalAmount)}
+              {formatEurFromCents(totalAmount)}
             </div>
             <p className="text-xs text-gray-500 mt-1">All time (completed)</p>
           </CardContent>
@@ -121,7 +151,7 @@ export default function PaymentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              {formatEur(pendingAmount)}
+              {formatEurFromCents(pendingAmount)}
             </div>
             <p className="text-xs text-gray-500 mt-1">Awaiting completion</p>
           </CardContent>
@@ -135,7 +165,9 @@ export default function PaymentsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">{transactions.length}</div>
-            <p className="text-xs text-gray-500 mt-1">Total count</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {pagination ? `${pagination.total} total` : 'Total count'}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -189,7 +221,7 @@ export default function PaymentsPage() {
                         </td>
                       )}
                       <td className="px-4 py-4 font-bold">
-                        {formatEur(isDeveloper ? t.totalAmount : t.amount)}
+                        {formatEurFromCents(isDeveloper ? t.totalAmount : t.amount)}
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center gap-2">
@@ -212,7 +244,28 @@ export default function PaymentsPage() {
                   ))}
                 </tbody>
               </table>
+            <div className="mt-2">
+              {pagination && pagination.hasMore && (
+                <div className="flex justify-center mt-6">
+                  <Button
+                      onClick={() => {
+                        setLoadingMore(true)
+                        const nextPage = page + 1
+                        setPage(nextPage)
+                        fetchTransactions(nextPage, true)
+                      }}
+                      disabled={loadingMore}
+                      variant="outline"
+                    >
+                      {loadingMore ? 'Loading...' : 'Load more'}
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
+
+            
+            
           )}
         </CardContent>
       </Card>

@@ -5,7 +5,7 @@ import { stripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { sendNotification, NotificationTemplates } from '@/lib/notifications'
 import Stripe from 'stripe'
-import { formatEur } from '@/lib/currency'
+import { formatEurFromCents } from '@/lib/currency'
 
 // This is CRITICAL for Stripe webhooks
 export const runtime = 'nodejs'
@@ -56,25 +56,45 @@ export async function POST(request: Request) {
     }
 
     // Handle events
-    switch (event.type) {
+    // NOTE: Stripe's event type union can lag behind actual event strings.
+    // Cast to string to avoid TS blocking valid webhook types like transfer.failed.
+    switch (event.type as string) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session
         
         console.log('💳 Checkout completed:', session.id)
+
+        if (session.payment_status !== 'paid') {
+          console.warn('Checkout session completed but not paid:', session.id, session.payment_status)
+          break
+        }
         
         if (session.metadata?.jobId) {
-          const job = await prisma.testingJob.update({
-            where: { id: session.metadata.jobId },
+          const updated = await prisma.testingJob.updateMany({
+            where: { id: session.metadata.jobId, stripeSessionId: null },
             data: {
               status: 'ACTIVE',
               publishedAt: new Date(),
               stripeSessionId: session.id,
               stripePaymentIntent: session.payment_intent as string,
             },
+          })
+
+          if (updated.count === 0) {
+            console.log('↩️ Duplicate checkout webhook ignored (already processed):', session.id, session.metadata?.jobId)
+            break
+          }
+
+          const job = await prisma.testingJob.findUnique({
+            where: { id: session.metadata.jobId },
             include: {
               developer: true,
             },
           })
+
+          if (!job) {
+            break
+          }
 
           console.log('✅ Job activated:', session.metadata.jobId, 'PaymentIntent:', session.payment_intent)
           
@@ -92,27 +112,29 @@ export async function POST(request: Request) {
           }
           
           // Notify all testers of new job opportunity
-          try {
-            const testers = await prisma.user.findMany({
-              where: { role: 'TESTER' },
-              select: { id: true },
-            })
-            
-            const notifyPromises = testers.map(tester =>
-              sendNotification({
-                userId: tester.id,
-                title: 'New Job Available! 📱',
-                body: `New testing opportunity: "${job.appName}" - ${formatEur(job.paymentPerTester)} per tester`,
-                url: `/dashboard/browse?jobId=${job.id}`,
-                type: 'new_job_posted',
-              }).catch(err => console.error(`Failed to notify tester ${tester.id}:`, err))
-            )
-            
-            await Promise.allSettled(notifyPromises)
-            console.log('✅ Notified', testers.length, 'testers of new job')
-          } catch (error) {
-            console.error('Failed to notify testers of new job:', error)
-          }
+          void (async () => {
+            try {
+              const testers = await prisma.user.findMany({
+                where: { role: 'TESTER' },
+                select: { id: true },
+              })
+              
+              const notifyPromises = testers.map(tester =>
+                sendNotification({
+                  userId: tester.id,
+                  title: 'New Job Available! 📱',
+                  body: `New testing opportunity: "${job.appName}" - ${formatEurFromCents(job.paymentPerTester)} per tester`,
+                  url: `/dashboard/browse?jobId=${job.id}`,
+                  type: 'new_job_posted',
+                }).catch(err => console.error(`Failed to notify tester ${tester.id}:`, err))
+              )
+              
+              await Promise.allSettled(notifyPromises)
+              console.log('✅ Notified', testers.length, 'testers of new job')
+            } catch (error) {
+              console.error('Failed to notify testers of new job:', error)
+            }
+          })()
         }
         break
       }
@@ -136,47 +158,55 @@ export async function POST(request: Request) {
         console.log('💸 Transfer created:', transfer.id)
         
         if (transfer.metadata?.applicationId) {
-          const payments = await prisma.payment.findMany({
-            where: { 
-              applicationId: transfer.metadata.applicationId,
-            },
-            include: {
-              application: {
-                include: {
-                  tester: true,
-                  job: true,
-                },
-              },
-            },
-          })
-          
           await prisma.payment.updateMany({
             where: { 
               applicationId: transfer.metadata.applicationId,
+              transferId: null,
+              status: 'PROCESSING',
             },
             data: {
-              status: 'COMPLETED',
-              completedAt: new Date(),
               transferId: transfer.id,
             },
           })
 
-          console.log('✅ Tester payout completed:', transfer.metadata.applicationId)
-          
-          // Notify tester of payment
-          if (payments[0]?.application?.tester) {
-            try {
-              await sendNotification({
-                userId: payments[0].application.tester.id,
-                title: 'Payment Received! 💰',
-                body: `You've received ${formatEur(payments[0].amount)} for testing "${payments[0].application.job.appName}".`,
-                url: `/dashboard/payments`,
-                type: 'payment_received',
-              })
-            } catch (notifyError) {
-              console.error('Failed to notify tester of payment:', notifyError)
-            }
-          }
+          console.log('✅ Transfer recorded (pending completion):', transfer.metadata.applicationId)
+        }
+        break
+      }
+
+      case 'transfer.failed': {
+        const transfer = event.data.object as Stripe.Transfer
+        console.error('❌ Transfer failed:', transfer.id)
+
+        if (transfer.metadata?.applicationId) {
+          await prisma.payment.updateMany({
+            where: {
+              applicationId: transfer.metadata.applicationId,
+            },
+            data: {
+              status: 'FAILED',
+              failedAt: new Date(),
+            },
+          })
+        }
+        break
+      }
+
+      case 'transfer.reversed': {
+        const transfer = event.data.object as Stripe.Transfer
+        console.error('❌ Transfer reversed:', transfer.id)
+
+        if (transfer.metadata?.applicationId) {
+          await prisma.payment.updateMany({
+            where: {
+              applicationId: transfer.metadata.applicationId,
+            },
+            data: {
+              status: 'REFUNDED',
+              failedAt: new Date(),
+              completedAt: null,
+            },
+          })
         }
         break
       }

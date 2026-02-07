@@ -13,6 +13,12 @@ export async function POST() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    // SECURITY: In production this fallback endpoint must be disabled.
+    // Rationale: It can activate jobs without verifying Stripe payment.
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
     // Find all DRAFT jobs for this developer and activate them
     // In a production app, you'd verify with Stripe that payment was received
     const result = await prisma.testingJob.updateMany({

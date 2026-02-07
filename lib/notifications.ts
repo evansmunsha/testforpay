@@ -1,5 +1,6 @@
 import prisma from './prisma'
 import webpush from 'web-push'
+import { formatEurFromCents } from './currency'
 
 // Initialize web-push if VAPID keys are set
 if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
@@ -95,15 +96,15 @@ export const NotificationTemplates = {
     type: 'verification_approved',
   }),
 
-  testingComplete: (appName: string, amount: number) => ({
+  testingComplete: (appName: string, amountCents: number) => ({
     title: 'Testing Complete! 💰',
-    body: `You've completed testing "${appName}". €${amount.toFixed(2)} will be sent to your account.`,
+    body: `You've completed testing "${appName}". ${formatEurFromCents(amountCents)} will be sent to your account.`,
     type: 'testing_complete',
   }),
 
-  paymentReceived: (amount: number) => ({
+  paymentReceived: (amountCents: number) => ({
     title: 'Payment Received! 🎊',
-    body: `You've received a payment of €${amount.toFixed(2)} for completed testing.`,
+    body: `You've received a payment of ${formatEurFromCents(amountCents)} for completed testing.`,
     type: 'payment_received',
   }),
 
@@ -125,3 +126,6 @@ export const NotificationTemplates = {
     type: 'new_feedback',
   }),
 }
+
+
+

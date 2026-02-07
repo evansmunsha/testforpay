@@ -22,6 +22,8 @@ import {
   Flag,
   MessageSquare
 } from 'lucide-react'
+import { formatEurFromCents } from '@/lib/currency'
+import type { Cents } from '@/types/money'
 
 interface Stats {
   totalUsers: number
@@ -31,7 +33,8 @@ interface Stats {
   activeJobs: number
   completedJobs: number
   totalApplications: number
-  totalRevenue: number
+  /** Platform fees in integer cents (EUR). */
+  totalRevenue: Cents
   pendingPayments: number
 }
 
@@ -52,7 +55,8 @@ interface Job {
   appName: string
   status: string
   testersNeeded: number
-  paymentPerTester: number
+  /** Payment per tester in integer cents (EUR). */
+  paymentPerTester: Cents
   createdAt: string
   developer: { id: string; email: string; name: string | null }
   _count: { applications: number }
@@ -68,7 +72,8 @@ interface Application {
 
 interface Payment {
   id: string
-  amount: number
+  /** Amount in integer cents (EUR). */
+  amount: Cents
   status: string
   createdAt: string
   failureReason?: string | null
@@ -616,7 +621,7 @@ export default function AdminDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold">
-              €{loadingStats ? '...' : (stats?.totalRevenue?.toFixed(2) ?? '0.00')}
+              {loadingStats ? '...' : formatEurFromCents(stats?.totalRevenue ?? 0)}
             </div>
             <p className="text-xs text-gray-500 mt-1">Platform fees</p>
           </CardContent>
@@ -788,7 +793,7 @@ export default function AdminDashboard() {
                           <td className="py-3 px-2">{getStatusBadge(job.status)}</td>
                           <td className="py-3 px-2">{job.testersNeeded}</td>
                           <td className="py-3 px-2">{job._count.applications}</td>
-                          <td className="py-3 px-2">€{job.paymentPerTester}</td>
+                          <td className="py-3 px-2">{formatEurFromCents(job.paymentPerTester)}</td>
                           <td className="py-3 px-2 text-gray-500">
                             {new Date(job.createdAt).toLocaleDateString()}
                           </td>
@@ -897,7 +902,7 @@ export default function AdminDashboard() {
                             {payment.application?.tester?.name || payment.application?.tester?.email || '-'}
                           </td>
                           <td className="py-3 px-2">{payment.application?.job?.appName || '-'}</td>
-                          <td className="py-3 px-2 font-medium">€{payment.amount.toFixed(2)}</td>
+                          <td className="py-3 px-2 font-medium">{formatEurFromCents(payment.amount)}</td>
                           <td className="py-3 px-2">
                             <div className="flex items-center gap-2">
                               {getStatusBadge(payment.status)}

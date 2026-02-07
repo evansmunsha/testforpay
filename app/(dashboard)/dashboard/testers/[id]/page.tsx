@@ -8,7 +8,8 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Star, TrendingUp, Briefcase, DollarSign, Calendar } from 'lucide-react'
 import Link from 'next/link'
 import { TesterActions } from '@/components/applications/tester-actions'
-import { formatEur } from '@/lib/currency'
+import { formatEurFromCents } from '@/lib/currency'
+import type { Cents } from '@/types/money'
 
 interface TesterProfile {
   id: string
@@ -16,7 +17,8 @@ interface TesterProfile {
   email: string
   averageEngagementScore: number | null
   totalTestsCompleted: number | null
-  totalEarnings: number | null
+  /** Total earnings in integer cents (EUR). */
+  totalEarnings: Cents | null
   averageRating: number | null
   createdAt: string
 }
@@ -129,7 +131,7 @@ export default function TesterProfilePage() {
                   <span className="text-sm font-medium">Total Earned</span>
                 </div>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatEur(profile.totalEarnings || 0)}
+                  {formatEurFromCents(profile.totalEarnings || 0)}
                 </p>
               </div>
 
@@ -163,7 +165,7 @@ export default function TesterProfilePage() {
                   <span className="text-sm font-medium">Avg Earnings/Test</span>
                 </div>
                 <p className="text-2xl font-bold">
-                  {formatEur(
+                  {formatEurFromCents(
                     profile.totalTestsCompleted
                       ? (profile.totalEarnings || 0) / profile.totalTestsCompleted
                       : 0

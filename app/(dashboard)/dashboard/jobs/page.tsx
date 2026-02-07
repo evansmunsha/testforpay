@@ -7,7 +7,9 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Plus, Briefcase, Calendar, Users, DollarSign, CheckCircle } from 'lucide-react'
 import Link from 'next/link'
+import { formatEurFromCents } from '@/lib/currency'
 import { useAuth } from '@/hooks/use-auth'
+import type { Cents } from '@/types/money'
 
 interface Job {
   id: string
@@ -15,7 +17,8 @@ interface Job {
   appDescription: string
   status: string
   testersNeeded: number
-  paymentPerTester: number
+  /** Payment per tester in integer cents (EUR). */
+  paymentPerTester: Cents
   createdAt: string
   _count: {
     applications: number
@@ -157,7 +160,7 @@ export default function JobsPage() {
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <DollarSign className="h-4 w-4" />
-                      <span>€{job.paymentPerTester} per tester</span>
+                      <span>{formatEurFromCents(job.paymentPerTester)} per tester</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <Calendar className="h-4 w-4" />

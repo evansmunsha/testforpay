@@ -12,12 +12,15 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Lock } from 'lucide-react'
+import { formatEurFromCents } from '@/lib/currency'
+import type { Cents } from '@/types/money'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 interface CheckoutFormProps {
   jobId: string
-  amount: number
+  /** Total amount in integer cents (EUR). */
+  amount: Cents
   onSuccess?: () => void
 }
 
@@ -88,7 +91,7 @@ function CheckoutFormContent({ jobId, amount, onSuccess }: CheckoutFormProps) {
         ) : (
           <>
             <Lock className="mr-2 h-4 w-4" />
-            Pay €{amount.toFixed(2)}
+            Pay {formatEurFromCents(amount)}
           </>
         )}
       </Button>

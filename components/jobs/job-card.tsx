@@ -14,7 +14,8 @@ import {
   ExternalLink,
   Share2
 } from 'lucide-react'
-import { formatEur } from '@/lib/currency'
+import { formatEurFromCents } from '@/lib/currency'
+import type { Cents } from '@/types/money'
 
 interface JobCardProps {
   job: {
@@ -25,7 +26,8 @@ interface JobCardProps {
     testersNeeded: number
     testDuration: number
     minAndroidVersion: string | null
-    paymentPerTester: number
+    /** Payment per tester in integer cents (EUR). */
+    paymentPerTester: Cents
     googlePlayLink: string
     createdAt: string
     _count: {
@@ -89,7 +91,7 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             </div>
             <div>
               <p className="text-sm text-gray-600">Payment</p>
-              <p className="font-bold text-green-600">{formatEur(job.paymentPerTester)}</p>
+              <p className="font-bold text-green-600">{formatEurFromCents(job.paymentPerTester)}</p>
             </div>
           </div>
 
@@ -160,7 +162,7 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              Get paid {formatEur(job.paymentPerTester)}
+              Get paid {formatEurFromCents(job.paymentPerTester)}
             </li>
           </ul>
         </div>
@@ -182,12 +184,12 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             disabled={loading}
             className="flex-1"
           >
-            {loading ? 'Applying...' : `Apply Now • ${formatEur(job.paymentPerTester)}`}
+            {loading ? 'Applying...' : `Apply Now • ${formatEurFromCents(job.paymentPerTester)}`}
           </Button>
         )}
         <Button variant="outline" size="icon" asChild>
           <a 
-            href={`https://wa.me/?text=${encodeURIComponent(`🎉 Earn ${formatEur(job.paymentPerTester)} testing "${job.appName}" app!
+            href={`https://wa.me/?text=${encodeURIComponent(`🎉 Earn ${formatEurFromCents(job.paymentPerTester)} testing "${job.appName}" app!
 
             ✅ Test for ${job.testDuration} days\r
             ✅ ${spotsLeft} spots left\r
@@ -215,3 +217,4 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
     </Card>
   )
 }
+

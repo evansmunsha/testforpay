@@ -11,7 +11,8 @@ import { Search, Briefcase, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/use-auth'
 import { useToast } from '@/hooks/use-toast'
-import { formatEur } from '@/lib/currency'
+import { formatEurFromCents } from '@/lib/currency'
+import type { Cents } from '@/types/money'
 
 
 interface Job {
@@ -22,7 +23,8 @@ interface Job {
   testersNeeded: number
   testDuration: number
   minAndroidVersion: string | null
-  paymentPerTester: number
+  /** Payment per tester in integer cents (EUR). */
+  paymentPerTester: Cents
   googlePlayLink: string
   createdAt: string
   _count: {
@@ -182,7 +184,7 @@ export default function BrowsePage() {
       }
 
       // Minimum payment filter
-      if (minPaymentValue !== null && job.paymentPerTester < minPaymentValue) {
+      if (minPaymentValue !== null && job.paymentPerTester < minPaymentValue * 100) {
         return false
       }
 
@@ -362,13 +364,13 @@ export default function BrowsePage() {
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-900">
-                  {formatEur(Math.max(...filteredJobs.map(job => job.paymentPerTester)))}
+                  {formatEurFromCents(Math.max(...filteredJobs.map(job => job.paymentPerTester)))}
                 </p>
                 <p className="text-sm text-blue-700">Highest Payment</p>
               </div>
               <div>
                 <p className="text-2xl font-bold text-blue-900">
-                  {formatEur(
+                  {formatEurFromCents(
                     filteredJobs.reduce((sum, job) => sum + job.paymentPerTester, 0) / 
                       filteredJobs.length
                   )}

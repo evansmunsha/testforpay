@@ -47,17 +47,14 @@ export async function GET() {
           failureReason = 'Tester has no connected Stripe account'
         } else {
           try {
-            const account = await stripe.accounts.retrieve(stripeAccountId, {
-              expand: ['external_accounts'],
-            })
-            const externalAccounts = account.external_accounts?.data ?? []
-            const hasEurExternalAccount = externalAccounts.some((external) => {
-              if (!('currency' in external)) return false
-              return external.currency?.toLowerCase() === 'eur'
-            })
-            const defaultCurrency = account.default_currency?.toLowerCase()
-            if (!hasEurExternalAccount && defaultCurrency !== 'eur') {
-              failureReason = `EUR payout not configured (country: ${account.country || 'unknown'})`
+            const account = await stripe.accounts.retrieve(stripeAccountId)
+            const payoutsEnabled = account.payouts_enabled === true
+            const hasBlockingRequirements =
+              Array.isArray(account.requirements?.currently_due) &&
+              account.requirements.currently_due.length > 0
+
+            if (!payoutsEnabled || hasBlockingRequirements) {
+              failureReason = `Payouts not enabled (country: ${account.country || 'unknown'})`
             } else {
               failureReason = 'Transfer failed. Check Stripe logs'
             }

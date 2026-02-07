@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { sendNotification } from '@/lib/notifications'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const ALLOWED_REASONS = [
   'harassment',
@@ -22,6 +23,18 @@ export async function POST(
         { error: 'Not authenticated' },
         { status: 401 }
       )
+    }
+
+    // SECURITY: Rate limit report submissions to reduce abuse.
+    if (process.env.NODE_ENV === 'production') {
+      const ip = getClientIp(request)
+      const rate = checkRateLimit(`feedback-report:${currentUser.userId}:${ip}`, 5, 10 * 60 * 1000)
+      if (!rate.allowed) {
+        return NextResponse.json(
+          { error: 'Too many reports. Please try again later.' },
+          { status: 429, headers: { 'Retry-After': `${rate.retryAfter || 60}` } }
+        )
+      }
     }
 
     const { id } = await params

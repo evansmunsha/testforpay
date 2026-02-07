@@ -198,6 +198,9 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
+    // Validate input (partial update)
+    const validated = questionnaireSchema.partial().parse(body)
+
     // Get the job
     const job = await prisma.testingJob.findUnique({
       where: { id },
@@ -233,7 +236,7 @@ export async function PATCH(
     // Update questionnaire (partial update - save draft)
     questionnaire = await prisma.productionQuestionnaire.update({
       where: { jobId: id },
-      data: body,
+      data: validated,
     })
 
     return NextResponse.json({
@@ -242,6 +245,15 @@ export async function PATCH(
       questionnaire,
     })
   } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        {
+          error: 'Validation error',
+          details: (error as any).errors,
+        },
+        { status: 400 }
+      )
+    }
     console.error('Update questionnaire error:', error)
     return NextResponse.json(
       { error: 'Failed to update questionnaire' },

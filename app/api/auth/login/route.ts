@@ -2,9 +2,22 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { verifyPassword, generateToken, setAuthCookie } from '@/lib/auth'
 import { loginSchema } from '@/lib/validators'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   try {
+    // SECURITY: Rate limit auth attempts in production to reduce brute-force risk.
+    if (process.env.NODE_ENV === 'production') {
+      const ip = getClientIp(request)
+      const rate = checkRateLimit(`auth:login:${ip}`, 10, 10 * 60 * 1000)
+      if (!rate.allowed) {
+        return NextResponse.json(
+          { error: 'Too many login attempts. Please try again later.' },
+          { status: 429, headers: { 'Retry-After': `${rate.retryAfter || 60}` } }
+        )
+      }
+    }
+
     const body = await request.json()
     
     // Validate input

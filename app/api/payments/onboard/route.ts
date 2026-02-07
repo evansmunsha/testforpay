@@ -33,6 +33,14 @@ export async function POST(request: Request) {
       )
     }
 
+    // SECURITY: Require verified email for payout onboarding.
+    if (!user.emailVerified) {
+      return NextResponse.json(
+        { error: 'Please verify your email to set up payouts' },
+        { status: 403 }
+      )
+    }
+
     let accountId = user.stripeAccountId
 
     // Create Stripe account if doesn't exist

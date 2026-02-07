@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 /**
  * POST /api/testers/[id]/follow
@@ -18,6 +19,18 @@ export async function POST(
         { error: 'Only developers can bookmark testers' },
         { status: 403 }
       )
+    }
+
+    // SECURITY: Rate limit follow actions to reduce abuse.
+    if (process.env.NODE_ENV === 'production') {
+      const ip = getClientIp(request)
+      const rate = checkRateLimit(`tester-follow:${currentUser.userId}:${ip}`, 30, 10 * 60 * 1000)
+      if (!rate.allowed) {
+        return NextResponse.json(
+          { error: 'Too many follow actions. Please try again later.' },
+          { status: 429, headers: { 'Retry-After': `${rate.retryAfter || 60}` } }
+        )
+      }
     }
 
     const { id } = await params
@@ -93,6 +106,18 @@ export async function DELETE(
         { error: 'Unauthorized' },
         { status: 403 }
       )
+    }
+
+    // SECURITY: Rate limit unfollow actions to reduce abuse.
+    if (process.env.NODE_ENV === 'production') {
+      const ip = getClientIp(request)
+      const rate = checkRateLimit(`tester-unfollow:${currentUser.userId}:${ip}`, 30, 10 * 60 * 1000)
+      if (!rate.allowed) {
+        return NextResponse.json(
+          { error: 'Too many actions. Please try again later.' },
+          { status: 429, headers: { 'Retry-After': `${rate.retryAfter || 60}` } }
+        )
+      }
     }
 
     const { id } = await params

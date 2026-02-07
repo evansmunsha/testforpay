@@ -15,6 +15,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
   const [maskedEmail, setMaskedEmail] = useState('')
   const [hint, setHint] = useState('')
+  const [resetToken, setResetToken] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -68,7 +69,7 @@ export default function ForgotPasswordPage() {
       const response = await fetch('/api/auth/forgot-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, step: 'reset', newPassword }),
+        body: JSON.stringify({ email, step: 'reset', newPassword, resetToken }),
       })
 
       const data = await response.json()
@@ -137,6 +138,21 @@ export default function ForgotPasswordPage() {
                   Resetting password for: <strong>{maskedEmail}</strong>
                 </p>
                 {hint && <p className="text-xs text-blue-600 mt-1">{hint}</p>}
+                <p className="text-xs text-blue-600 mt-2">
+                  We emailed you a reset code. Enter it below to continue.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="resetToken">Reset Code</Label>
+                <Input
+                  id="resetToken"
+                  type="text"
+                  placeholder="Enter the code from your email"
+                  value={resetToken}
+                  onChange={(e) => setResetToken(e.target.value.trim())}
+                  required
+                />
               </div>
 
               <div className="space-y-2">

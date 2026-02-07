@@ -10,7 +10,6 @@ import { Search, Loader } from 'lucide-react'
 interface SearchResult {
   id: string
   name: string | null
-  email: string
   averageEngagementScore: number | null
   totalTestsCompleted: number | null
   averageRating: number | null
@@ -48,7 +47,7 @@ export function TesterSearch() {
       <div className="relative">
         <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
         <Input
-          placeholder="Search testers by name or email..."
+          placeholder="Search testers by name..."
           value={query}
           onChange={handleSearch}
           className="pl-10"
@@ -78,7 +77,6 @@ export function TesterSearch() {
                   <h3 className="font-semibold text-lg">
                     {tester.name || 'Anonymous'}
                   </h3>
-                  <p className="text-sm text-gray-600">{tester.email}</p>
                 </div>
                 <Button variant="outline" size="sm">
                   View Profile

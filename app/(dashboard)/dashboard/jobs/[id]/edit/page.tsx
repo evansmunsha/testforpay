@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/toast-provider'
 import { ArrowLeft, AlertCircle, Save } from 'lucide-react'
 import Link from 'next/link'
+import { formatEurFromCents } from '@/lib/currency'
+import type { Cents } from '@/types/money'
 
 interface Job {
   id: string
@@ -22,7 +24,8 @@ interface Job {
   testersNeeded: number
   testDuration: number
   minAndroidVersion: string | null
-  paymentPerTester: number
+  /** Payment per tester in integer cents (EUR). */
+  paymentPerTester: Cents
   status: string
 }
 
@@ -264,7 +267,7 @@ export default function EditJobPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Payment per Tester</span>
-                    <span className="font-medium">€{job.paymentPerTester}</span>
+                    <span className="font-medium">{formatEurFromCents(job.paymentPerTester)}</span>
                   </div>
                 </div>
 

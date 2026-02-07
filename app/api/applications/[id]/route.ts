@@ -7,6 +7,7 @@ import {
   sendApplicationApprovedEmail, 
   sendTestingStartedEmail 
 } from '@/lib/email'
+import { formatEurFromCents } from '@/lib/currency'
 
 // GET - Get single application
 export async function GET(
@@ -14,18 +15,29 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      )
+    }
+
     const { id } = await params
 
     const application = await prisma.application.findUnique({
       where: { id },
       include: {
         job: {
-          include: {
+          select: {
+            id: true,
+            appName: true,
+            developerId: true,
+            googlePlayLink: true,
             developer: {
               select: {
                 id: true,
                 name: true,
-                email: true,
               },
             },
           },
@@ -34,9 +46,7 @@ export async function GET(
           select: {
             id: true,
             name: true,
-            email: true,
             createdAt: true,
-            deviceInfo: true,
           },
         },
         payment: true,
@@ -48,6 +58,87 @@ export async function GET(
         { error: 'Application not found' },
         { status: 404 }
       )
+    }
+
+    const isOwner =
+      currentUser.role === 'ADMIN' ||
+      application.tester.id === currentUser.userId ||
+      application.job.developerId === currentUser.userId
+
+    if (!isOwner) {
+      return NextResponse.json(
+        { error: 'Not authorized' },
+        { status: 403 }
+      )
+    }
+
+    const canSeePii =
+      currentUser.role === 'ADMIN' ||
+      application.job.developerId === currentUser.userId
+    const isTesterSelf = application.tester.id === currentUser.userId
+
+    if (canSeePii) {
+      const full = await prisma.application.findUnique({
+        where: { id },
+        include: {
+          job: {
+            include: {
+              developer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          tester: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              createdAt: true,
+              deviceInfo: true,
+            },
+          },
+          payment: true,
+        },
+      })
+
+      return NextResponse.json({ success: true, application: full })
+    }
+
+    if (isTesterSelf) {
+      const self = await prisma.application.findUnique({
+        where: { id },
+        include: {
+          job: {
+            select: {
+              id: true,
+              appName: true,
+              developerId: true,
+              googlePlayLink: true,
+              developer: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+          tester: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              createdAt: true,
+            },
+          },
+          payment: true,
+        },
+      })
+
+      return NextResponse.json({ success: true, application: self })
     }
 
     return NextResponse.json({ success: true, application })
@@ -122,7 +213,7 @@ export async function PATCH(
 
       // Create Payment record for escrow
       // Calculate platform fee share for this tester
-      const platformFeePerTester = application.job.platformFee / application.job.testersNeeded
+      const platformFeePerTester = Math.round(application.job.platformFee / application.job.testersNeeded)
       const totalPaymentAmount = application.job.paymentPerTester + platformFeePerTester
 
       try {
@@ -145,14 +236,14 @@ export async function PATCH(
 
       // Send approval email
       try {
-        const testerPaymentEur = application.job.paymentPerTester
+        const testerPaymentCents = application.job.paymentPerTester
         await sendApplicationApprovedEmail(
           application.tester.email,
           {
             testerName: application.tester.name || 'Tester',
             appName: application.job.appName,
             googlePlayLink: application.job.googlePlayLink,
-            payment: Math.round(testerPaymentEur * 100) / 100,
+            paymentCents: testerPaymentCents,
           }
         )
       } catch (emailError) {
@@ -257,31 +348,16 @@ export async function PATCH(
         },
       })
 
-      // Update payment status to PROCESSING (testing has started)
-      if (updatedApplication.payment) {
-        try {
-          await prisma.payment.update({
-            where: { id: updatedApplication.payment.id },
-            data: {
-              status: 'PROCESSING',
-            },
-          })
-          console.log('💰 Payment status updated to PROCESSING for application:', id)
-        } catch (paymentError) {
-          console.error('Failed to update payment status on verification:', paymentError)
-        }
-      }
-
       // Send testing started email
       try {
-        const testerPaymentEur = application.job.paymentPerTester
+        const testerPaymentCents = application.job.paymentPerTester
         await sendTestingStartedEmail(
           application.tester.email,
           {
             testerName: application.tester.name || 'Tester',
             appName: application.job.appName,
             endDate: testingEndDate.toLocaleDateString(),
-            payment: Math.round(testerPaymentEur * 100) / 100,
+            paymentCents: testerPaymentCents,
           }
         )
       } catch (emailError) {
@@ -340,15 +416,35 @@ export async function PATCH(
         },
       })
 
-      // Payment should already exist and be in PROCESSING status
-      // It will be picked up by the cron job for actual payout
+      // Move escrowed payment into PROCESSING (ready for payout)
       if (!updatedApplication.payment) {
         console.warn('⚠️ No payment record found for completed application:', id)
       } else {
         try {
-          const payoutResult = await processPaymentById(updatedApplication.payment.id)
-          if (payoutResult?.status === 'failed') {
-            console.warn('⚠️ Immediate payout attempt failed:', payoutResult.error)
+          const moved = await prisma.payment.updateMany({
+            where: {
+              id: updatedApplication.payment.id,
+              status: 'ESCROWED',
+              transferId: null,
+            },
+            data: { status: 'PROCESSING' },
+          })
+
+          if (moved.count === 0) {
+            const fresh = await prisma.payment.findUnique({
+              where: { id: updatedApplication.payment.id },
+              select: { status: true, transferId: true },
+            })
+            console.warn('⚠️ Skipping payout transition:', {
+              paymentId: updatedApplication.payment.id,
+              status: fresh?.status,
+              transferId: fresh?.transferId,
+            })
+          } else {
+            const payoutResult = await processPaymentById(updatedApplication.payment.id)
+            if (payoutResult?.status === 'failed') {
+              console.warn('⚠️ Immediate payout attempt failed:', payoutResult.error)
+            }
           }
         } catch (payoutError) {
           console.error('⚠️ Immediate payout attempt threw an error:', payoutError)
@@ -390,7 +486,7 @@ export async function PATCH(
           },
         })
 
-        console.log(`✅ Updated reputation for tester ${updatedApplication.testerId}: ${totalTestsCompleted} tests, $${totalEarnings}`)
+        console.log(`✅ Updated reputation for tester ${updatedApplication.testerId}: ${totalTestsCompleted} tests, ${formatEurFromCents(totalEarnings)}`)
       } catch (repError) {
         console.error('⚠️ Failed to update tester reputation:', repError)
       }

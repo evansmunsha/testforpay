@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { z } from 'zod'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const submitFeedbackSchema = z.object({
   type: z.enum(['developer', 'tester']),
@@ -21,6 +22,18 @@ export async function POST(request: Request) {
         { error: 'Not authenticated' },
         { status: 401 }
       )
+    }
+
+    // SECURITY: Rate limit feedback submissions to reduce spam/abuse.
+    if (process.env.NODE_ENV === 'production') {
+      const ip = getClientIp(request)
+      const rate = checkRateLimit(`feedback:${currentUser.userId}:${ip}`, 5, 10 * 60 * 1000)
+      if (!rate.allowed) {
+        return NextResponse.json(
+          { error: 'Too many feedback submissions. Please try again later.' },
+          { status: 429, headers: { 'Retry-After': `${rate.retryAfter || 60}` } }
+        )
+      }
     }
 
     const body = await request.json()

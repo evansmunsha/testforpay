@@ -1,14 +1,11 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
 interface TesterRank {
   id: string
   name: string | null
-  email: string
   averageEngagementScore: number | null
   totalTestsCompleted: number | null
-  totalEarnings: number | null
   averageRating: number | null
   rank: number
   badge: string

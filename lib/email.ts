@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { formatEurFromCents } from './currency'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -11,7 +12,7 @@ export async function sendApplicationApprovedEmail(
     testerName: string
     appName: string
     googlePlayLink: string
-    payment: number
+    paymentCents: number
   }
 ) {
   return resend.emails.send({
@@ -30,7 +31,7 @@ export async function sendApplicationApprovedEmail(
             <li>Opt-in to the Google Play closed test using the link below</li>
             <li>Upload a screenshot to verify your opt-in</li>
             <li>Test the app for 14 days</li>
-            <li>Get paid €${data.payment}</li>
+            <li>Get paid ${formatEurFromCents(data.paymentCents)}</li>
           </ol>
         </div>
         
@@ -87,7 +88,7 @@ export async function sendTestingStartedEmail(
     testerName: string
     appName: string
     endDate: string
-    payment: number
+    paymentCents: number
   }
 ) {
   return resend.emails.send({
@@ -102,7 +103,7 @@ export async function sendTestingStartedEmail(
         
         <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <p><strong>Testing ends:</strong> ${data.endDate}</p>
-          <p><strong>Payment:</strong> €${data.payment}</p>
+          <p><strong>Payment:</strong> ${formatEurFromCents(data.paymentCents)}</p>
           <p style="margin-top: 15px; color: #166534;">
             Just use the app naturally and provide honest feedback. 
             Payment will be processed automatically after 14 days.
@@ -118,7 +119,7 @@ export async function sendTestingCompletedEmail(
   data: {
     testerName: string
     appName: string
-    payment: number
+    paymentCents: number
   }
 ) {
   return resend.emails.send({
@@ -133,7 +134,7 @@ export async function sendTestingCompletedEmail(
         
         <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h2 style="margin-top: 0; color: #166534;">Payment Processing</h2>
-          <p>Your payment of <strong>€${data.payment}</strong> is being processed and will arrive in your bank account within 2-3 business days.</p>
+          <p>Your payment of <strong>${formatEurFromCents(data.paymentCents)}</strong> is being processed and will arrive in your bank account within 2-3 business days.</p>
         </div>
         
         <p>Thank you for being a valuable tester! Look for more opportunities in your dashboard.</p>
@@ -147,7 +148,7 @@ export async function sendPaymentConfirmationEmail(
   data: {
     developerName: string
     appName: string
-    amount: number
+    amountCents: number
     testersCount: number
   }
 ) {
@@ -162,7 +163,7 @@ export async function sendPaymentConfirmationEmail(
         <p>Your payment for <strong>${data.appName}</strong> has been processed successfully.</p>
         
         <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p style="margin: 5px 0;"><strong>Amount:</strong> €${data.amount}</p>
+          <p style="margin: 5px 0;"><strong>Amount:</strong> ${formatEurFromCents(data.amountCents)}</p>
           <p style="margin: 5px 0;"><strong>Testers:</strong> ${data.testersCount}</p>
           <p style="margin: 5px 0;"><strong>Status:</strong> Active and accepting applications</p>
         </div>
@@ -196,3 +197,30 @@ export async function sendTestingReminderEmail(
     `,
   })
 }
+
+export async function sendPasswordResetEmail(
+  to: string,
+  data: {
+    resetToken: string
+  }
+) {
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: 'Reset your TestForPay password',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #2563eb;">Password Reset</h1>
+        <p>We received a request to reset your password.</p>
+        <p>Use this code to reset your password:</p>
+        <div style="font-size: 24px; font-weight: bold; letter-spacing: 2px; margin: 16px 0;">
+          ${data.resetToken}
+        </div>
+        <p style="color: #6b7280; font-size: 14px;">
+          This code expires in 30 minutes. If you didn't request this, you can ignore this email.
+        </p>
+      </div>
+    `,
+  })
+}
+

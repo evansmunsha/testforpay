@@ -101,7 +101,7 @@ export async function POST(
 
     // Calculate payouts for each category
     for (const app of completedTesters) {
-      const amount = paymentPerTester * 1.0 // 100%
+      const amount = Math.round(paymentPerTester * 1.0) // 100% in cents
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
@@ -113,7 +113,7 @@ export async function POST(
     }
 
     for (const app of testingTesters) {
-      const amount = paymentPerTester * 0.75 // 75%
+      const amount = Math.round(paymentPerTester * 0.75) // 75% in cents
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
@@ -125,7 +125,7 @@ export async function POST(
     }
 
     for (const app of verifiedTesters) {
-      const amount = paymentPerTester * 0.50 // 50%
+      const amount = Math.round(paymentPerTester * 0.50) // 50% in cents
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
@@ -137,7 +137,7 @@ export async function POST(
     }
 
     for (const app of optedInTesters) {
-      const amount = paymentPerTester * 0.25 // 25%
+      const amount = Math.round(paymentPerTester * 0.25) // 25% in cents
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
@@ -161,7 +161,7 @@ export async function POST(
 
     // Calculate developer refund
     const totalJobBudget = job.totalBudget + job.platformFee
-    const platformFeeOnPayouts = totalPayoutToTesters * 0.15 // Platform keeps 15% of payouts
+    const platformFeeOnPayouts = Math.round(totalPayoutToTesters * 0.15) // Platform keeps 15% of payouts
     const developerRefund = totalJobBudget - totalPayoutToTesters - platformFeeOnPayouts
 
     // Process payments and refunds
@@ -211,7 +211,8 @@ export async function POST(
 
             // Create Stripe transfer to tester
             const transfer = await stripe.transfers.create({
-              amount: Math.round(payout.amount * 100), // Convert to cents
+              // Amount is stored/handled in cents.
+              amount: payout.amount,
               currency: 'eur',
               destination: stripeAccountId,
               metadata: {
@@ -237,7 +238,7 @@ export async function POST(
             }
 
             payoutResults.push({ testerId: payout.testerId, success: true })
-            console.log(`Partial payout to tester ${payout.testerId}: €${payout.amount.toFixed(2)} (${payout.percentage}%)`)
+            console.log(`Partial payout to tester ${payout.testerId}: €${(payout.amount / 100).toFixed(2)} (${payout.percentage}%)`)
           } catch (error: any) {
             console.error(`Failed to pay tester ${payout.testerId}:`, error.message)
             payoutResults.push({ testerId: payout.testerId, success: false, error: error.message })
@@ -257,7 +258,7 @@ export async function POST(
         try {
           const refund = await stripe.refunds.create({
             payment_intent: paymentIntentId,
-            amount: Math.round(developerRefund * 100), // Partial refund in cents
+            amount: developerRefund, // Already in cents
             reason: 'requested_by_customer',
             metadata: {
               jobId: job.id,
@@ -268,7 +269,7 @@ export async function POST(
 
           refundIssued = true
           refundId = refund.id
-          console.log(`Partial refund to developer: €${developerRefund.toFixed(2)}`)
+          console.log(`Partial refund to developer: €${(developerRefund / 100).toFixed(2)}`)
         } catch (stripeError: any) {
           console.error('Stripe refund error:', stripeError.message)
         }
@@ -325,7 +326,7 @@ export async function POST(
         amount: developerRefund > 0 ? developerRefund : 0,
         refundId: refundId,
         message: refundIssued
-          ? `Partial refund of €${developerRefund.toFixed(2)} has been processed.`
+          ? `Partial refund of €${(developerRefund / 100).toFixed(2)} has been processed.`
           : developerRefund <= 0
             ? 'No refund - all budget used for tester compensation'
             : job.status === 'DRAFT'

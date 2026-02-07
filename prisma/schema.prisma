@@ -68,6 +68,10 @@ model User {
   suspended     Boolean   @default(false)
   suspendedAt   DateTime?
   suspendReason String?
+
+  // Password reset
+  passwordResetToken      String?
+  passwordResetExpiresAt  DateTime?
   
   // Fraud Detection
   fraudScore    Int       @default(0)  // 0-100, higher = more suspicious
@@ -102,7 +106,7 @@ model User {
   // Tester Reputation (cached for performance)
   averageEngagementScore Float?   @default(0)
   totalTestsCompleted    Int?     @default(0)
-  totalEarnings          Float?   @default(0)
+  totalEarnings          Int?     @default(0) // stored in cents
   
   // Developer features: Follow/Bookmark testers
   followedTesters FollowedTester[] @relation("DeveloperFollows")
@@ -176,9 +180,9 @@ model TestingJob {
   minAndroidVersion String?
   
   // Compensation
-  paymentPerTester  Float
-  totalBudget       Float
-  platformFee       Float
+  paymentPerTester  Int
+  totalBudget       Int
+  platformFee       Int
   
   // Payment tracking (for refunds)
   stripeSessionId   String?     @unique
@@ -274,9 +278,9 @@ model Payment {
   jobId             String
   job               TestingJob    @relation(fields: [jobId], references: [id])
   
-  amount            Float
-  platformFee       Float
-  totalAmount       Float
+  amount            Int
+  platformFee       Int
+  totalAmount       Int
   
   status            PaymentStatus @default(PENDING)
   

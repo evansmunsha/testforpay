@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -10,6 +11,18 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // SECURITY: Rate limit onboarding emails to reduce spam/abuse.
+    if (process.env.NODE_ENV === 'production') {
+      const ip = getClientIp(request)
+      const rate = checkRateLimit(`onboarding:${ip}`, 3, 60 * 60 * 1000)
+      if (!rate.allowed) {
+        return NextResponse.json(
+          { error: 'Too many requests. Please try again later.' },
+          { status: 429, headers: { 'Retry-After': `${rate.retryAfter || 60}` } }
+        )
+      }
+    }
+
     const currentUser = await getCurrentUser()
 
     if (!currentUser) {

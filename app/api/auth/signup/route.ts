@@ -2,9 +2,22 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { hashPassword, generateToken, setAuthCookie } from '@/lib/auth'
 import { signupSchema } from '@/lib/validators'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 export async function POST(request: Request) {
   try {
+    // SECURITY: Rate limit signups in production to reduce abuse.
+    if (process.env.NODE_ENV === 'production') {
+      const ip = getClientIp(request)
+      const rate = checkRateLimit(`auth:signup:${ip}`, 5, 10 * 60 * 1000)
+      if (!rate.allowed) {
+        return NextResponse.json(
+          { error: 'Too many signup attempts. Please try again later.' },
+          { status: 429, headers: { 'Retry-After': `${rate.retryAfter || 60}` } }
+        )
+      }
+    }
+
     const body = await request.json()
     
     // Get IP for fraud tracking

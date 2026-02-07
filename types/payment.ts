@@ -1,3 +1,5 @@
+import type { Cents } from './money'
+
 export type PaymentStatus = 
   | 'PENDING' 
   | 'ESCROWED' 
@@ -10,9 +12,12 @@ export interface Payment {
   id: string
   applicationId: string
   jobId: string
-  amount: number
-  platformFee: number
-  totalAmount: number
+  /** Amount in integer cents (EUR). */
+  amount: Cents
+  /** Platform fee in integer cents (EUR). */
+  platformFee: Cents
+  /** Total amount in integer cents (EUR). */
+  totalAmount: Cents
   status: PaymentStatus
   paymentIntentId: string | null
   transferId: string | null

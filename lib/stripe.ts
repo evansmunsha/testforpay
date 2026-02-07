@@ -13,7 +13,8 @@ export async function createJobPaymentIntent(
   developerId: string
 ) {
   const paymentIntent = await stripe.paymentIntents.create({
-    amount: Math.round(amount * 100), // Convert to cents
+    // Amount is stored/handled in cents.
+    amount,
     currency: 'eur',
     metadata: {
       jobId,
@@ -119,7 +120,8 @@ export async function getAccountBalance(stripeAccountId: string) {
 export async function refundPaymentIntent(paymentIntentId: string, amount?: number) {
   const refund = await stripe.refunds.create({
     payment_intent: paymentIntentId,
-    ...(amount && { amount: Math.round(amount * 100) }), // Partial refund if amount specified
+    // Amount is stored/handled in cents.
+    ...(amount && { amount }), // Partial refund if amount specified
   })
 
   return refund

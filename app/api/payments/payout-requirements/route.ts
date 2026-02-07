@@ -36,22 +36,19 @@ export async function GET() {
       })
     }
 
-    const account = await stripe.accounts.retrieve(user.stripeAccountId, {
-      expand: ['external_accounts'],
-    })
-
-    const externalAccounts = account.external_accounts?.data ?? []
-    const hasEurExternalAccount = externalAccounts.some((external) => {
-      if (!('currency' in external)) return false
-      return external.currency?.toLowerCase() === 'eur'
-    })
+    const account = await stripe.accounts.retrieve(user.stripeAccountId)
+    const payoutsEnabled = account.payouts_enabled === true
+    const hasBlockingRequirements =
+      Array.isArray(account.requirements?.currently_due) &&
+      account.requirements.currently_due.length > 0
 
     return NextResponse.json({
       hasStripeAccount: true,
       requiredCurrency: 'EUR',
       country: account.country ?? null,
       defaultCurrency: account.default_currency ?? null,
-      hasEurExternalAccount,
+      payoutsEnabled,
+      hasBlockingRequirements,
     })
   } catch (error) {
     console.error('Payout requirements fetch error:', error)

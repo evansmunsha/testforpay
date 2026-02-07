@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import Stripe from 'stripe'
+import { toCents } from '@/lib/currency'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover'
@@ -20,6 +21,19 @@ export async function POST(request: Request) {
     if (currentUser.role !== 'DEVELOPER') {
       return NextResponse.json(
         { error: 'Only developers can create jobs' },
+        { status: 403 }
+      )
+    }
+
+    // SECURITY: Require verified email for critical actions.
+    const developer = await prisma.user.findUnique({
+      where: { id: currentUser.userId },
+      select: { emailVerified: true },
+    })
+
+    if (!developer?.emailVerified) {
+      return NextResponse.json(
+        { error: 'Please verify your email to create jobs' },
         { status: 403 }
       )
     }
@@ -47,17 +61,18 @@ export async function POST(request: Request) {
     // Minimum requirements
     const MIN_TESTERS = 12
     const MIN_DURATION = 14
-    const MIN_PAYMENT = 5
+    const MIN_PAYMENT_EUR = 5
 
     // Use values provided by developer (with minimums enforced)
-    let finalTestersNeeded = Math.max(MIN_TESTERS, testersNeeded || 20)
+    const finalTestersNeeded = Math.max(MIN_TESTERS, testersNeeded || 20)
     const normalizedDuration = typeof testDuration === 'number' ? Math.trunc(testDuration) : undefined
-    let finalTestDuration = Math.max(MIN_DURATION, normalizedDuration || 14)
-    let finalPaymentPerTester = Math.max(MIN_PAYMENT, customPaymentPerTester || 7.5)
-    let finalTotalBudget = finalPaymentPerTester * finalTestersNeeded
+    const finalTestDuration = Math.max(MIN_DURATION, normalizedDuration || 14)
+    const paymentPerTesterEur = Math.max(MIN_PAYMENT_EUR, customPaymentPerTester || 7.5)
+    const finalPaymentPerTester = toCents(paymentPerTesterEur)
+    const finalTotalBudget = finalPaymentPerTester * finalTestersNeeded
 
-    const platformFeePercent = 0.15 
-    const platformFee = finalTotalBudget * platformFeePercent
+    const platformFeePercent = 0.15
+    const platformFee = Math.round(finalTotalBudget * platformFeePercent)
 
     // Create job in DRAFT status
     const job = await prisma.testingJob.create({
@@ -87,7 +102,7 @@ export async function POST(request: Request) {
               name: `TestForPay - ${planType || 'Custom'} Plan`,
               description: `${finalTestersNeeded} verified testers for ${appName}`,
             },
-            unit_amount: Math.round((finalTotalBudget + platformFee) * 100), // Total cost in cents
+            unit_amount: finalTotalBudget + platformFee, // Already in cents
           },
           quantity: 1,
         },

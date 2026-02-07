@@ -1,6 +1,7 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { cookies } from 'next/headers'
+import prisma from '@/lib/prisma'
 
 const JWT_SECRET = process.env.JWT_SECRET!
 const SALT_ROUNDS = 10
@@ -68,5 +69,24 @@ export async function removeAuthCookie() {
 export async function getCurrentUser(): Promise<TokenPayload | null> {
   const token = await getAuthCookie()
   if (!token) return null
-  return verifyToken(token)
+
+  const payload = verifyToken(token)
+  if (!payload) return null
+
+  // SECURITY: Invalidate tokens if the user was suspended or role changed.
+  // This prevents stale JWTs from retaining access after admin actions.
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { role: true, suspended: true },
+  })
+
+  if (!user || user.suspended || user.role !== payload.role) {
+    return null
+  }
+
+  return {
+    userId: payload.userId,
+    email: payload.email,
+    role: user.role,
+  }
 }
