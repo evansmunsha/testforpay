@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { JobCard } from '@/components/jobs/job-card'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -44,6 +45,7 @@ export default function BrowsePage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null)
+  const [applyWarning, setApplyWarning] = useState<string | null>(null)
   const { toast } = useToast()
   
   
@@ -149,6 +151,7 @@ export default function BrowsePage() {
       const data = await response.json()
 
       if (response.ok) {
+        setApplyWarning(null)
         // Refresh data immediately
         await fetchApplications()
         await fetchJobs()
@@ -156,6 +159,14 @@ export default function BrowsePage() {
         toast({ title: 'Applied!', description: 'Check your applications page for next steps', variant: 'success' })
         router.push('/dashboard/applications')
       } else {
+        if (response.status === 403) {
+          const errorMessage = typeof data?.error === 'string' ? data.error : ''
+          if (errorMessage.toLowerCase().includes('verify')) {
+            setApplyWarning('Please verify your email to apply for jobs.')
+          } else {
+            setApplyWarning(errorMessage || 'You are not allowed to apply for this job.')
+          }
+        }
         toast({ title: 'Error', description: data.error || 'Failed to apply', variant: 'destructive' })
       }
     } catch (error) {
@@ -225,6 +236,20 @@ export default function BrowsePage() {
           {refreshing ? 'Updating...' : 'Refresh Now'}
         </Button>
       </div>
+
+      {applyWarning && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="pt-6 text-sm text-yellow-800">
+            <p className="font-medium">Action required</p>
+            <p>
+              {applyWarning}{' '}
+              <Link href="/dashboard/settings" className="underline">
+                Go to settings
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <Card>

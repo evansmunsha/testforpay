@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ApplicationCard } from '@/components/applications/application-card'
 import { useToast } from '@/components/ui/toast-provider'
 import { TestingReportViewer } from '@/components/jobs/testing-report-viewer'
@@ -98,6 +99,46 @@ export default function JobDetailPage() {
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    title: string
+    description: string
+    confirmLabel: string
+    onConfirm: (() => Promise<void> | void) | null
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    confirmLabel: 'Confirm',
+    onConfirm: null,
+  })
+
+  const openConfirm = (options: {
+    title: string
+    description: string
+    confirmLabel?: string
+    onConfirm: () => Promise<void> | void
+  }) => {
+    setConfirmDialog({
+      open: true,
+      title: options.title,
+      description: options.description,
+      confirmLabel: options.confirmLabel || 'Confirm',
+      onConfirm: options.onConfirm,
+    })
+  }
+
+  const closeConfirm = () => {
+    setConfirmDialog((prev) => ({ ...prev, open: false }))
+  }
+
+  const handleConfirm = async () => {
+    const action = confirmDialog.onConfirm
+    closeConfirm()
+    if (action) {
+      await action()
+    }
+  }
 
   useEffect(() => {
     fetchJob()
@@ -129,22 +170,27 @@ export default function JobDetailPage() {
     }
   }
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this job? This cannot be undone.')) return
+  const handleDelete = () => {
+    openConfirm({
+      title: 'Delete job?',
+      description: 'Are you sure you want to delete this job? This cannot be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/jobs/${params.id}`, {
+            method: 'DELETE',
+          })
 
-    try {
-      const response = await fetch(`/api/jobs/${params.id}`, {
-        method: 'DELETE',
-      })
-
-      if (response.ok) {
-        router.push('/dashboard/jobs')
-      } else {
-        toast({ title: 'Error', description: 'Failed to delete job', variant: 'destructive' })
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
-    }
+          if (response.ok) {
+            router.push('/dashboard/jobs')
+          } else {
+            toast({ title: 'Error', description: 'Failed to delete job', variant: 'destructive' })
+          }
+        } catch (err) {
+          toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+        }
+      },
+    })
   }
 
   const handlePublish = async () => {
@@ -193,27 +239,32 @@ export default function JobDetailPage() {
   }
 
   const handleReject = async (applicationId: string) => {
-    if (!confirm('Are you sure you want to reject this application?')) return
+    openConfirm({
+      title: 'Reject application?',
+      description: 'Are you sure you want to reject this application?',
+      confirmLabel: 'Reject',
+      onConfirm: async () => {
+        setActionLoading(true)
+        try {
+          const response = await fetch(`/api/applications/${applicationId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'reject' }),
+          })
 
-    setActionLoading(true)
-    try {
-      const response = await fetch(`/api/applications/${applicationId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'reject' }),
-      })
-
-      if (response.ok) {
-        fetchJob()
-        toast({ title: 'Rejected', description: 'Application rejected', variant: 'default' })
-      } else {
-        toast({ title: 'Error', description: 'Failed to reject application', variant: 'destructive' })
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
-    } finally {
-      setActionLoading(false)
-    }
+          if (response.ok) {
+            fetchJob()
+            toast({ title: 'Rejected', description: 'Application rejected', variant: 'default' })
+          } else {
+            toast({ title: 'Error', description: 'Failed to reject application', variant: 'destructive' })
+          }
+        } catch (err) {
+          toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+        } finally {
+          setActionLoading(false)
+        }
+      },
+    })
   }
 
   const handleCancel = async () => {
@@ -233,70 +284,80 @@ Testers will be compensated based on their progress:
 You will receive a partial refund for unused budget.`
       : 'Are you sure you want to cancel this job? You will receive a full refund.'
     
-    if (!confirm(confirmMessage)) return
+    openConfirm({
+      title: 'Cancel job?',
+      description: confirmMessage,
+      confirmLabel: 'Cancel Job',
+      onConfirm: async () => {
+        setActionLoading(true)
+        try {
+          const response = await fetch(`/api/jobs/${params.id}/cancel`, {
+            method: 'POST',
+          })
 
-    setActionLoading(true)
-    try {
-      const response = await fetch(`/api/jobs/${params.id}/cancel`, {
-        method: 'POST',
-      })
+          const data = await response.json()
 
-      const data = await response.json()
-
-      if (response.ok) {
-        // Build detailed message for successful cancellation
-        let message = data.message
-        
-        if (data.cancellation?.testerPayouts?.length > 0) {
-          const paidTesters = data.cancellation.testerPayouts.filter((p: any) => p.amount > 0)
-          if (paidTesters.length > 0) {
-            message += `. ${paidTesters.length} tester(s) compensated totaling ${formatEurFromCents(data.cancellation.totalPaidToTesters)}`
+          if (response.ok) {
+            // Build detailed message for successful cancellation
+            let message = data.message
+            
+            if (data.cancellation?.testerPayouts?.length > 0) {
+              const paidTesters = data.cancellation.testerPayouts.filter((p: any) => p.amount > 0)
+              if (paidTesters.length > 0) {
+                message += `. ${paidTesters.length} tester(s) compensated totaling ${formatEurFromCents(data.cancellation.totalPaidToTesters)}`
+              }
+            }
+            
+            if (data.refund?.issued) {
+              message += `. Your refund: ${formatEurFromCents(data.refund.amount)}`
+            }
+            
+            toast({ title: 'Job Cancelled', description: message, variant: 'success' })
+            router.push('/dashboard/jobs')
+          } else {
+            if (data.jobCancelled) {
+              toast({ title: 'Warning', description: data.error, variant: 'warning' })
+              router.push('/dashboard/jobs')
+            } else {
+              toast({ title: 'Error', description: data.error || 'Failed to cancel job', variant: 'destructive' })
+            }
           }
+        } catch (err) {
+          toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+        } finally {
+          setActionLoading(false)
         }
-        
-        if (data.refund?.issued) {
-          message += `. Your refund: ${formatEurFromCents(data.refund.amount)}`
-        }
-        
-        toast({ title: 'Job Cancelled', description: message, variant: 'success' })
-        router.push('/dashboard/jobs')
-      } else {
-        if (data.jobCancelled) {
-          toast({ title: 'Warning', description: data.error, variant: 'warning' })
-          router.push('/dashboard/jobs')
-        } else {
-          toast({ title: 'Error', description: data.error || 'Failed to cancel job', variant: 'destructive' })
-        }
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
-    } finally {
-      setActionLoading(false)
-    }
+      },
+    })
   }
 
   const handleVerify = async (applicationId: string) => {
-    if (!confirm('Confirm that the tester has opted-in to your Google Play test? This will start the 14-day testing period.')) return
+    openConfirm({
+      title: 'Confirm tester opt-in?',
+      description: 'Confirm that the tester has opted-in to your Google Play test? This will start the 14-day testing period.',
+      confirmLabel: 'Confirm',
+      onConfirm: async () => {
+        setActionLoading(true)
+        try {
+          const response = await fetch(`/api/applications/${applicationId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'verify' }),
+          })
 
-    setActionLoading(true)
-    try {
-      const response = await fetch(`/api/applications/${applicationId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'verify' }),
-      })
-
-      if (response.ok) {
-        fetchJob()
-        toast({ title: 'Verified', description: 'Testing period started. Payment will be processed after 14 days.', variant: 'success' })
-      } else {
-        toast({ title: 'Error', description: 'Failed to verify application', variant: 'destructive' })
-      }
-    } catch (err) {
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
-    } finally {
-      setActionLoading(false)
-    }
+          if (response.ok) {
+            fetchJob()
+            toast({ title: 'Verified', description: 'Testing period started. Payment will be processed after 14 days.', variant: 'success' })
+          } else {
+            toast({ title: 'Error', description: 'Failed to verify application', variant: 'destructive' })
+          }
+        } catch (err) {
+          toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+        } finally {
+          setActionLoading(false)
+        }
+      },
+    })
   }
 
   if (loading) {
@@ -356,6 +417,24 @@ You will receive a partial refund for unused budget.`
 
   return (
     <div className="space-y-6">
+      <Dialog open={confirmDialog.open} onOpenChange={(open) => !open && closeConfirm()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmDialog.title}</DialogTitle>
+            <DialogDescription className="whitespace-pre-line">
+              {confirmDialog.description}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeConfirm}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirm} disabled={actionLoading}>
+              {confirmDialog.confirmLabel}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/jobs">

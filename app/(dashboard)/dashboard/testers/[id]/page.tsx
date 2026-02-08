@@ -14,7 +14,7 @@ import type { Cents } from '@/types/money'
 interface TesterProfile {
   id: string
   name: string | null
-  email: string
+  email: string | null
   averageEngagementScore: number | null
   totalTestsCompleted: number | null
   /** Total earnings in integer cents (EUR). */
@@ -101,7 +101,9 @@ export default function TesterProfilePage() {
             <div className="flex items-start justify-between">
               <div>
                 <h1 className="text-3xl font-bold">{profile.name || 'Anonymous Tester'}</h1>
-                <p className="text-gray-600">{profile.email}</p>
+                <p className="text-gray-600">
+                  {profile.email ?? 'testers Email available after apply'}
+                </p>
                 <p className="text-sm text-gray-500 mt-2">
                   Member for {memberDays} days
                 </p>
@@ -131,7 +133,7 @@ export default function TesterProfilePage() {
                   <span className="text-sm font-medium">Total Earned</span>
                 </div>
                 <p className="text-2xl font-bold text-green-600">
-                  {formatEurFromCents(profile.totalEarnings || 0)}
+                  {profile.totalEarnings === null ? 'Hidden' : formatEurFromCents(profile.totalEarnings)}
                 </p>
               </div>
 
@@ -165,11 +167,13 @@ export default function TesterProfilePage() {
                   <span className="text-sm font-medium">Avg Earnings/Test</span>
                 </div>
                 <p className="text-2xl font-bold">
-                  {formatEurFromCents(
-                    profile.totalTestsCompleted
-                      ? (profile.totalEarnings || 0) / profile.totalTestsCompleted
-                      : 0
-                  )}
+                  {profile.totalEarnings === null
+                    ? '—'
+                    : formatEurFromCents(
+                        profile.totalTestsCompleted
+                          ? (profile.totalEarnings || 0) / profile.totalTestsCompleted
+                          : 0
+                      )}
                 </p>
               </div>
             </div>

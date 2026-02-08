@@ -32,7 +32,8 @@ export async function GET() {
         requiredCurrency: 'EUR',
         country: null,
         defaultCurrency: null,
-        hasEurExternalAccount: false,
+        payoutsEnabled: false,
+        hasBlockingRequirements: false,
       })
     }
 

@@ -11,7 +11,7 @@ import Link from 'next/link'
 interface TesterCard {
   id: string
   name: string | null
-  email: string
+  email: string | null
   averageEngagementScore: number | null
   totalTestsCompleted: number | null
   averageRating: number | null
@@ -65,7 +65,11 @@ export default function TesterBrowserPage() {
           <div className="flex justify-between items-start mb-3">
             <div>
               <h3 className="font-semibold text-lg">{tester.name || 'Anonymous'}</h3>
-              <p className="text-sm text-gray-600">{tester.email}</p>
+              {tester.email ? (
+                <p className="text-sm text-gray-600">{tester.email}</p>
+              ) : (
+                <p className="text-xs text-gray-500">testers Email available after apply</p>
+              )}
             </div>
           </div>
 
@@ -125,7 +129,7 @@ export default function TesterBrowserPage() {
             <CardHeader>
               <CardTitle>Find Qualified Testers</CardTitle>
               <CardDescription>
-                Search by name or email to find testers with proven track records
+                Search by name to find testers with proven track records
               </CardDescription>
             </CardHeader>
             <CardContent>

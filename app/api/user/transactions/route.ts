@@ -55,7 +55,7 @@ export async function GET(request: Request) {
       const pendingSum = await prisma.payment.aggregate({
         where: {
           job: { developerId: currentUser.userId },
-          status: 'PENDING',
+          status: { in: ['PENDING', 'ESCROWED', 'PROCESSING'] },
         },
         _sum: { totalAmount: true },
       })
@@ -106,7 +106,7 @@ export async function GET(request: Request) {
       const pendingSum = await prisma.payment.aggregate({
         where: {
           application: { testerId: currentUser.userId },
-          status: 'PENDING',
+          status: { in: ['PENDING', 'ESCROWED', 'PROCESSING'] },
         },
         _sum: { amount: true },
       })

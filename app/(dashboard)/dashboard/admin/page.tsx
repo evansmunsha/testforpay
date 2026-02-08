@@ -7,6 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/toast-provider'
 import { 
   Users, 
@@ -157,16 +160,59 @@ export default function AdminDashboard() {
   const [loadingTab, setLoadingTab] = useState(false)
   const [activeTab, setActiveTab] = useState('users')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean
+    title: string
+    description: string
+    confirmLabel: string
+    onConfirm: (() => Promise<void> | void) | null
+  }>({
+    open: false,
+    title: '',
+    description: '',
+    confirmLabel: 'Confirm',
+    onConfirm: null,
+  })
+  const [suspendDialogOpen, setSuspendDialogOpen] = useState(false)
+  const [suspendTargetId, setSuspendTargetId] = useState<string | null>(null)
+  const [suspendReason, setSuspendReason] = useState('Violation of Terms of Service')
   const failedPaymentsCount = payments.filter((payment) => payment.status === 'FAILED').length
   const unresolvedReportsCount = feedbackReports.filter((report) => !report.resolvedAt).length
 
-  const handleSuspendUser = async (userId: string, action: 'suspend' | 'unsuspend') => {
-    const reason = action === 'suspend' 
-      ? prompt('Enter suspension reason (optional):', 'Violation of Terms of Service')
-      : null
-    
-    if (action === 'suspend' && reason === null) return // User cancelled
+  const openConfirm = (options: {
+    title: string
+    description: string
+    confirmLabel?: string
+    onConfirm: () => Promise<void> | void
+  }) => {
+    setConfirmDialog({
+      open: true,
+      title: options.title,
+      description: options.description,
+      confirmLabel: options.confirmLabel || 'Confirm',
+      onConfirm: options.onConfirm,
+    })
+  }
 
+  const closeConfirm = () => {
+    setConfirmDialog((prev) => ({ ...prev, open: false }))
+  }
+
+  const handleConfirm = async () => {
+    const action = confirmDialog.onConfirm
+    closeConfirm()
+    if (action) {
+      await action()
+    }
+  }
+
+  const openSuspendDialog = (userId: string) => {
+    setSuspendTargetId(userId)
+    setSuspendReason('Violation of Terms of Service')
+    setSuspendDialogOpen(true)
+  }
+
+  const performSuspendUser = async (userId: string, action: 'suspend' | 'unsuspend', reason?: string | null) => {
     setActionLoading(userId)
     try {
       const response = await fetch(`/api/admin/users/${userId}`, {
@@ -188,27 +234,48 @@ export default function AdminDashboard() {
     }
   }
 
-  const handleDeleteUser = async (userId: string) => {
-    if (!confirm('Are you sure you want to PERMANENTLY DELETE this user? This cannot be undone.')) return
-
-    setActionLoading(userId)
-    try {
-      const response = await fetch(`/api/admin/users/${userId}`, {
-        method: 'DELETE',
-      })
-      const data = await response.json()
-      if (response.ok) {
-        toast({ title: 'Deleted', description: data.message, variant: 'success' })
-        fetchUsers()
-        fetchStats()
-      } else {
-        toast({ title: 'Error', description: data.error || 'Failed to delete user', variant: 'destructive' })
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
-    } finally {
-      setActionLoading(null)
+  const handleSuspendUser = async (userId: string, action: 'suspend' | 'unsuspend') => {
+    if (action === 'suspend') {
+      openSuspendDialog(userId)
+      return
     }
+    await performSuspendUser(userId, 'unsuspend', null)
+  }
+
+  const handleConfirmSuspend = async () => {
+    if (!suspendTargetId) return
+    const targetId = suspendTargetId
+    setSuspendTargetId(null)
+    setSuspendDialogOpen(false)
+    await performSuspendUser(targetId, 'suspend', suspendReason || null)
+  }
+
+  const handleDeleteUser = async (userId: string) => {
+    openConfirm({
+      title: 'Delete user?',
+      description: 'Are you sure you want to PERMANENTLY DELETE this user? This cannot be undone.',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        setActionLoading(userId)
+        try {
+          const response = await fetch(`/api/admin/users/${userId}`, {
+            method: 'DELETE',
+          })
+          const data = await response.json()
+          if (response.ok) {
+            toast({ title: 'Deleted', description: data.message, variant: 'success' })
+            fetchUsers()
+            fetchStats()
+          } else {
+            toast({ title: 'Error', description: data.error || 'Failed to delete user', variant: 'destructive' })
+          }
+        } catch (error) {
+          toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+        } finally {
+          setActionLoading(null)
+        }
+      },
+    })
   }
 
   const handleProcessPayouts = async () => {
@@ -432,24 +499,30 @@ export default function AdminDashboard() {
   }
 
   const handleDeleteFeedback = async (feedbackId: string) => {
-    if (!confirm('Delete this feedback permanently?')) return
-    setActionLoading(feedbackId)
-    try {
-      const response = await fetch(`/api/admin/feedback/${feedbackId}`, {
-        method: 'DELETE',
-      })
-      const data = await response.json()
-      if (response.ok) {
-        toast({ title: 'Deleted', description: data.message, variant: 'success' })
-        fetchTestimonials()
-      } else {
-        toast({ title: 'Error', description: data.error || 'Failed to delete feedback', variant: 'destructive' })
-      }
-    } catch (error) {
-      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
-    } finally {
-      setActionLoading(null)
-    }
+    openConfirm({
+      title: 'Delete feedback?',
+      description: 'Delete this feedback permanently?',
+      confirmLabel: 'Delete',
+      onConfirm: async () => {
+        setActionLoading(feedbackId)
+        try {
+          const response = await fetch(`/api/admin/feedback/${feedbackId}`, {
+            method: 'DELETE',
+          })
+          const data = await response.json()
+          if (response.ok) {
+            toast({ title: 'Deleted', description: data.message, variant: 'success' })
+            fetchTestimonials()
+          } else {
+            toast({ title: 'Error', description: data.error || 'Failed to delete feedback', variant: 'destructive' })
+          }
+        } catch (error) {
+          toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+        } finally {
+          setActionLoading(null)
+        }
+      },
+    })
   }
 
   const handleResolveFraudLog = async (logId: string) => {
@@ -547,6 +620,53 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      <Dialog open={confirmDialog.open} onOpenChange={(open) => !open && closeConfirm()}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{confirmDialog.title}</DialogTitle>
+            <DialogDescription className="whitespace-pre-line">
+              {confirmDialog.description}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeConfirm}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirm} disabled={actionLoading !== null}>
+              {confirmDialog.confirmLabel}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={suspendDialogOpen} onOpenChange={(open) => !open && setSuspendDialogOpen(false)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Suspend user?</DialogTitle>
+            <DialogDescription>
+              Provide an optional reason that will be stored with the suspension.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="suspend-reason">Suspension reason</Label>
+            <Input
+              id="suspend-reason"
+              value={suspendReason}
+              onChange={(e) => setSuspendReason(e.target.value)}
+              placeholder="Violation of Terms of Service"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSuspendDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmSuspend} disabled={actionLoading !== null}>
+              Suspend User
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Admin Dashboard</h2>

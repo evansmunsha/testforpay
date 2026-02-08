@@ -41,7 +41,8 @@ export default function SettingsPage() {
     hasStripeAccount: boolean
     country: string | null
     defaultCurrency: string | null
-    hasEurExternalAccount: boolean
+    payoutsEnabled: boolean
+    hasBlockingRequirements: boolean
   } | null>(null)
   const [muteReplies, setMuteReplies] = useState(false)
   const [prefLoading, setPrefLoading] = useState(false)
@@ -268,15 +269,16 @@ export default function SettingsPage() {
   }
 
   const payoutCountryLabel = payoutInfo?.country ? `Your Stripe country is ${payoutInfo.country}. ` : ''
-  const hasEurPayout =
+  const hasPayoutReady =
     !!payoutInfo?.hasStripeAccount &&
-    (payoutInfo?.hasEurExternalAccount || payoutInfo?.defaultCurrency?.toLowerCase() === 'eur')
-  const payoutBannerTitle = hasEurPayout ? 'EUR payout ready' : 'EUR payout required'
+    !!payoutInfo?.payoutsEnabled &&
+    !payoutInfo?.hasBlockingRequirements
+  const payoutBannerTitle = hasPayoutReady ? 'Payouts ready' : 'Payout setup required'
   const payoutBannerBody = payoutInfo?.hasStripeAccount
-    ? (hasEurPayout
-        ? `${payoutCountryLabel}Payouts are sent in EUR and your account is ready to receive EUR.`
-        : `${payoutCountryLabel}Payouts are sent in EUR. Add a EUR payout method in Stripe to avoid failed transfers.`)
-    : 'Payouts are sent in EUR. During Stripe setup, add a EUR payout method for your country to receive payments.'
+    ? (hasPayoutReady
+        ? `${payoutCountryLabel}Your Stripe account is ready to receive payouts.`
+        : `${payoutCountryLabel}Finish your Stripe payout setup to avoid failed transfers.`)
+    : 'Set up your Stripe payout account to receive payments for completed testing.'
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -418,18 +420,18 @@ export default function SettingsPage() {
               </CardTitle>
               <CardDescription>
                 {user?.stripeAccountId 
-                  ? 'Your payout account is set up and active' 
+                  ? (hasPayoutReady ? 'Your payout account is ready to receive payments' : 'Stripe account linked — finish payout setup')
                   : 'Set up how you want to receive payments'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div
                 className={`rounded-lg border p-3 text-sm ${
-                  hasEurPayout ? 'border-green-200 bg-green-50 text-green-800' : 'border-amber-200 bg-amber-50 text-amber-800'
+                  hasPayoutReady ? 'border-green-200 bg-green-50 text-green-800' : 'border-amber-200 bg-amber-50 text-amber-800'
                 }`}
               >
                 <div className="flex items-start gap-2">
-                  {hasEurPayout ? <CheckCircle className="h-4 w-4 mt-0.5" /> : <AlertTriangle className="h-4 w-4 mt-0.5" />}
+                  {hasPayoutReady ? <CheckCircle className="h-4 w-4 mt-0.5" /> : <AlertTriangle className="h-4 w-4 mt-0.5" />}
                   <div>
                     <p className="font-medium">{payoutBannerTitle}</p>
                     <p className="text-xs mt-1">{payoutBannerBody}</p>
@@ -444,7 +446,9 @@ export default function SettingsPage() {
                     <p className="font-medium">Stripe Connect Account Linked</p>
                   </div>
                   <p className="text-sm text-gray-600 mt-2">
-                    Your account (ID: {user.stripeAccountId}) is ready to receive payouts.
+                    {hasPayoutReady
+                      ? `Your account (ID: ${user.stripeAccountId}) is ready to receive payouts.`
+                      : `Your account (ID: ${user.stripeAccountId}) is linked, but payout setup is incomplete.`}
                   </p>
                   <Button 
                     variant="outline" 

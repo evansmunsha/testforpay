@@ -24,7 +24,6 @@ export async function GET(request: Request) {
           select: {
             id: true,
             name: true,
-            email: true,
             averageEngagementScore: true,
             totalTestsCompleted: true,
             averageRating: true,
@@ -35,11 +34,28 @@ export async function GET(request: Request) {
       orderBy: { createdAt: 'desc' },
     })
 
+    const testerIds = followed.map(f => f.tester.id)
+    const sharedApplications = await prisma.application.findMany({
+      where: {
+        testerId: { in: testerIds },
+        job: { developerId: currentUser.userId },
+      },
+      select: { testerId: true },
+    })
+    const testersWithApps = new Set(sharedApplications.map(a => a.testerId))
+
+    const testersWithEmail = await prisma.user.findMany({
+      where: { id: { in: testerIds } },
+      select: { id: true, email: true },
+    })
+    const emailById = new Map(testersWithEmail.map(t => [t.id, t.email]))
+
     return NextResponse.json({
       success: true,
       count: followed.length,
       followedTesters: followed.map(f => ({
         ...f.tester,
+        email: testersWithApps.has(f.tester.id) ? (emailById.get(f.tester.id) || null) : null,
         bookmarkedAt: f.createdAt,
       })),
     })
