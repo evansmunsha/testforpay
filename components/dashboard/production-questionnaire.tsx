@@ -127,7 +127,7 @@ export function ProductionQuestionnaire({ jobId }: ProductionQuestionnaireProps)
           <CheckCircle className="w-5 h-5 text-green-600 shrink-0 mt-0.5" />
           <div>
             <h3 className="font-semibold text-green-900">Questionnaire Submitted</h3>
-            <p className="text-sm text-green-800">Your production readiness questionnaire has been submitted to Google Play.</p>
+            <p className="text-sm text-green-800">Your production readiness questionnaire has been saved as submitted.</p>
           </div>
         </Card>
       )}
@@ -136,7 +136,8 @@ export function ProductionQuestionnaire({ jobId }: ProductionQuestionnaireProps)
         <AlertCircle className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
         <div className="text-sm text-blue-800">
           <p className="font-semibold mb-1">Google Play Production Access</p>
-          <p>Complete this questionnaire to apply for production access on Google Play. Your answers help us understand your app's readiness and testing quality.</p>
+          <p>Complete this questionnaire to prepare your production application. Your answers help us understand your app's readiness and testing quality.</p>
+          <p className="mt-2 text-xs text-blue-700">Note: Submitting here does not send anything to Google Play.</p>
         </div>
       </Card>
 
@@ -363,7 +364,7 @@ export function ProductionQuestionnaire({ jobId }: ProductionQuestionnaireProps)
             className="flex-1"
           >
             {submitting ? <Loader className="w-4 h-4 animate-spin mr-2" /> : null}
-            Submit to Google Play
+            Submit Questionnaire
           </Button>
         </div>
       </form>

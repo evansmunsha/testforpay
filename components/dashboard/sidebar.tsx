@@ -13,7 +13,8 @@ import {
   DollarSign,
   Shield,
   X,
-  Trophy
+  Trophy,
+  MessageSquare
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -48,6 +49,11 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
       icon: CreditCard,
     },
     {
+      href: '/dashboard/feedback',
+      label: 'Feedback',
+      icon: MessageSquare,
+    },
+    {
       href: '/dashboard/settings',
       label: 'Settings',
       icon: Settings,
@@ -74,6 +80,11 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
       href: '/dashboard/payments',
       label: 'Earnings',
       icon: DollarSign,
+    },
+    {
+      href: '/dashboard/feedback',
+      label: 'Feedback',
+      icon: MessageSquare,
     },
     {
       href: '/dashboard/settings',
