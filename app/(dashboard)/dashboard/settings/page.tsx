@@ -14,7 +14,8 @@ export default function SettingsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const setup = searchParams?.get('setup')
-  
+  const payoneerReferralUrl = process.env.NEXT_PUBLIC_PAYONEER_REFERRAL_URL
+
   const [name, setName] = useState('')
   const [deviceModel, setDeviceModel] = useState('')
   const [androidVersion, setAndroidVersion] = useState('')
@@ -41,6 +42,7 @@ export default function SettingsPage() {
     hasStripeAccount: boolean
     country: string | null
     defaultCurrency: string | null
+    supportedPayoutCurrencies: string[]
     payoutsEnabled: boolean
     hasBlockingRequirements: boolean
   } | null>(null)
@@ -269,6 +271,9 @@ export default function SettingsPage() {
   }
 
   const payoutCountryLabel = payoutInfo?.country ? `Your Stripe country is ${payoutInfo.country}. ` : ''
+  const payoutCurrenciesLabel = payoutInfo?.supportedPayoutCurrencies?.length
+    ? `Supported payout currencies: ${payoutInfo.supportedPayoutCurrencies.join(', ')}. `
+    : ''
   const hasPayoutReady =
     !!payoutInfo?.hasStripeAccount &&
     !!payoutInfo?.payoutsEnabled &&
@@ -276,8 +281,8 @@ export default function SettingsPage() {
   const payoutBannerTitle = hasPayoutReady ? 'Payouts ready' : 'Payout setup required'
   const payoutBannerBody = payoutInfo?.hasStripeAccount
     ? (hasPayoutReady
-        ? `${payoutCountryLabel}Your Stripe account is ready to receive payouts.`
-        : `${payoutCountryLabel}Finish your Stripe payout setup to avoid failed transfers.`)
+        ? `${payoutCountryLabel}${payoutCurrenciesLabel}Your Stripe account is ready to receive payouts.`
+        : `${payoutCountryLabel}${payoutCurrenciesLabel}Finish your Stripe payout setup to avoid failed transfers.`)
     : 'Set up your Stripe payout account to receive payments for completed testing.'
 
   return (
@@ -425,10 +430,27 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              {payoneerReferralUrl && (
+                <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                  <p className="text-sm font-semibold text-blue-900">Can’t add a EUR bank account?</p>
+                  <p className="text-xs text-blue-800 mt-1">
+                    If Stripe doesn’t support your country or bank for EUR payouts, you can use Payoneer instead.{' '}
+                    <a
+                      href={payoneerReferralUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline"
+                    >
+                      Set up Payoneer
+                    </a>
+                  </p>
+                </div>
+              )}
               <div
                 className={`rounded-lg border p-3 text-sm ${
                   hasPayoutReady ? 'border-green-200 bg-green-50 text-green-800' : 'border-amber-200 bg-amber-50 text-amber-800'
-                }`}
+                
+                  }  `}
               >
                 <div className="flex items-start gap-2">
                   {hasPayoutReady ? <CheckCircle className="h-4 w-4 mt-0.5" /> : <AlertTriangle className="h-4 w-4 mt-0.5" />}

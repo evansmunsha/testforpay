@@ -46,14 +46,66 @@ async function processPaymentForPayout(payment: NonNullable<PaymentWithContext>)
   }
 
   try {
+    const account = await stripe.accounts.retrieve(tester.stripeAccountId, {
+      expand: ['external_accounts'],
+    })
+
+    // Use Stripe account flags/requirements for payout readiness.
+    const payoutsEnabled = account.payouts_enabled === true
+    const hasBlockingRequirements =
+      Array.isArray(account.requirements?.currently_due) &&
+      account.requirements.currently_due.length > 0
+
+    const externalAccounts = account.external_accounts?.data ?? []
+    const hasEurExternalAccount = externalAccounts.some((external) => {
+      if (!('currency' in external)) return false
+      return external.currency?.toLowerCase() === 'eur'
+    })
+    const defaultCurrency = account.default_currency?.toLowerCase()
+    const hasEurPayoutMethod = defaultCurrency === 'eur' || hasEurExternalAccount
+    const payoutCurrency = 'eur'
+    const payoutAmount = payment.amount
+
+    if (!payoutsEnabled || hasBlockingRequirements || !hasEurPayoutMethod) {
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'FAILED',
+          failedAt: new Date(),
+        },
+      })
+      try {
+        await sendNotification({
+          userId: tester.id,
+          title: 'Payout Setup Required',
+          body: !hasEurPayoutMethod
+            ? "We couldn't send your payout because your Stripe account isn't set up to receive EUR. Please add a EUR payout method to continue."
+            : "We couldn't send your payout because your Stripe account isn't fully set up for payouts yet. Please finish the Stripe setup to continue.",
+          url: '/dashboard/settings',
+          type: 'payout_setup_required',
+        })
+      } catch (notifyError) {
+        console.error('Failed to notify tester about payout setup:', notifyError)
+      }
+      return {
+        applicationId: application.id,
+        testerId: tester.id,
+        amount: payment.amount,
+        status: 'failed',
+        error: !hasEurPayoutMethod
+          ? `Tester payout account not configured for EUR (country: ${account.country || 'unknown'})`
+          : `Tester payout account not enabled for payouts (country: ${account.country || 'unknown'})`,
+      }
+    }
+
     // SECURITY: Pre-check platform balance to avoid balance_insufficient failures.
-    // Stripe expects integer minor units; compare against available EUR balance.
+    // Stripe expects integer minor units; compare against available balance in payout currency.
     try {
       const balance = await stripe.balance.retrieve()
-      const eurAvailable =
-        balance.available.find((b) => b.currency.toLowerCase() === 'eur')?.amount || 0
+      const available =
+        balance.available.find((b) => b.currency.toLowerCase() === payoutCurrency)?.amount || 0
 
-      if (eurAvailable < payment.amount) {
+      if (available < payoutAmount) {
         return {
           applicationId: application.id,
           testerId: tester.id,
@@ -68,48 +120,12 @@ async function processPaymentForPayout(payment: NonNullable<PaymentWithContext>)
       console.warn('Failed to pre-check Stripe balance:', balanceError)
     }
 
-    const account = await stripe.accounts.retrieve(tester.stripeAccountId)
-
-    // Use Stripe account flags/requirements for payout readiness (more reliable than external account currency).
-    const payoutsEnabled = account.payouts_enabled === true
-    const hasBlockingRequirements =
-      Array.isArray(account.requirements?.currently_due) &&
-      account.requirements.currently_due.length > 0
-
-    if (!payoutsEnabled || hasBlockingRequirements) {
-      await prisma.payment.update({
-        where: { id: payment.id },
-        data: {
-          status: 'FAILED',
-          failedAt: new Date(),
-        },
-      })
-      try {
-        await sendNotification({
-          userId: tester.id,
-          title: 'Payout Setup Required',
-          body: 'We couldn’t send your payout because your Stripe account isn’t fully set up for payouts yet. Please finish the Stripe setup to continue.',
-          url: '/dashboard/settings',
-          type: 'payout_setup_required',
-        })
-      } catch (notifyError) {
-        console.error('Failed to notify tester about payout setup:', notifyError)
-      }
-      return {
-        applicationId: application.id,
-        testerId: tester.id,
-        amount: payment.amount,
-        status: 'failed',
-        error: `Tester payout account not enabled for payouts (country: ${account.country || 'unknown'})`,
-      }
-    }
-
     // Create a transfer to the tester's connected account
     const transfer = await stripe.transfers.create(
       {
-        // Amount is stored/handled in cents.
-        amount: payment.amount,
-        currency: 'eur',
+        // Amount is stored/handled in minor units.
+        amount: payoutAmount,
+        currency: payoutCurrency,
         destination: tester.stripeAccountId,
         transfer_group: `job_${application.jobId}`,
         metadata: {
@@ -161,7 +177,6 @@ async function processPaymentForPayout(payment: NonNullable<PaymentWithContext>)
     }
   }
 }
-
 export async function processPaymentById(paymentId: string): Promise<PayoutResult | null> {
   const payment = await prisma.payment.findUnique({
     where: { id: paymentId },

@@ -182,38 +182,52 @@ export async function POST(
             const account = await stripe.accounts.retrieve(stripeAccountId, {
               expand: ['external_accounts'],
             })
+
+            const payoutsEnabled = account.payouts_enabled === true
+            const hasBlockingRequirements =
+              Array.isArray(account.requirements?.currently_due) &&
+              account.requirements.currently_due.length > 0
+
             const externalAccounts = account.external_accounts?.data ?? []
             const hasEurExternalAccount = externalAccounts.some((external) => {
               if (!('currency' in external)) return false
               return external.currency?.toLowerCase() === 'eur'
             })
             const defaultCurrency = account.default_currency?.toLowerCase()
+            const hasEurPayoutMethod = defaultCurrency === 'eur' || hasEurExternalAccount
 
-            if (!hasEurExternalAccount && defaultCurrency !== 'eur') {
+            if (!payoutsEnabled || hasBlockingRequirements || !hasEurPayoutMethod) {
               try {
                 await sendNotification({
                   userId: payout.testerId,
                   title: 'Payout Setup Required',
-                  body: 'We couldn’t send your payout because your Stripe account isn’t set up to receive EUR. Please add a EUR payout method to continue.',
+                  body: !hasEurPayoutMethod
+                    ? "We couldn't send your payout because your Stripe account isn't set up to receive EUR. Please add a EUR payout method to continue."
+                    : "We couldn't send your payout because your Stripe account isn't fully set up for payouts yet. Please finish the Stripe setup to continue.",
                   url: '/dashboard/settings',
                   type: 'payout_setup_required',
                 })
               } catch (notifyError) {
                 console.error('Failed to notify tester about payout setup:', notifyError)
               }
-              payoutResults.push({ 
-                testerId: payout.testerId, 
-                success: false, 
-                error: `Payout account not configured for EUR (country: ${account.country || 'unknown'})`
+              payoutResults.push({
+                testerId: payout.testerId,
+                success: false,
+                error: !hasEurPayoutMethod
+                  ? `Payout account not configured for EUR (country: ${account.country || 'unknown'})`
+                  : `Payout account not enabled for payouts (country: ${account.country || 'unknown'})`,
               })
               continue
             }
 
+            const payoutCurrency = 'eur'
+            const payoutAmount = payout.amount
+
             // Create Stripe transfer to tester
             const transfer = await stripe.transfers.create({
-              // Amount is stored/handled in cents.
-              amount: payout.amount,
-              currency: 'eur',
+              // Amount is stored/handled in minor units.
+              amount: payoutAmount,
+              currency: payoutCurrency,
               destination: stripeAccountId,
               metadata: {
                 jobId: job.id,
@@ -230,25 +244,27 @@ export async function POST(
                 where: { id: testerApp.payment.id },
                 data: {
                   amount: payout.amount,
-                  status: 'COMPLETED',
+                  status: 'PROCESSING',
                   transferId: transfer.id,
-                  completedAt: new Date(),
+                  // Keep in PROCESSING; webhook/reconcile will finalize.
                 },
               })
             }
 
             payoutResults.push({ testerId: payout.testerId, success: true })
-            console.log(`Partial payout to tester ${payout.testerId}: €${(payout.amount / 100).toFixed(2)} (${payout.percentage}%)`)
+            console.log(
+              `Partial payout to tester ${payout.testerId}: ${payoutCurrency.toUpperCase()} ${payoutAmount} (${payout.percentage}%)`
+            )
           } catch (error: any) {
             console.error(`Failed to pay tester ${payout.testerId}:`, error.message)
             payoutResults.push({ testerId: payout.testerId, success: false, error: error.message })
           }
         } else if (payout.amount > 0) {
           // Tester doesn't have Stripe connected - flag for manual payout
-          payoutResults.push({ 
-            testerId: payout.testerId, 
-            success: false, 
-            error: 'No Stripe account connected - manual payout required' 
+          payoutResults.push({
+            testerId: payout.testerId,
+            success: false,
+            error: 'No Stripe account connected - manual payout required',
           })
         }
       }
@@ -256,9 +272,18 @@ export async function POST(
       // Then process partial refund to developer
       if (developerRefund > 0 && paymentIntentId) {
         try {
+          const intent = await stripe.paymentIntents.retrieve(paymentIntentId)
+          const totalEurCents =
+            Number(intent.metadata?.amountEurCents) || totalJobBudget
+          const totalChargeCents = intent.amount
+          const refundAmountCents =
+            totalEurCents > 0 && totalChargeCents > 0
+              ? Math.round((developerRefund / totalEurCents) * totalChargeCents)
+              : developerRefund
+
           const refund = await stripe.refunds.create({
             payment_intent: paymentIntentId,
-            amount: developerRefund, // Already in cents
+            amount: refundAmountCents,
             reason: 'requested_by_customer',
             metadata: {
               jobId: job.id,
@@ -279,6 +304,7 @@ export async function POST(
         console.log('No refund to developer - all budget allocated to tester compensation')
       }
     }
+
 
     // Update job status to CANCELLED
     const cancelledJob = await prisma.testingJob.update({

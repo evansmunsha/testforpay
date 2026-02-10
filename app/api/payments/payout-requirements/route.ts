@@ -32,22 +32,37 @@ export async function GET() {
         requiredCurrency: 'EUR',
         country: null,
         defaultCurrency: null,
+        supportedPayoutCurrencies: [],
         payoutsEnabled: false,
         hasBlockingRequirements: false,
       })
     }
 
-    const account = await stripe.accounts.retrieve(user.stripeAccountId)
+    const account = await stripe.accounts.retrieve(user.stripeAccountId, {
+      expand: ['external_accounts'],
+    })
     const payoutsEnabled = account.payouts_enabled === true
     const hasBlockingRequirements =
       Array.isArray(account.requirements?.currently_due) &&
       account.requirements.currently_due.length > 0
+    const externalAccounts = account.external_accounts?.data ?? []
+    const supportedPayoutCurrencies = new Set<string>()
+    if (account.default_currency) {
+      supportedPayoutCurrencies.add(account.default_currency.toUpperCase())
+    }
+    for (const external of externalAccounts) {
+      if (!('currency' in external)) continue
+      if (external.currency) {
+        supportedPayoutCurrencies.add(external.currency.toUpperCase())
+      }
+    }
 
     return NextResponse.json({
       hasStripeAccount: true,
       requiredCurrency: 'EUR',
       country: account.country ?? null,
-      defaultCurrency: account.default_currency ?? null,
+      defaultCurrency: account.default_currency?.toUpperCase() ?? null,
+      supportedPayoutCurrencies: Array.from(supportedPayoutCurrencies),
       payoutsEnabled,
       hasBlockingRequirements,
     })

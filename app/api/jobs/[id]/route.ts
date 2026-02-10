@@ -317,9 +317,18 @@ export async function PATCH(
       // Refund developer to their Stripe account
       if (existingJob.stripePaymentIntent) {
         try {
+          const intent = await stripe.paymentIntents.retrieve(existingJob.stripePaymentIntent)
+          const totalEurCents =
+            Number(intent.metadata?.amountEurCents) || totalBudgetPaid
+          const totalChargeCents = intent.amount
+          const refundAmountCents =
+            totalEurCents > 0 && totalChargeCents > 0
+              ? Math.round((developerRefund / totalEurCents) * totalChargeCents)
+              : developerRefund
+
           const refund = await refundPaymentIntent(
             existingJob.stripePaymentIntent,
-            developerRefund // Refund only the unused amount
+            refundAmountCents // Refund in charge currency (USD)
           )
           console.log('💰 Developer refund processed:', refund.id, 'Amount:', formatEurFromCents(developerRefund))
         } catch (refundError) {
