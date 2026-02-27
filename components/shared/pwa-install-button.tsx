@@ -11,24 +11,25 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function PWAInstallButton() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [showButton, setShowButton] = useState(false)
-  const [isInstalled, setIsInstalled] = useState(false)
+  const [dismissed, setDismissed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return localStorage.getItem('pwa-install-dismissed') === 'true'
+  })
+  const [isInstalled, setIsInstalled] = useState(() => {
+    if (typeof window === 'undefined') return false
 
-  useEffect(() => {
-    // Check if already installed or dismissed
-    const dismissed = localStorage.getItem('pwa-install-dismissed')
-    const installed = localStorage.getItem('pwa-installed')
-    
-    if (dismissed || installed) {
-      setShowButton(false)
-      return
+    const installed = localStorage.getItem('pwa-installed') === 'true'
+    const standalone = window.matchMedia('(display-mode: standalone)').matches
+
+    if (standalone && !installed) {
+      localStorage.setItem('pwa-installed', 'true')
     }
 
-    // Check if running as installed PWA
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-      localStorage.setItem('pwa-installed', 'true')
-      setIsInstalled(true)
-      setShowButton(false)
+    return installed || standalone
+  })
+
+  useEffect(() => {
+    if (dismissed || isInstalled) {
       return
     }
 
@@ -36,14 +37,12 @@ export function PWAInstallButton() {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault()
       setDeferredPrompt(e as BeforeInstallPromptEvent)
-      setShowButton(true)
     }
 
     // Listen for successful install
     const handleAppInstalled = () => {
       localStorage.setItem('pwa-installed', 'true')
       setIsInstalled(true)
-      setShowButton(false)
       setDeferredPrompt(null)
     }
 
@@ -54,7 +53,7 @@ export function PWAInstallButton() {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
       window.removeEventListener('appinstalled', handleAppInstalled)
     }
-  }, [])
+  }, [dismissed, isInstalled])
 
   const handleInstall = async () => {
     if (!deferredPrompt) return
@@ -68,7 +67,6 @@ export function PWAInstallButton() {
         setIsInstalled(true)
       }
       
-      setShowButton(false)
       setDeferredPrompt(null)
     } catch (error) {
       console.error('Install prompt error:', error)
@@ -77,8 +75,11 @@ export function PWAInstallButton() {
 
   const handleDismiss = () => {
     localStorage.setItem('pwa-install-dismissed', 'true')
-    setShowButton(false)
+    setDismissed(true)
+    setDeferredPrompt(null)
   }
+
+  const showButton = !dismissed && !isInstalled && deferredPrompt !== null
 
   if (!showButton || isInstalled) return null
 

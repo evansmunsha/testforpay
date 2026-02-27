@@ -1,3 +1,4 @@
+import type { Application } from './application'
 import type { Cents } from './money'
 
 export type JobStatus = 'DRAFT' | 'ACTIVE' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED'
@@ -39,7 +40,7 @@ export interface CreateJobInput {
 }
 
 export interface JobWithApplications extends Job {
-  applications: any[]
+  applications: Application[]
   _count: {
     applications: number
   }

@@ -79,10 +79,16 @@ export async function transferToTester({
   amount: number
   currency?: string
   destinationAccountId: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, string | number | boolean | null | undefined>
   transferGroup?: string
   adminUserId?: string // Pass admin userId for notification
 }) {
+  const serializedMetadata = Object.fromEntries(
+    Object.entries(metadata).flatMap(([key, value]) =>
+      value == null ? [] : [[key, String(value)]]
+    )
+  )
+
   // Fetch account details before transfer
   const account = await stripe.accounts.retrieve(destinationAccountId)
   console.log('Stripe account capabilities:', account.capabilities)
@@ -110,7 +116,7 @@ export async function transferToTester({
     amount,
     currency,
     destination: destinationAccountId,
-    metadata,
+    metadata: serializedMetadata,
     transfer_group: transferGroup,
   })
 }

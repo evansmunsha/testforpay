@@ -4,12 +4,24 @@ import { cookies } from 'next/headers'
 import prisma from '@/lib/prisma'
 
 const JWT_SECRET = process.env.JWT_SECRET!
+const EMAIL_VERIFICATION_SECRET =
+  process.env.EMAIL_VERIFICATION_SECRET || JWT_SECRET
 const SALT_ROUNDS = 10
 
 export interface TokenPayload {
   userId: string
   email: string
   role: string
+}
+
+interface EmailVerificationTokenPayload {
+  userId: string
+  email: string
+  type: 'email-verification'
+}
+
+export function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase()
 }
 
 // Hash password
@@ -36,6 +48,40 @@ export function generateToken(payload: TokenPayload): string {
 export function verifyToken(token: string): TokenPayload | null {
   try {
     return jwt.verify(token, JWT_SECRET) as TokenPayload
+  } catch {
+    return null
+  }
+}
+
+export function generateEmailVerificationToken(
+  payload: Omit<EmailVerificationTokenPayload, 'type'>
+): string {
+  return jwt.sign(
+    {
+      ...payload,
+      type: 'email-verification',
+    },
+    EMAIL_VERIFICATION_SECRET,
+    {
+      expiresIn: '24h',
+    }
+  )
+}
+
+export function verifyEmailVerificationToken(
+  token: string
+): EmailVerificationTokenPayload | null {
+  try {
+    const payload = jwt.verify(
+      token,
+      EMAIL_VERIFICATION_SECRET
+    ) as EmailVerificationTokenPayload
+
+    if (payload.type !== 'email-verification') {
+      return null
+    }
+
+    return payload
   } catch {
     return null
   }

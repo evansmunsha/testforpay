@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { sendPasswordResetEmail } from '@/lib/email'
+import { normalizeEmail } from '@/lib/auth'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const RESET_TOKEN_TTL_MINUTES = 30
@@ -32,7 +33,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const normalizedEmail = email.toLowerCase()
+    const normalizedEmail = normalizeEmail(email)
 
     // Step 1: Just verify email exists and return masked version
     if (step === 'verify') {

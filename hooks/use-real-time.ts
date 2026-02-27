@@ -11,6 +11,16 @@ interface UseRealTimeOptions {
   onError?: (error: Error) => void
 }
 
+interface NotificationItem {
+  id: string
+  title: string
+  body: string
+  url: string | null
+  type: string
+  read: boolean
+  createdAt: string
+}
+
 export function useRealTime<T>(
   fetchFn: () => Promise<T>,
   options: UseRealTimeOptions & { initialData: T }
@@ -88,7 +98,7 @@ export function useRealTime<T>(
 
 export function useRealtimeNotifications(interval: number = 3000) {
   const [unreadCount, setUnreadCount] = useState(0)
-  const [notifications, setNotifications] = useState<any[]>([])
+  const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const lastCountRef = useRef(0)
 
   const fetchNotifications = useCallback(async () => {
@@ -100,27 +110,37 @@ export function useRealtimeNotifications(interval: number = 3000) {
     const count = list.length
 
     const prev = lastCountRef.current
-    if (count !== prev) {
-      lastCountRef.current = count
-      setUnreadCount(count)
-      setNotifications(list)
+    lastCountRef.current = count
+    setUnreadCount(count)
+    setNotifications(list)
 
-      if (count > prev) {
-        const latest = list[0]
-        if (latest && Notification.permission === 'granted') {
-          new Notification(latest.title, {
-            body: latest.body,
-            icon: '/icon-192x192.png',
-          })
-        }
+    if (count > prev) {
+      const latest = list[0]
+      if (
+        latest &&
+        typeof Notification !== 'undefined' &&
+        Notification.permission === 'granted'
+      ) {
+        new Notification(latest.title, {
+          body: latest.body,
+          icon: '/icon-192x192.png',
+        })
       }
     }
   }, [])
 
   useEffect(() => {
-    fetchNotifications()
-    const id = setInterval(fetchNotifications, interval)
-    return () => clearInterval(id)
+    const initialFetchId = window.setTimeout(() => {
+      void fetchNotifications()
+    }, 0)
+    const intervalId = window.setInterval(() => {
+      void fetchNotifications()
+    }, interval)
+
+    return () => {
+      window.clearTimeout(initialFetchId)
+      window.clearInterval(intervalId)
+    }
   }, [fetchNotifications, interval])
 
   return { unreadCount, notifications, refresh: fetchNotifications }

@@ -2,6 +2,7 @@ import prisma from './prisma'
 import { stripe } from './stripe'
 import type { Prisma } from '@/generated/prisma/client'
 import { sendNotification } from './notifications'
+import Stripe from 'stripe'
 
 interface PayoutResult {
   applicationId: string
@@ -21,6 +22,15 @@ type PaymentWithContext = Prisma.PaymentGetPayload<{
     }
   }
 }>
+
+type StripeTransferWithReversalState = Stripe.Transfer & {
+  reversed?: boolean
+  amount_reversed?: number
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Transfer failed'
+}
 
 async function processPaymentForPayout(payment: NonNullable<PaymentWithContext>): Promise<PayoutResult> {
   const { application } = payment
@@ -156,7 +166,7 @@ async function processPaymentForPayout(payment: NonNullable<PaymentWithContext>)
       amount: payment.amount,
       status: 'success',
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error(`Payout failed for application ${application.id}:`, error)
 
     // Mark payment as failed
@@ -173,7 +183,7 @@ async function processPaymentForPayout(payment: NonNullable<PaymentWithContext>)
       testerId: tester.id,
       amount: payment.amount,
       status: 'failed',
-      error: error.message || 'Transfer failed',
+      error: getErrorMessage(error),
     }
   }
 }
@@ -267,10 +277,17 @@ export async function reconcileProcessingTransfers(minAgeMinutes = 60 * 24) {
 
   for (const payment of candidates) {
     try {
-      const transfer = await stripe.transfers.retrieve(payment.transferId as string)
+      if (!payment.transferId) {
+        failed += 1
+        continue
+      }
+
+      const transfer = await stripe.transfers.retrieve(
+        payment.transferId
+      ) as StripeTransferWithReversalState
       const isReversed =
-        (transfer as any).reversed === true ||
-        ((transfer as any).amount_reversed ?? 0) > 0
+        transfer.reversed === true ||
+        (transfer.amount_reversed ?? 0) > 0
 
       if (isReversed) {
         await prisma.payment.update({

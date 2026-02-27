@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,51 +23,74 @@ interface JobFormData {
   planType: 'STARTER' | 'PROFESSIONAL' | 'CUSTOM'
 }
 
+const DEFAULT_JOB_FORM_DATA: JobFormData = {
+  appName: '',
+  appDescription: '',
+  packageName: '',
+  googlePlayLink: '',
+  appCategory: '',
+  testersNeeded: 20,
+  testDuration: 14,
+  minAndroidVersion: '',
+  paymentPerTester: 7.5,
+  planType: 'STARTER',
+}
+
+function getStoredJobFormState(): {
+  formData: JobFormData
+  hasStoredData: boolean
+} {
+  if (typeof window === 'undefined') {
+    return { formData: DEFAULT_JOB_FORM_DATA, hasStoredData: false }
+  }
+
+  try {
+    const savedData = window.localStorage.getItem('jobFormData')
+    if (!savedData) {
+      return { formData: DEFAULT_JOB_FORM_DATA, hasStoredData: false }
+    }
+
+    const parsedData = JSON.parse(savedData) as Partial<JobFormData>
+
+    return {
+      formData: {
+        ...DEFAULT_JOB_FORM_DATA,
+        ...parsedData,
+      },
+      hasStoredData: true,
+    }
+  } catch (error) {
+    console.error('Failed to restore form data:', error)
+    return { formData: DEFAULT_JOB_FORM_DATA, hasStoredData: false }
+  }
+}
+
 export function JobForm() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [mounted, setMounted] = useState(false)
-  const [hasStoredData, setHasStoredData] = useState(false)
-  
-  const [formData, setFormData] = useState<JobFormData>({
-    appName: '',
-    appDescription: '',
-    packageName: '',
-    googlePlayLink: '',
-    appCategory: '',
-    testersNeeded: 20,
-    testDuration: 14,
-    minAndroidVersion: '',
-    paymentPerTester: 7.5,
-    planType: 'STARTER',
-  })
-
-  // Restore from localStorage on mount
-  useEffect(() => {
-    try {
-      const savedData = localStorage.getItem('jobFormData')
-      if (savedData) {
-        const parsedData = JSON.parse(savedData)
-        setFormData(parsedData)
-        setHasStoredData(true)
-      }
-    } catch (err) {
-      console.error('Failed to restore form data:', err)
-    }
-    setMounted(true)
-  }, [])
+  const [initialDraftState] = useState(getStoredJobFormState)
+  const [hasStoredData, setHasStoredData] = useState(
+    initialDraftState.hasStoredData
+  )
+  const [formData, setFormData] = useState<JobFormData>(
+    initialDraftState.formData
+  )
+  const hasHydratedRef = useRef(false)
 
   // Save to localStorage whenever form data changes
   useEffect(() => {
-    if (mounted) {
-      try {
-        localStorage.setItem('jobFormData', JSON.stringify(formData))
-      } catch (err) {
-        console.error('Failed to save form data:', err)
-      }
+    if (!hasHydratedRef.current) {
+      hasHydratedRef.current = true
+      return
     }
-  }, [formData, mounted])
+
+    try {
+      localStorage.setItem('jobFormData', JSON.stringify(formData))
+    } catch (error) {
+      console.error('Failed to save form data:', error)
+    }
+  }, [formData])
 
   const totalBudget = formData.paymentPerTester * formData.testersNeeded
   const platformFee = totalBudget * 0.15
@@ -105,7 +128,7 @@ export function JobForm() {
       localStorage.removeItem('jobFormData')
       // Redirect to job details page if no payment required (shouldn't happen with current logic)
       router.push(`/dashboard/jobs/${data.jobId}`)
-    } catch (err) {
+    } catch {
       setError('Something went wrong. Please try again.')
       setLoading(false)
     }
@@ -153,20 +176,9 @@ export function JobForm() {
     try {
       localStorage.removeItem('jobFormData')
       setHasStoredData(false)
-      setFormData({
-        appName: '',
-        appDescription: '',
-        packageName: '',
-        googlePlayLink: '',
-        appCategory: '',
-        testersNeeded: 20,
-        testDuration: 14,
-        minAndroidVersion: '',
-        paymentPerTester: 7.5,
-        planType: 'STARTER',
-      })
-    } catch (err) {
-      console.error('Failed to clear form data:', err)
+      setFormData(DEFAULT_JOB_FORM_DATA)
+    } catch (error) {
+      console.error('Failed to clear form data:', error)
     }
   }
 

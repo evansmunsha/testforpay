@@ -195,45 +195,51 @@ export async function PATCH(
 
     // Handle approval
     if (body.action === 'approve') {
-      const updatedApplication = await prisma.application.update({
-        where: { id },
-        data: {
-          status: 'APPROVED',
-        },
-        include: {
-          tester: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
-          job: true,
-        },
-      })
-
-      // Create Payment record for escrow
-      // Calculate platform fee share for this tester
+      if (application.status !== 'PENDING') {
+        return NextResponse.json(
+          { error: 'Only pending applications can be approved' },
+          { status: 409 }
+        )
+      }
       const platformFeePerTester = Math.round(application.job.platformFee / application.job.testersNeeded)
       const totalPaymentAmount = application.job.paymentPerTester + platformFeePerTester
-
-      try {
-        const payment = await prisma.payment.create({
+      const updatedApplication = await prisma.$transaction(async (tx) => {
+        const updated = await tx.application.update({
+          where: { id },
           data: {
-            applicationId: updatedApplication.id,
-            jobId: updatedApplication.job.id,
+            status: 'APPROVED',
+          },
+          include: {
+            tester: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+            job: true,
+          },
+        })
+        const existingPayment = await tx.payment.findUnique({
+          where: { applicationId: updated.id },
+          select: { id: true },
+        })
+        if (existingPayment) {
+          throw new Error('PAYMENT_ALREADY_EXISTS')
+        }
+        const payment = await tx.payment.create({
+          data: {
+            applicationId: updated.id,
+            jobId: updated.job.id,
             amount: application.job.paymentPerTester,
             platformFee: platformFeePerTester,
             totalAmount: totalPaymentAmount,
-            status: 'ESCROWED', // Funds already escrowed from developer payment
+            status: 'ESCROWED',
             escrowedAt: new Date(),
           },
         })
-        console.log('✅ Payment record created:', payment.id, 'for application:', id)
-      } catch (paymentError) {
-        console.error('Failed to create payment record:', paymentError)
-        // Don't fail the approval if payment record creation fails, but log it
-      }
-
+        console.log('Payment record created:', payment.id, 'for application:', id)
+        return updated
+      })
       // Send approval email
       try {
         const testerPaymentCents = application.job.paymentPerTester
@@ -272,6 +278,13 @@ export async function PATCH(
 
     // Handle rejection
     if (body.action === 'reject') {
+      if (!['PENDING', 'APPROVED'].includes(application.status)) {
+        return NextResponse.json(
+          { error: 'This application can no longer be rejected' },
+          { status: 409 }
+        )
+      }
+
       const updatedApplication = await prisma.application.update({
         where: { id },
         data: {
@@ -323,6 +336,13 @@ export async function PATCH(
 
     // Handle verification
     if (body.action === 'verify') {
+      if (application.status !== 'OPTED_IN') {
+        return NextResponse.json(
+          { error: 'Only opted-in applications can be verified' },
+          { status: 409 }
+        )
+      }
+
       const now = new Date()
       const testingEndDate = new Date(now)
       testingEndDate.setDate(testingEndDate.getDate() + application.job.testDuration)
@@ -399,6 +419,13 @@ export async function PATCH(
 
     // Handle completion (when testing period ends)
     if (body.action === 'complete') {
+      if (application.status !== 'TESTING') {
+        return NextResponse.json(
+          { error: 'Only testing applications can be completed' },
+          { status: 409 }
+        )
+      }
+
       const updatedApplication = await prisma.application.update({
         where: { id },
         data: {
@@ -497,26 +524,30 @@ export async function PATCH(
         message: 'Application marked as completed. Payment will be processed soon.',
       })
     }
-    const updatedApplication = await prisma.application.update({
-      where: { id },
-      data: body,
-      include: {
-        tester: {
-          select: {
-            name: true,
-            email: true,
-          },
-        },
-        job: true,
-      },
-    })
-
-    return NextResponse.json({
-      success: true,
-      application: updatedApplication,
-      message: 'Application updated successfully',
-    })
+    return NextResponse.json(
+      { error: 'Invalid application action' },
+      { status: 400 }
+    )
   } catch (error) {
+    if (error instanceof Error && error.message === 'PAYMENT_ALREADY_EXISTS') {
+      return NextResponse.json(
+        { error: 'Payment already exists for this application' },
+        { status: 409 }
+      )
+    }
+
+    if (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      error.code === 'P2002'
+    ) {
+      return NextResponse.json(
+        { error: 'Payment already exists for this application' },
+        { status: 409 }
+      )
+    }
+
     console.error('Update application error:', error)
     return NextResponse.json(
       { error: 'Failed to update application' },
@@ -584,4 +615,5 @@ export async function DELETE(
     )
   }
 }
+
 

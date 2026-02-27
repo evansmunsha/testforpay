@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { refundPaymentIntent, stripe } from '@/lib/stripe'
-import { formatEurFromCents, toCents } from '@/lib/currency'
+import { stripe } from '@/lib/stripe'
+import { toCents } from '@/lib/currency'
 
 // GET - Get single job
 export async function GET(
@@ -60,7 +60,6 @@ export async function GET(
     }
 
     // SECURITY: Only the job owner or an admin can access full job details.
-    // This prevents public access to tester PII (email/device info) via this endpoint.
     if (currentUser.role !== 'ADMIN' && job.developerId !== currentUser.userId) {
       return NextResponse.json(
         { error: 'Not authorized' },
@@ -96,7 +95,6 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
 
-    // Check if user owns this job
     const existingJob = await prisma.testingJob.findUnique({
       where: { id },
     })
@@ -116,8 +114,7 @@ export async function PATCH(
     }
 
     // SECURITY: Whitelist fields to prevent mass assignment of sensitive data.
-    // Only allow the fields that are editable from the UI.
-    const updateData: Record<string, any> = {}
+    const updateData: Record<string, unknown> = {}
     const allowedStringFields = [
       'appName',
       'appDescription',
@@ -125,7 +122,7 @@ export async function PATCH(
       'googlePlayLink',
       'appCategory',
       'minAndroidVersion',
-    ]
+    ] as const
 
     for (const field of allowedStringFields) {
       if (field in body) {
@@ -140,7 +137,10 @@ export async function PATCH(
     }
 
     if ('testersNeeded' in body) {
-      if (typeof body.testersNeeded !== 'number' || !Number.isFinite(body.testersNeeded)) {
+      if (
+        typeof body.testersNeeded !== 'number' ||
+        !Number.isFinite(body.testersNeeded)
+      ) {
         return NextResponse.json(
           { error: 'Invalid testersNeeded' },
           { status: 400 }
@@ -150,7 +150,10 @@ export async function PATCH(
     }
 
     if ('testDuration' in body) {
-      if (typeof body.testDuration !== 'number' || !Number.isFinite(body.testDuration)) {
+      if (
+        typeof body.testDuration !== 'number' ||
+        !Number.isFinite(body.testDuration)
+      ) {
         return NextResponse.json(
           { error: 'Invalid testDuration' },
           { status: 400 }
@@ -160,18 +163,27 @@ export async function PATCH(
     }
 
     if ('paymentPerTester' in body) {
-      if (typeof body.paymentPerTester !== 'number' || !Number.isFinite(body.paymentPerTester)) {
+      if (
+        typeof body.paymentPerTester !== 'number' ||
+        !Number.isFinite(body.paymentPerTester)
+      ) {
         return NextResponse.json(
           { error: 'Invalid paymentPerTester' },
           { status: 400 }
         )
       }
-      // CURRENCY: Client sends euros; store as integer cents to avoid float rounding.
+      // CURRENCY: Client sends euros; store as integer cents.
       updateData.paymentPerTester = toCents(body.paymentPerTester)
     }
 
     if ('status' in body) {
-      const allowedStatuses = ['DRAFT', 'ACTIVE', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED']
+      const allowedStatuses = [
+        'DRAFT',
+        'ACTIVE',
+        'IN_PROGRESS',
+        'COMPLETED',
+        'CANCELLED',
+      ]
       if (!allowedStatuses.includes(body.status)) {
         return NextResponse.json(
           { error: 'Invalid status' },
@@ -192,7 +204,6 @@ export async function PATCH(
     }
 
     // SECURITY: Prevent activating unpaid jobs in production.
-    // Rationale: Developers must not be able to publish without a verified Stripe payment.
     if (body.status === 'ACTIVE' && existingJob.status === 'DRAFT') {
       if (process.env.NODE_ENV === 'production') {
         if (!existingJob.stripePaymentIntent) {
@@ -223,151 +234,12 @@ export async function PATCH(
       }
     }
 
-    // Handle job cancellation with partial refunds based on testing progress
+    // Keep all cancellation/refund logic on the dedicated endpoint.
     if (body.status === 'CANCELLED' && existingJob.status !== 'CANCELLED') {
-      // Compensation percentages based on testing progress
-      const compensationRates: Record<string, number> = {
-        COMPLETED: 1.0,   // 100%
-        TESTING: 0.75,    // 75%
-        VERIFIED: 0.5,    // 50%
-        OPTED_IN: 0.25,   // 25%
-        APPROVED: 0,      // 0%
-        PENDING: 0,       // 0%
-      }
-
-      // Get all applications by status
-      const applicationsByStatus = await prisma.application.findMany({
-        where: { jobId: id },
-        include: { tester: true },
-      })
-
-      // Calculate payouts per tester
-      let totalTesterPayouts = 0
-      const payoutDetails: Array<{
-        applicationId: string
-        testerId: string
-        status: string
-        basePayment: number
-        compensation: number
-      }> = []
-
-      for (const app of applicationsByStatus) {
-        const rate = compensationRates[app.status] || 0
-        const compensation = Math.round(existingJob.paymentPerTester * rate)
-
-        if (compensation > 0) {
-          totalTesterPayouts += compensation
-          payoutDetails.push({
-            applicationId: app.id,
-            testerId: app.testerId,
-            status: app.status,
-            basePayment: existingJob.paymentPerTester,
-            compensation,
-          })
-        }
-      }
-
-      // Calculate platform fee on actual payouts (not full budget)
-      const platformFeeOnPayouts = Math.round(totalTesterPayouts * 0.15)
-
-      // Calculate developer refund
-      const totalBudgetPaid = existingJob.totalBudget + existingJob.platformFee
-      const developerRefund = Math.round(totalBudgetPaid - totalTesterPayouts - platformFeeOnPayouts)
-
-      // Create Payment records for testers who earned compensation
-      for (const detail of payoutDetails) {
-        try {
-          // Find existing application payment or create new one
-          const existingPayment = await prisma.payment.findUnique({
-            where: { applicationId: detail.applicationId },
-          })
-
-          if (existingPayment) {
-            // Update existing payment to REFUNDED status instead of deleting
-            await prisma.payment.update({
-              where: { id: existingPayment.id },
-              data: {
-                amount: detail.compensation,
-                platformFee: Math.round(detail.compensation * 0.15),
-                totalAmount: detail.compensation + Math.round(detail.compensation * 0.15),
-                status: 'REFUNDED', // Mark as refunded for audit trail
-                completedAt: new Date(),
-              },
-            })
-          } else {
-            // Create new payment record for this tester with REFUNDED status
-            await prisma.payment.create({
-              data: {
-                applicationId: detail.applicationId,
-                jobId: id,
-                amount: detail.compensation,
-                platformFee: Math.round(detail.compensation * 0.15),
-                totalAmount: detail.compensation + Math.round(detail.compensation * 0.15),
-                status: 'REFUNDED',
-                escrowedAt: new Date(),
-                completedAt: new Date(),
-              },
-            })
-          }
-        } catch (paymentError) {
-          console.error('Failed to create/update payment for tester:', detail.testerId, paymentError)
-        }
-      }
-
-      // Refund developer to their Stripe account
-      if (existingJob.stripePaymentIntent) {
-        try {
-          const intent = await stripe.paymentIntents.retrieve(existingJob.stripePaymentIntent)
-          const totalEurCents =
-            Number(intent.metadata?.amountEurCents) || totalBudgetPaid
-          const totalChargeCents = intent.amount
-          const refundAmountCents =
-            totalEurCents > 0 && totalChargeCents > 0
-              ? Math.round((developerRefund / totalEurCents) * totalChargeCents)
-              : developerRefund
-
-          const refund = await refundPaymentIntent(
-            existingJob.stripePaymentIntent,
-            refundAmountCents // Refund in charge currency (USD)
-          )
-          console.log('💰 Developer refund processed:', refund.id, 'Amount:', formatEurFromCents(developerRefund))
-        } catch (refundError) {
-          console.error('Failed to refund developer:', refundError)
-          // Log but don't fail the cancellation
-        }
-      }
-
-      // Mark PENDING applications as rejected (not paid)
-      await prisma.application.updateMany({
-        where: {
-          jobId: id,
-          status: 'PENDING',
-        },
-        data: {
-          status: 'REJECTED',
-        },
-      })
-
-      console.log(`📋 Job cancelled with partial refunds:
-        - Total tester payouts: ${formatEurFromCents(totalTesterPayouts)}
-        - Platform fee (15%): ${formatEurFromCents(platformFeeOnPayouts)}
-        - Developer refund: ${formatEurFromCents(developerRefund)}
-        - Testers paid: ${payoutDetails.length}
-      `)
-
-      // Return cancellation breakdown for UI
-      return NextResponse.json({
-        success: true,
-        cancelled: true,
-        message: 'Job cancelled with partial refunds processed',
-        breakdown: {
-          totalBudgetPaid,
-          totalTesterPayouts,
-          platformFeeOnPayouts,
-          developerRefund,
-          payoutDetails,
-        },
-      })
+      return NextResponse.json(
+        { error: 'Use the dedicated cancellation endpoint for job cancellations' },
+        { status: 400 }
+      )
     }
 
     if (Object.keys(updateData).length === 0) {
@@ -377,19 +249,25 @@ export async function PATCH(
       )
     }
 
-    // Update job (only if not cancelled - cancellation returns above)
+    const nextPaymentPerTester =
+      typeof updateData.paymentPerTester === 'number'
+        ? updateData.paymentPerTester
+        : existingJob.paymentPerTester
+    const nextTestersNeeded =
+      typeof updateData.testersNeeded === 'number'
+        ? updateData.testersNeeded
+        : existingJob.testersNeeded
+
     const updatedJob = await prisma.testingJob.update({
       where: { id },
       data: {
         ...updateData,
-        // Recalculate if payment or testers changed
-        ...((typeof updateData.paymentPerTester === 'number' || typeof updateData.testersNeeded === 'number')
+        ...(typeof updateData.paymentPerTester === 'number' ||
+        typeof updateData.testersNeeded === 'number'
           ? {
-              totalBudget: (updateData.paymentPerTester ?? existingJob.paymentPerTester) * 
-                          (updateData.testersNeeded ?? existingJob.testersNeeded),
+              totalBudget: nextPaymentPerTester * nextTestersNeeded,
               platformFee: Math.round(
-                (updateData.paymentPerTester ?? existingJob.paymentPerTester) * 
-                (updateData.testersNeeded ?? existingJob.testersNeeded) * 0.15
+                nextPaymentPerTester * nextTestersNeeded * 0.15
               ),
             }
           : {}),
@@ -427,7 +305,6 @@ export async function DELETE(
 
     const { id } = await params
 
-    // Check if user owns this job
     const existingJob = await prisma.testingJob.findUnique({
       where: { id },
     })
@@ -446,7 +323,6 @@ export async function DELETE(
       )
     }
 
-    // Delete job
     await prisma.testingJob.delete({
       where: { id },
     })
@@ -463,6 +339,3 @@ export async function DELETE(
     )
   }
 }
-
-
-

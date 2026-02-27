@@ -4,6 +4,7 @@ import { formatEurFromCents } from './currency'
 const resend = new Resend(process.env.RESEND_API_KEY)
 
 const FROM_EMAIL = 'TestForPay <noreply@testforpay.com>'
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
 
 export async function sendApplicationApprovedEmail(
@@ -218,6 +219,37 @@ export async function sendPasswordResetEmail(
         </div>
         <p style="color: #6b7280; font-size: 14px;">
           This code expires in 30 minutes. If you didn't request this, you can ignore this email.
+        </p>
+      </div>
+    `,
+  })
+}
+
+export async function sendEmailVerificationEmail(
+  to: string,
+  data: {
+    name?: string | null
+    verificationToken: string
+  }
+) {
+  const verificationUrl = `${APP_URL}/verify-email?token=${encodeURIComponent(data.verificationToken)}`
+
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: 'Verify your TestForPay email',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h1 style="color: #2563eb;">Verify your email</h1>
+        <p>Hi ${data.name || 'there'},</p>
+        <p>Confirm your email address to unlock job creation, applications, and payouts.</p>
+        <a href="${verificationUrl}"
+           style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px;
+                  text-decoration: none; border-radius: 6px; margin: 16px 0;">
+          Verify email
+        </a>
+        <p style="color: #6b7280; font-size: 14px;">
+          This link expires in 24 hours. If you didn't create this account, you can ignore this email.
         </p>
       </div>
     `,

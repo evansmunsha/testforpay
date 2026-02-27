@@ -4,6 +4,10 @@ import { getCurrentUser } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 import { sendNotification } from '@/lib/notifications'
 
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unexpected error'
+}
+
 // POST - Cancel a job with flexible partial refund policy
 export async function POST(
   request: Request,
@@ -255,9 +259,14 @@ export async function POST(
             console.log(
               `Partial payout to tester ${payout.testerId}: ${payoutCurrency.toUpperCase()} ${payoutAmount} (${payout.percentage}%)`
             )
-          } catch (error: any) {
-            console.error(`Failed to pay tester ${payout.testerId}:`, error.message)
-            payoutResults.push({ testerId: payout.testerId, success: false, error: error.message })
+          } catch (error) {
+            const errorMessage = getErrorMessage(error)
+            console.error(`Failed to pay tester ${payout.testerId}:`, errorMessage)
+            payoutResults.push({
+              testerId: payout.testerId,
+              success: false,
+              error: errorMessage,
+            })
           }
         } else if (payout.amount > 0) {
           // Tester doesn't have Stripe connected - flag for manual payout
@@ -295,8 +304,8 @@ export async function POST(
           refundIssued = true
           refundId = refund.id
           console.log(`Partial refund to developer: €${(developerRefund / 100).toFixed(2)}`)
-        } catch (stripeError: any) {
-          console.error('Stripe refund error:', stripeError.message)
+        } catch (stripeError) {
+          console.error('Stripe refund error:', getErrorMessage(stripeError))
         }
       } else if (developerRefund <= 0) {
         // All budget used for tester payouts - no refund to developer

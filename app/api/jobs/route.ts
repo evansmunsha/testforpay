@@ -4,10 +4,33 @@ import { getCurrentUser } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import Stripe from 'stripe'
 import { toCents } from '@/lib/currency'
+import type { Prisma } from '@/generated/prisma/client'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover'
 })
+
+interface CreateJobRequestBody {
+  appName?: string
+  appDescription?: string
+  packageName?: string
+  googlePlayLink?: string
+  planType?: string
+  testersNeeded?: number
+  testDuration?: number
+  paymentPerTester?: number
+}
+
+const JOB_STATUS_FILTERS = ['DRAFT', 'ACTIVE', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const
+type JobStatusFilter = typeof JOB_STATUS_FILTERS[number]
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Failed to create job'
+}
+
+function isJobStatusFilter(status: string): status is JobStatusFilter {
+  return JOB_STATUS_FILTERS.includes(status as JobStatusFilter)
+}
 
 export async function POST(request: Request) {
   try {
@@ -38,7 +61,7 @@ export async function POST(request: Request) {
       )
     }
 
-    const body = await request.json()
+    const body = await request.json() as CreateJobRequestBody
     const { 
       appName, 
       appDescription, 
@@ -114,7 +137,7 @@ export async function POST(request: Request) {
       metadata: {
         jobId: job.id,
         userId: currentUser.userId,
-        planType
+        planType: planType ?? 'CUSTOM',
       }
     })
 
@@ -125,10 +148,10 @@ export async function POST(request: Request) {
       paymentUrl: checkoutSession.url
     })
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Job creation error:', error)
     return NextResponse.json(
-      { error: error.message || 'Failed to create job' },
+      { error: getErrorMessage(error) },
       { status: 500 }
     )
   }
@@ -146,7 +169,7 @@ export async function GET(request: Request) {
     const status = searchParams.get('status')
 
     // Build where clause based on user role
-    const where: any = {}
+    const where: Prisma.TestingJobWhereInput = {}
 
     // Developers see only their own jobs
     // Testers see all ACTIVE jobs (for browsing)
@@ -158,7 +181,7 @@ export async function GET(request: Request) {
     }
 
     // Apply status filter if provided (for developers filtering their own jobs)
-    if (status && currentUser.role === 'DEVELOPER') {
+    if (status && currentUser.role === 'DEVELOPER' && isJobStatusFilter(status)) {
       where.status = status
     }
 

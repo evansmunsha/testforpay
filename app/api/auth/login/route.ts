@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { verifyPassword, generateToken, setAuthCookie } from '@/lib/auth'
+import {
+  verifyPassword,
+  generateToken,
+  setAuthCookie,
+  normalizeEmail,
+} from '@/lib/auth'
 import { loginSchema } from '@/lib/validators'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
@@ -22,10 +27,11 @@ export async function POST(request: Request) {
     
     // Validate input
     const validatedData = loginSchema.parse(body)
+    const normalizedEmail = normalizeEmail(validatedData.email)
     
     // Find user
     const user = await prisma.user.findUnique({
-      where: { email: validatedData.email },
+      where: { email: normalizedEmail },
     })
     
     if (!user) {

@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +8,6 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function SignupPage() {
-  const router = useRouter()
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -39,12 +37,11 @@ export default function SignupPage() {
         return
       }
 
-      // Redirect based on user role (use full page navigation to ensure cookie is sent)
-      if (data.user.role === 'DEVELOPER') {
-        window.location.href = '/dashboard'
-      } else {
-        window.location.href = '/dashboard/browse'
-      }
+      const params = new URLSearchParams({
+        email: data.user.email,
+        sent: data.verificationEmailSent ? '1' : '0',
+      })
+      window.location.href = `/verify-email?${params.toString()}`
     } catch (err) {
       setError('Something went wrong. Please try again.')
       setLoading(false)

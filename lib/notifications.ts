@@ -19,6 +19,10 @@ interface NotificationData {
   type: string
 }
 
+function isPushError(error: unknown): error is { statusCode?: number } {
+  return typeof error === 'object' && error !== null && 'statusCode' in error
+}
+
 // Create notification and send push
 export async function sendNotification(data: NotificationData) {
   try {
@@ -56,9 +60,12 @@ export async function sendNotification(data: NotificationData) {
             notificationId: notification.id,
           })
         )
-      } catch (error: any) {
+      } catch (error) {
         // If subscription is invalid, remove it
-        if (error.statusCode === 410 || error.statusCode === 404) {
+        if (
+          isPushError(error) &&
+          (error.statusCode === 410 || error.statusCode === 404)
+        ) {
           await prisma.pushSubscription.delete({
             where: { id: sub.id },
           })

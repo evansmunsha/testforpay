@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
-import { hashPassword, generateToken, setAuthCookie } from '@/lib/auth'
+import {
+  hashPassword,
+  generateToken,
+  setAuthCookie,
+  generateEmailVerificationToken,
+  normalizeEmail,
+} from '@/lib/auth'
 import { signupSchema } from '@/lib/validators'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { sendEmailVerificationEmail } from '@/lib/email'
 
 export async function POST(request: Request) {
   try {
@@ -27,10 +34,11 @@ export async function POST(request: Request) {
     
     // Validate input
     const validatedData = signupSchema.parse(body)
+    const normalizedEmail = normalizeEmail(validatedData.email)
     
     // Check if user already exists
     const existingUser = await prisma.user.findUnique({
-      where: { email: validatedData.email },
+      where: { email: normalizedEmail },
     })
     
     if (existingUser) {
@@ -46,7 +54,7 @@ export async function POST(request: Request) {
     // Create user with fraud tracking
     const user = await prisma.user.create({
       data: {
-        email: validatedData.email,
+        email: normalizedEmail,
         password: hashedPassword,
         name: validatedData.name,
         role: validatedData.role,
@@ -61,6 +69,22 @@ export async function POST(request: Request) {
       email: user.email,
       role: user.role,
     })
+
+    let verificationEmailSent = false
+    try {
+      const verificationToken = generateEmailVerificationToken({
+        userId: user.id,
+        email: user.email,
+      })
+
+      await sendEmailVerificationEmail(user.email, {
+        name: user.name,
+        verificationToken,
+      })
+      verificationEmailSent = true
+    } catch (emailError) {
+      console.error('Signup verification email error:', emailError)
+    }
     
     // Set cookie
     await setAuthCookie(token)
@@ -73,6 +97,8 @@ export async function POST(request: Request) {
         name: user.name,
         role: user.role,
       },
+      requiresEmailVerification: true,
+      verificationEmailSent,
     })
   } catch (error) {
     console.error('Signup error:', error)
