@@ -2,13 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AlertCircle, DollarSign, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AlertCircle, DollarSign, Trash2 } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { eurToUsd, formatUsd } from '@/lib/currency'
 
 interface JobFormData {
   appName: string
@@ -70,15 +71,10 @@ export function JobForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [initialDraftState] = useState(getStoredJobFormState)
-  const [hasStoredData, setHasStoredData] = useState(
-    initialDraftState.hasStoredData
-  )
-  const [formData, setFormData] = useState<JobFormData>(
-    initialDraftState.formData
-  )
+  const [hasStoredData, setHasStoredData] = useState(initialDraftState.hasStoredData)
+  const [formData, setFormData] = useState<JobFormData>(initialDraftState.formData)
   const hasHydratedRef = useRef(false)
 
-  // Save to localStorage whenever form data changes
   useEffect(() => {
     if (!hasHydratedRef.current) {
       hasHydratedRef.current = true
@@ -94,7 +90,8 @@ export function JobForm() {
 
   const totalBudget = formData.paymentPerTester * formData.testersNeeded
   const platformFee = totalBudget * 0.15
-  const totalCost = totalBudget + platformFee
+  const totalCostEur = totalBudget + platformFee
+  const totalCostUsd = eurToUsd(totalCostEur)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -116,17 +113,7 @@ export function JobForm() {
         return
       }
 
-      if (data.requiresPayment && data.paymentUrl) {
-        // Clear saved data on successful submission (redirecting to payment)
-        localStorage.removeItem('jobFormData')
-        // Redirect to Stripe Checkout
-        window.location.href = data.paymentUrl
-        return
-      }
-
-      // Clear saved data on successful submission (redirecting to job details)
       localStorage.removeItem('jobFormData')
-      // Redirect to job details page if no payment required (shouldn't happen with current logic)
       router.push(`/dashboard/jobs/${data.jobId}`)
     } catch {
       setError('Something went wrong. Please try again.')
@@ -134,7 +121,6 @@ export function JobForm() {
     }
   }
 
-  // Minimum requirements (12 testers is Google Play minimum for some apps)
   const MIN_TESTERS = 12
   const RECOMMENDED_TESTERS = 20
   const MIN_DURATION = 14
@@ -142,34 +128,42 @@ export function JobForm() {
 
   const handlePlanChange = (plan: 'STARTER' | 'PROFESSIONAL' | 'CUSTOM') => {
     if (plan === 'STARTER') {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         planType: 'STARTER',
         testersNeeded: 20,
-        paymentPerTester: 7.5, // 150 / 20
+        paymentPerTester: 7.5,
       }))
-    } else if (plan === 'PROFESSIONAL') {
-      setFormData(prev => ({
+      return
+    }
+
+    if (plan === 'PROFESSIONAL') {
+      setFormData((prev) => ({
         ...prev,
         planType: 'PROFESSIONAL',
         testersNeeded: 35,
-        paymentPerTester: 7.14, // 250 / 35 approx
+        paymentPerTester: 7.14,
       }))
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        planType: 'CUSTOM',
-      }))
+      return
     }
+
+    setFormData((prev) => ({
+      ...prev,
+      planType: 'CUSTOM',
+    }))
   }
 
   const handleChange = (field: keyof JobFormData, value: string | number) => {
-    // Auto-switch to CUSTOM plan when user manually changes values
-    if (field === 'testersNeeded' || field === 'paymentPerTester' || field === 'testDuration') {
-      setFormData(prev => ({ ...prev, [field]: value, planType: 'CUSTOM' }))
-    } else {
-      setFormData(prev => ({ ...prev, [field]: value }))
+    if (
+      field === 'testersNeeded' ||
+      field === 'paymentPerTester' ||
+      field === 'testDuration'
+    ) {
+      setFormData((prev) => ({ ...prev, [field]: value, planType: 'CUSTOM' }))
+      return
     }
+
+    setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
   const clearSavedData = () => {
@@ -185,18 +179,21 @@ export function JobForm() {
   return (
     <div className="space-y-6">
       {hasStoredData && (
-        <div className="bg-blue-50 border border-blue-200 text-blue-600 p-4 rounded-lg flex items-start gap-3 justify-between">
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 text-blue-600">
           <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 mt-0.5" />
+            <AlertCircle className="mt-0.5 h-5 w-5" />
             <div>
               <p className="font-medium">Your draft has been restored</p>
-              <p className="text-sm">We found your previously saved form data. Continue editing or start fresh.</p>
+              <p className="text-sm">
+                We found your previously saved form data. Continue editing or start fresh.
+              </p>
             </div>
           </div>
           <button
             onClick={clearSavedData}
-            className="text-blue-600 hover:text-blue-700 shrink-0 p-1"
+            className="shrink-0 p-1 text-blue-600 hover:text-blue-700"
             title="Clear saved data"
+            type="button"
           >
             <Trash2 className="h-5 w-5" />
           </button>
@@ -204,8 +201,8 @@ export function JobForm() {
       )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-lg flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-red-600">
+          <AlertCircle className="mt-0.5 h-5 w-5" />
           <div>
             <p className="font-medium">Error</p>
             <p className="text-sm">{error}</p>
@@ -213,55 +210,59 @@ export function JobForm() {
         </div>
       )}
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="space-y-6 lg:col-span-2">
           <Card>
             <CardHeader>
               <CardTitle>Choose a Plan</CardTitle>
               <CardDescription>Select the best testing plan for your app</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid md:grid-cols-3 gap-4">
+              <div className="grid gap-4 md:grid-cols-3">
                 <button
                   type="button"
                   onClick={() => handlePlanChange('STARTER')}
-                  className={`p-4 rounded-xl border-2 text-left transition ${
+                  className={`rounded-xl border-2 p-4 text-left transition ${
                     formData.planType === 'STARTER'
                       ? 'border-blue-600 bg-blue-50'
                       : 'border-gray-200 hover:border-blue-200'
                   }`}
                 >
-                  <p className="font-bold text-lg">€150</p>
+                  <p className="text-lg font-bold">{formatUsd(eurToUsd(150))}</p>
                   <p className="font-semibold">Starter</p>
-                  <p className="text-xs text-gray-500 mt-1">20 Verified Testers</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    20 verified testers, payouts set in EUR
+                  </p>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handlePlanChange('PROFESSIONAL')}
-                  className={`p-4 rounded-xl border-2 text-left transition ${
+                  className={`rounded-xl border-2 p-4 text-left transition ${
                     formData.planType === 'PROFESSIONAL'
                       ? 'border-blue-600 bg-blue-50'
                       : 'border-gray-200 hover:border-blue-200'
                   }`}
                 >
-                  <p className="font-bold text-lg">€250</p>
+                  <p className="text-lg font-bold">{formatUsd(eurToUsd(250))}</p>
                   <p className="font-semibold">Professional</p>
-                  <p className="text-xs text-gray-500 mt-1">35 Verified Testers</p>
+                  <p className="mt-1 text-xs text-gray-500">
+                    35 verified testers, payouts set in EUR
+                  </p>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => handlePlanChange('CUSTOM')}
-                  className={`p-4 rounded-xl border-2 text-left transition ${
+                  className={`rounded-xl border-2 p-4 text-left transition ${
                     formData.planType === 'CUSTOM'
                       ? 'border-blue-600 bg-blue-50'
                       : 'border-gray-200 hover:border-blue-200'
                   }`}
                 >
-                  <p className="font-bold text-lg">Custom</p>
+                  <p className="text-lg font-bold">Custom</p>
                   <p className="font-semibold">Flexible</p>
-                  <p className="text-xs text-gray-500 mt-1">Set your own rates</p>
+                  <p className="mt-1 text-xs text-gray-500">Set your own rates</p>
                 </button>
               </div>
             </CardContent>
@@ -297,7 +298,7 @@ export function JobForm() {
                 <p className="text-xs text-gray-500">Minimum 20 characters</p>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="packageName">Package Name (Optional)</Label>
                   <Input
@@ -323,7 +324,7 @@ export function JobForm() {
                       <SelectItem value="entertainment">Entertainment</SelectItem>
                       <SelectItem value="games">Games</SelectItem>
                       <SelectItem value="education">Education</SelectItem>
-                      <SelectItem value="health">Health & Fitness</SelectItem>
+                      <SelectItem value="health">Health &amp; Fitness</SelectItem>
                       <SelectItem value="finance">Finance</SelectItem>
                       <SelectItem value="shopping">Shopping</SelectItem>
                       <SelectItem value="other">Other</SelectItem>
@@ -343,7 +344,7 @@ export function JobForm() {
                   required
                 />
                 <p className="text-xs text-gray-500">
-                  Testers will use this link to opt-in to your closed test
+                  Testers will use this link to opt in to your closed test.
                 </p>
               </div>
             </CardContent>
@@ -355,7 +356,7 @@ export function JobForm() {
               <CardDescription>Define your testing needs</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="testersNeeded">Number of Testers *</Label>
                   <Input
@@ -364,10 +365,17 @@ export function JobForm() {
                     min={MIN_TESTERS}
                     max="500"
                     value={formData.testersNeeded}
-                    onChange={(e) => handleChange('testersNeeded', Math.max(MIN_TESTERS, parseInt(e.target.value) || MIN_TESTERS))}
+                    onChange={(e) =>
+                      handleChange(
+                        'testersNeeded',
+                        Math.max(MIN_TESTERS, parseInt(e.target.value, 10) || MIN_TESTERS)
+                      )
+                    }
                     required
                   />
-                  <p className="text-xs text-gray-500">Minimum {MIN_TESTERS} testers. Recommended: {RECOMMENDED_TESTERS}+</p>
+                  <p className="text-xs text-gray-500">
+                    Minimum {MIN_TESTERS} testers. Recommended: {RECOMMENDED_TESTERS}+.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -376,10 +384,15 @@ export function JobForm() {
                     id="testDuration"
                     type="number"
                     min={MIN_DURATION}
-                    step="1"
                     max="90"
+                    step="1"
                     value={formData.testDuration}
-                    onChange={(e) => handleChange('testDuration', Math.max(MIN_DURATION, parseInt(e.target.value, 10) || MIN_DURATION))}
+                    onChange={(e) =>
+                      handleChange(
+                        'testDuration',
+                        Math.max(MIN_DURATION, parseInt(e.target.value, 10) || MIN_DURATION)
+                      )
+                    }
                     required
                   />
                   <p className="text-xs text-gray-500">Minimum 14 days for testing</p>
@@ -411,7 +424,7 @@ export function JobForm() {
           <Card>
             <CardHeader>
               <CardTitle>Payment</CardTitle>
-              <CardDescription>Set your payment per tester</CardDescription>
+              <CardDescription>Set your tester payout in EUR</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
@@ -423,18 +436,22 @@ export function JobForm() {
                   max="100"
                   step="0.50"
                   value={formData.paymentPerTester}
-                  onChange={(e) => handleChange('paymentPerTester', Math.max(MIN_PAYMENT, parseFloat(e.target.value) || MIN_PAYMENT))}
+                  onChange={(e) =>
+                    handleChange(
+                      'paymentPerTester',
+                      Math.max(MIN_PAYMENT, parseFloat(e.target.value) || MIN_PAYMENT)
+                    )
+                  }
                   required
                 />
                 <p className="text-xs text-gray-500">
-                  Minimum €{MIN_PAYMENT}. Higher payments attract more testers faster.
+                  Minimum EUR {MIN_PAYMENT}. Higher payouts attract testers faster.
                 </p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Summary Card */}
         <div className="lg:col-span-1">
           <Card className="sticky top-20">
             <CardHeader>
@@ -452,54 +469,50 @@ export function JobForm() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Payment per tester</span>
-                  <span className="font-medium">€{formData.paymentPerTester.toFixed(2)}</span>
+                  <span className="font-medium">EUR {formData.paymentPerTester.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Test duration</span>
                   <span className="font-medium">{formData.testDuration} days</span>
                 </div>
-                <div className="border-t pt-3 space-y-2">
+                <div className="space-y-2 border-t pt-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Tester payments</span>
-                    <span className="font-medium">€{totalBudget.toFixed(2)}</span>
+                    <span className="font-medium">EUR {totalBudget.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Platform fee (15%)</span>
-                    <span className="font-medium">€{platformFee.toFixed(2)}</span>
+                    <span className="font-medium">EUR {platformFee.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="border-t pt-3">
                   <div className="flex justify-between">
-                    <span className="font-semibold text-lg">Total Cost</span>
-                    <span className="font-bold text-2xl text-blue-600">
-                      €{totalCost.toFixed(2)}
+                    <span className="text-lg font-semibold">Developer Charge</span>
+                    <span className="text-2xl font-bold text-blue-600">
+                      {formatUsd(totalCostUsd)}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-blue-50 p-4 rounded-lg space-y-2">
-                <p className="text-sm font-medium text-blue-900">What's Included:</p>
-                <ul className="text-xs text-blue-700 space-y-1">
-                  <li>✓ {formData.testersNeeded} verified testers</li>
-                  <li>✓ {formData.testDuration}-day testing period</li>
-                  <li>✓ Google Play opt-in verification</li>
-                  <li>✓ Basic feedback from testers</li>
-                  <li>✓ Real-time progress tracking</li>
+              <div className="space-y-2 rounded-lg bg-blue-50 p-4">
+                <p className="text-sm font-medium text-blue-900">What&apos;s Included:</p>
+                <ul className="space-y-1 text-xs text-blue-700">
+                  <li>- {formData.testersNeeded} verified testers</li>
+                  <li>- {formData.testDuration}-day testing period</li>
+                  <li>- Google Play opt-in verification</li>
+                  <li>- Basic feedback from testers</li>
+                  <li>- Real-time progress tracking</li>
                 </ul>
               </div>
 
-              <Button 
-                onClick={handleSubmit}
-                className="w-full" 
-                size="lg"
-                disabled={loading}
-              >
+              <Button onClick={handleSubmit} className="w-full" size="lg" disabled={loading}>
                 {loading ? 'Creating Job...' : 'Create Testing Job'}
               </Button>
 
-              <p className="text-xs text-gray-500 text-center">
-                Job will be saved as draft. You can publish it later.
+              <p className="text-center text-xs text-gray-500">
+                Job will be saved as draft. Complete the USD payment on the next screen, then
+                publish it.
               </p>
             </CardContent>
           </Card>

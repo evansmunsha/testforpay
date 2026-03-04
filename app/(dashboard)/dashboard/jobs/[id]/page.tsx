@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ApplicationCard } from '@/components/applications/application-card'
+import { CheckoutForm } from '@/components/payments/checkout-form'
 import { useToast } from '@/components/ui/toast-provider'
 import { TestingReportViewer } from '@/components/jobs/testing-report-viewer'
 import { ProductionQuestionnaire } from '@/components/dashboard/production-questionnaire'
@@ -27,7 +28,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import Link from 'next/link'
-import { formatEurFromCents } from '@/lib/currency'
+import { formatEurFromCents, formatUsdFromEurCents } from '@/lib/currency'
 import type { Cents } from '@/types/money'
 
 interface Job {
@@ -46,6 +47,7 @@ interface Job {
   totalBudget: Cents
   /** Platform fee in integer cents (EUR). */
   platformFee: Cents
+  stripePaymentIntent?: string | null
   status: string
   createdAt: string
   publishedAt: string | null
@@ -208,7 +210,12 @@ export default function JobDetailPage() {
         fetchJob()
         toast({ title: 'Published', description: 'Job is now live', variant: 'success' })
       } else {
-        toast({ title: 'Error', description: 'Failed to publish job', variant: 'destructive' })
+        const data = await response.json()
+        toast({
+          title: 'Error',
+          description: data.error || 'Failed to publish job',
+          variant: 'destructive',
+        })
       }
     } catch (err) {
       toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
@@ -404,6 +411,7 @@ You will receive a partial refund for unused budget.`
   const isCancelled = job.status === 'CANCELLED'
   const isCompleted = job.status === 'COMPLETED'
   const isActive = ['ACTIVE', 'IN_PROGRESS'].includes(job.status)
+  const totalChargeEurCents = job.totalBudget + job.platformFee
   const paymentReceived = !isDraft && !isCancelled
   const paymentSummary = isDraft
     ? 'Awaiting payment. Complete checkout to publish this job.'
@@ -545,13 +553,13 @@ You will receive a partial refund for unused budget.`
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              Total Budget
+              Developer Charge
             </CardTitle>
             <DollarSign className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatEurFromCents(job.totalBudget + job.platformFee)}</div>
-            <p className="text-xs text-gray-500 mt-1">Including fees</p>
+            <div className="text-2xl font-bold">{formatUsdFromEurCents(totalChargeEurCents)}</div>
+            <p className="text-xs text-gray-500 mt-1">Charged in USD</p>
           </CardContent>
         </Card>
       </div>
@@ -782,7 +790,7 @@ You will receive a partial refund for unused budget.`
             <CardHeader>
               <CardTitle>Cost Breakdown</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-3">
+          <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Tester payments</span>
                 <span className="font-medium">{formatEurFromCents(job.totalBudget)}</span>
@@ -791,13 +799,20 @@ You will receive a partial refund for unused budget.`
                 <span className="text-gray-600">Platform fee (15%)</span>
                 <span className="font-medium">{formatEurFromCents(job.platformFee)}</span>
               </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Developer charge</span>
+                <span className="font-medium">{formatUsdFromEurCents(totalChargeEurCents)}</span>
+              </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between">
-                  <span className="font-semibold">Total</span>
+                  <span className="font-semibold">Escrow basis</span>
                   <span className="font-bold text-lg">
-                    {formatEurFromCents(job.totalBudget + job.platformFee)}
+                    {formatEurFromCents(totalChargeEurCents)}
                   </span>
                 </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Developers are charged in USD. Tester payouts remain denominated in EUR.
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -806,8 +821,11 @@ You will receive a partial refund for unused budget.`
             <Card className="bg-blue-50 border-blue-200">
               <CardContent className="pt-6">
                 <p className="text-sm text-blue-900 mb-4">
-                  Your job is in draft mode. Publish it to make it visible to testers.
+                  Complete the USD payment first, then publish the job to make it visible to testers.
                 </p>
+                <div className="mb-4">
+                  <CheckoutForm jobId={job.id} amountEurCents={totalChargeEurCents} />
+                </div>
                 <Button onClick={handlePublish} className="w-full">
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Publish Job

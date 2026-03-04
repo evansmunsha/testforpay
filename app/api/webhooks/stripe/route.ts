@@ -3,8 +3,6 @@ import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
-import { sendNotification } from '@/lib/notifications'
-import { formatEurFromCents } from '@/lib/currency'
 
 // This is CRITICAL for Stripe webhooks
 export const runtime = 'nodejs'
@@ -51,105 +49,6 @@ export async function POST(request: Request) {
     }
 
     switch (event.type as string) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session
-
-        console.log('Checkout completed:', session.id)
-
-        if (session.payment_status !== 'paid') {
-          console.warn(
-            'Checkout session completed but not paid:',
-            session.id,
-            session.payment_status
-          )
-          break
-        }
-
-        if (session.metadata?.jobId) {
-          const updated = await prisma.testingJob.updateMany({
-            where: { id: session.metadata.jobId, stripeSessionId: null },
-            data: {
-              status: 'ACTIVE',
-              publishedAt: new Date(),
-              stripeSessionId: session.id,
-              stripePaymentIntent: session.payment_intent as string,
-            },
-          })
-
-          if (updated.count === 0) {
-            console.log(
-              'Duplicate checkout webhook ignored:',
-              session.id,
-              session.metadata.jobId
-            )
-            break
-          }
-
-          const job = await prisma.testingJob.findUnique({
-            where: { id: session.metadata.jobId },
-            include: {
-              developer: true,
-            },
-          })
-
-          if (!job) {
-            break
-          }
-
-          console.log(
-            'Job activated:',
-            session.metadata.jobId,
-            'PaymentIntent:',
-            session.payment_intent
-          )
-
-          try {
-            await sendNotification({
-              userId: job.developerId,
-              title: 'Job Published!',
-              body: `Your testing job "${job.appName}" is now live and testers can apply.`,
-              url: `/dashboard/jobs/${job.id}`,
-              type: 'job_published',
-            })
-          } catch (notifyError) {
-            console.error(
-              'Failed to notify developer of job activation:',
-              notifyError
-            )
-          }
-
-          void (async () => {
-            try {
-              const testers = await prisma.user.findMany({
-                where: { role: 'TESTER' },
-                select: { id: true },
-              })
-
-              const notifyPromises = testers.map((tester) =>
-                sendNotification({
-                  userId: tester.id,
-                  title: 'New Job Available!',
-                  body: `New testing opportunity: "${job.appName}" - ${formatEurFromCents(job.paymentPerTester)} per tester`,
-                  url: `/dashboard/browse?jobId=${job.id}`,
-                  type: 'new_job_posted',
-                }).catch((error) =>
-                  console.error(
-                    `Failed to notify tester ${tester.id}:`,
-                    error
-                  )
-                )
-              )
-
-              await Promise.allSettled(notifyPromises)
-              console.log('Notified testers of new job:', testers.length)
-            } catch (error) {
-              console.error('Failed to notify testers of new job:', error)
-            }
-          })()
-        }
-        break
-      }
-
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
         console.log('Payment intent succeeded:', paymentIntent.id)

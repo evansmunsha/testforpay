@@ -2,13 +2,8 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import prisma from '@/lib/prisma'
-import Stripe from 'stripe'
 import { toCents } from '@/lib/currency'
 import type { Prisma } from '@/generated/prisma/client'
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover'
-})
 
 interface CreateJobRequestBody {
   appName?: string
@@ -114,38 +109,11 @@ export async function POST(request: Request) {
       }
     })
 
-    // Create Stripe Checkout Session
-    const checkoutSession = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'eur',
-            product_data: {
-              name: `TestForPay - ${planType || 'Custom'} Plan`,
-              description: `${finalTestersNeeded} verified testers for ${appName}`,
-            },
-            unit_amount: finalTotalBudget + platformFee, // Already in cents
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/jobs?payment=success`,
-      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/jobs/new`,
-      client_reference_id: job.id,
-      metadata: {
-        jobId: job.id,
-        userId: currentUser.userId,
-        planType: planType ?? 'CUSTOM',
-      }
-    })
-
     return NextResponse.json({
       success: true,
       jobId: job.id,
       requiresPayment: true,
-      paymentUrl: checkoutSession.url
+      message: 'Job created. Complete payment in USD before publishing.',
     })
 
   } catch (error) {

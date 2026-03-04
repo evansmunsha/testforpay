@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { loadStripe } from '@stripe/stripe-js'
 import {
   PaymentElement,
@@ -12,22 +11,21 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Lock } from 'lucide-react'
-import { formatEurFromCents } from '@/lib/currency'
+import { formatUsdFromEurCents } from '@/lib/currency'
 import type { Cents } from '@/types/money'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 interface CheckoutFormProps {
   jobId: string
-  /** Total amount in integer cents (EUR). */
-  amount: Cents
+  /** Total job cost stored in integer EUR cents, charged to developers in USD. */
+  amountEurCents: Cents
   onSuccess?: () => void
 }
 
-function CheckoutFormContent({ jobId, amount, onSuccess }: CheckoutFormProps) {
+function CheckoutFormContent({ jobId, amountEurCents }: CheckoutFormProps) {
   const stripe = useStripe()
   const elements = useElements()
-  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -61,7 +59,7 @@ function CheckoutFormContent({ jobId, amount, onSuccess }: CheckoutFormProps) {
         setError(confirmError.message || 'Payment failed')
         setLoading(false)
       }
-    } catch (err) {
+    } catch {
       setError('Something went wrong. Please try again.')
       setLoading(false)
     }
@@ -91,7 +89,7 @@ function CheckoutFormContent({ jobId, amount, onSuccess }: CheckoutFormProps) {
         ) : (
           <>
             <Lock className="mr-2 h-4 w-4" />
-            Pay {formatEurFromCents(amount)}
+            Pay {formatUsdFromEurCents(amountEurCents)}
           </>
         )}
       </Button>
@@ -103,7 +101,7 @@ function CheckoutFormContent({ jobId, amount, onSuccess }: CheckoutFormProps) {
   )
 }
 
-export function CheckoutForm({ jobId, amount, onSuccess }: CheckoutFormProps) {
+export function CheckoutForm({ jobId, amountEurCents, onSuccess }: CheckoutFormProps) {
   const [clientSecret, setClientSecret] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -116,7 +114,7 @@ export function CheckoutForm({ jobId, amount, onSuccess }: CheckoutFormProps) {
       const response = await fetch('/api/payments/create-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount, jobId }),
+        body: JSON.stringify({ amount: amountEurCents, jobId }),
       })
 
       const data = await response.json()
@@ -162,7 +160,7 @@ export function CheckoutForm({ jobId, amount, onSuccess }: CheckoutFormProps) {
       <CardHeader>
         <CardTitle>Payment Details</CardTitle>
         <CardDescription>
-          Complete your payment to publish the job
+          Complete your USD payment to publish the job
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -177,7 +175,7 @@ export function CheckoutForm({ jobId, amount, onSuccess }: CheckoutFormProps) {
         >
           <CheckoutFormContent 
             jobId={jobId} 
-            amount={amount} 
+            amountEurCents={amountEurCents} 
             onSuccess={onSuccess} 
           />
         </Elements>

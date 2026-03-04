@@ -24,6 +24,8 @@ export const toCents = (amountEur: number) => Math.round(amountEur * 100)
 export const fromCents = (amountCents: number) => amountCents / 100
 export const formatEurFromCents = (amountCents: number) =>
   formatEur(fromCents(amountCents))
+export const formatUsdFromCents = (amountCents: number) =>
+  formatUsd(fromCents(amountCents))
 
 export const getEurToUsdRate = () => {
   const usdToEur = getUsdToEurRate()
@@ -55,3 +57,9 @@ export const getMinorUnitFactor = (currency: string) => {
 
 export const toMinorUnits = (amount: number, currency: string) =>
   Math.round(amount * getMinorUnitFactor(currency))
+
+export const eurCentsToUsdCents = (amountCents: number) =>
+  toMinorUnits(eurToUsd(fromCents(amountCents)), 'usd')
+
+export const formatUsdFromEurCents = (amountCents: number) =>
+  formatUsdFromCents(eurCentsToUsdCents(amountCents))

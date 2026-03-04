@@ -1,6 +1,6 @@
 import Stripe from 'stripe'
 import { sendNotification } from './notifications'
-import { eurToUsd, toMinorUnits } from './currency'
+import { eurCentsToUsdCents } from './currency'
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover',
@@ -13,10 +13,8 @@ export async function createJobPaymentIntent(
   jobId: string,
   developerId: string
 ) {
-  // Amount is stored in EUR cents. Charge in USD by converting from EUR.
-  const amountEur = amount / 100
-  const amountUsd = eurToUsd(amountEur)
-  const amountUsdCents = toMinorUnits(amountUsd, 'usd')
+  // Amount is stored in EUR cents internally, but developers are charged in USD.
+  const amountUsdCents = eurCentsToUsdCents(amount)
 
   const paymentIntent = await stripe.paymentIntents.create({
     // Amount is stored/handled in cents.
