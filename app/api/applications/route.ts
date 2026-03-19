@@ -79,17 +79,18 @@ export async function POST(request: Request) {
     }
 
     // SECURITY: Require verified email for critical actions.
-    const tester = await prisma.user.findUnique({
-      where: { id: currentUser.userId },
-      select: { emailVerified: true },
-    })
+    // TEMPORARILY DISABLED FOR MVP - Comment out when adding email verification requirement back
+    // const tester = await prisma.user.findUnique({
+    //   where: { id: currentUser.userId },
+    //   select: { emailVerified: true },
+    // })
 
-    if (!tester?.emailVerified) {
-      return NextResponse.json(
-        { error: 'Please verify your email to apply' },
-        { status: 403 }
-      )
-    }
+    // if (!tester?.emailVerified) {
+    //   return NextResponse.json(
+    //     { error: 'Please verify your email to apply' },
+    //     { status: 403 }
+    //   )
+    // }
 
     // Get IP and User-Agent for fraud detection
     const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 

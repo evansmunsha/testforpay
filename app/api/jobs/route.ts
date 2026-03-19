@@ -44,17 +44,18 @@ export async function POST(request: Request) {
     }
 
     // SECURITY: Require verified email for critical actions.
-    const developer = await prisma.user.findUnique({
-      where: { id: currentUser.userId },
-      select: { emailVerified: true },
-    })
+    // TEMPORARILY DISABLED FOR MVP - Comment out when adding email verification requirement back
+    // const developer = await prisma.user.findUnique({
+    //   where: { id: currentUser.userId },
+    //   select: { emailVerified: true },
+    // })
 
-    if (!developer?.emailVerified) {
-      return NextResponse.json(
-        { error: 'Please verify your email to create jobs' },
-        { status: 403 }
-      )
-    }
+    // if (!developer?.emailVerified) {
+    //   return NextResponse.json(
+    //     { error: 'Please verify your email to create jobs' },
+    //     { status: 403 }
+    //   )
+    // }
 
     const body = await request.json() as CreateJobRequestBody
     const { 
