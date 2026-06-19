@@ -521,7 +521,7 @@ export function JobForm() {
               </Button>
 
               <p className="text-center text-xs text-gray-500">
-                Job will be saved as draft. Complete the USD payment on the next screen, then publish it. Tester payouts remain denominated in EUR.
+                Job will be saved as draft. Complete the EUR payment on the next screen, then publish it.
               </p>
             </CardContent>
           </Card>

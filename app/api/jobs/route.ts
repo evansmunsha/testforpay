@@ -114,7 +114,7 @@ export async function POST(request: Request) {
       success: true,
       jobId: job.id,
       requiresPayment: true,
-      message: 'Job created. Complete payment in USD before publishing.',
+      message: 'Job created. Complete payment in EUR before publishing.',
     })
 
   } catch (error) {
