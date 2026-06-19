@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import { createJobPaymentIntent, stripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
-import { eurCentsToUsdCents } from '@/lib/currency'
 
 export async function POST(request: Request) {
   try {
@@ -80,10 +79,10 @@ export async function POST(request: Request) {
     }
 
     // SECURITY: Ensure integer minor units (cents) for Stripe.
-    // Our amounts are stored in cents, but we still round to guard against any float input.
+    // Our amounts are stored in EUR cents and Stripe will be charged in EUR.
     const amountEurCents = Math.round(job.totalBudget + job.platformFee)
-    const expectedAmount = eurCentsToUsdCents(amountEurCents)
-    const expectedCurrency = 'usd'
+    const expectedAmount = amountEurCents
+    const expectedCurrency = 'eur'
 
     // SECURITY: Prevent creating multiple PaymentIntents for the same job.
     // If a PaymentIntent already exists, reuse it unless it's canceled or succeeded.

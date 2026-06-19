@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { DashboardNav } from '@/components/dashboard/nav'
 import { useAuth } from '@/hooks/use-auth'
@@ -13,17 +14,31 @@ export default function DashboardLayout({
 }) {
   const { user, loading } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const router = useRouter()
+  const pathname = usePathname()
 
-  if (loading) {
+  useEffect(() => {
+    if (!loading && !user) {
+      const redirectPath =
+        pathname && pathname !== '/dashboard'
+          ? `${pathname}${window.location.search}`
+          : '/dashboard'
+
+      router.replace(`/login?redirect=${encodeURIComponent(redirectPath)}`)
+    }
+  }, [loading, pathname, router, user])
+
+  if (loading || !user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+          <p className="mt-4 text-sm text-gray-600">
+            {loading ? 'Checking your session...' : 'Redirecting to sign in...'}
+          </p>
+        </div>
       </div>
     )
-  }
-
-  if (!user) {
-    return null // Middleware will redirect
   }
 
   return (

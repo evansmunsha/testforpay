@@ -17,6 +17,7 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [showTestimonialsSection, setShowTestimonialsSection] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
@@ -30,6 +31,10 @@ export default function LandingPage() {
       .catch(() => {})
       .finally(() => setCheckingAuth(false));
   }, []);
+
+  const handleTestimonialsStateChange = ({ hasContent }: { loading: boolean; hasContent: boolean }) => {
+    setShowTestimonialsSection(hasContent)
+  }
 
   const handleGetStarted = () => {
     // Store user type for signup page
@@ -565,16 +570,17 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
-      <section className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center mb-4">What Our Users Say</h2>
-          <p className="text-center text-gray-600 mb-12 text-lg">
-            Real feedback from developers and testers using TestForPay
-          </p>
-          <Testimonials limit={6} />
-        </div>
-      </section>
+      {showTestimonialsSection && (
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 className="text-4xl font-bold text-center mb-4">What Our Users Say</h2>
+            <p className="text-center text-gray-600 mb-12 text-lg">
+              Real feedback from developers and testers using TestForPay
+            </p>
+            <Testimonials limit={6} onStateChange={handleTestimonialsStateChange} />
+          </div>
+        </section>
+      )}
 
       {/* FAQ */}
       <section id="faq" className="bg-gray-50 py-20">

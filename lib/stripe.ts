@@ -1,6 +1,5 @@
 import Stripe from 'stripe'
 import { sendNotification } from './notifications'
-import { eurCentsToUsdCents } from './currency'
 
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover',
@@ -13,19 +12,16 @@ export async function createJobPaymentIntent(
   jobId: string,
   developerId: string
 ) {
-  // Amount is stored in EUR cents internally, but developers are charged in USD.
-  const amountUsdCents = eurCentsToUsdCents(amount)
-
+  // Amount is stored in EUR cents internally and should be charged in EUR.
   const paymentIntent = await stripe.paymentIntents.create({
-    // Amount is stored/handled in cents.
-    amount: amountUsdCents,
-    currency: 'usd',
+    // Amount is stored/handled in cents (EUR cents).
+    amount: amount,
+    currency: 'eur',
     metadata: {
       jobId,
       developerId,
       type: 'job_payment',
       amountEurCents: amount.toString(),
-      amountUsdCents: amountUsdCents.toString(),
     },
     automatic_payment_methods: {
       enabled: true,

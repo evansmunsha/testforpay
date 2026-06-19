@@ -21,13 +21,16 @@ interface Feedback {
 interface TestimonialsProps {
   limit?: number
   type?: 'developer' | 'tester'
+  onStateChange?: (state: { loading: boolean; hasContent: boolean }) => void
 }
 
-export function Testimonials({ limit = 6, type }: TestimonialsProps) {
+export function Testimonials({ limit = 6, type, onStateChange }: TestimonialsProps) {
   const [testimonials, setTestimonials] = useState<Feedback[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    onStateChange?.({ loading: true, hasContent: false })
+
     const fetchTestimonials = async () => {
       try {
         const params = new URLSearchParams()
@@ -38,10 +41,15 @@ export function Testimonials({ limit = 6, type }: TestimonialsProps) {
         const data = await response.json()
 
         if (data.success) {
-          setTestimonials(data.feedback)
+          const nextTestimonials = data.feedback || []
+          setTestimonials(nextTestimonials)
+          onStateChange?.({ loading: false, hasContent: nextTestimonials.length > 0 })
+        } else {
+          onStateChange?.({ loading: false, hasContent: false })
         }
       } catch (error) {
         console.error('Failed to fetch testimonials:', error)
+        onStateChange?.({ loading: false, hasContent: false })
       } finally {
         setLoading(false)
       }
@@ -61,11 +69,7 @@ export function Testimonials({ limit = 6, type }: TestimonialsProps) {
   }
 
   if (testimonials.length === 0) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-gray-500">No testimonials yet. Be the first to share your feedback!</p>
-      </div>
-    )
+    return null
   }
 
   return (

@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { eurToUsd, formatUsd } from '@/lib/currency'
+import { eurToUsd, formatEur, formatUsd, formatEurFromCents, toCents } from '@/lib/currency'
 
 interface JobFormData {
   appName: string
@@ -91,6 +91,7 @@ export function JobForm() {
   const totalBudget = formData.paymentPerTester * formData.testersNeeded
   const platformFee = totalBudget * 0.15
   const totalCostEur = totalBudget + platformFee
+  const totalCostEurCents = toCents(totalCostEur)
   const totalCostUsd = eurToUsd(totalCostEur)
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -486,11 +487,20 @@ export function JobForm() {
                   </div>
                 </div>
                 <div className="border-t pt-3">
-                  <div className="flex justify-between">
-                    <span className="text-lg font-semibold">Developer Charge</span>
-                    <span className="text-2xl font-bold text-blue-600">
-                      {formatUsd(totalCostUsd)}
-                    </span>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">EUR job cost basis</span>
+                    <span className="font-medium">{formatEur(totalCostEur)}</span>
+                  </div>
+                  <div className="border-t pt-3">
+                    <div className="flex justify-between">
+                      <span className="text-lg font-semibold">Developer Charge</span>
+                      <span className="text-2xl font-bold text-blue-600">
+                        {formatEur(totalCostEur)}
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs text-gray-500">
+                      You will be charged in EUR at checkout.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -511,8 +521,7 @@ export function JobForm() {
               </Button>
 
               <p className="text-center text-xs text-gray-500">
-                Job will be saved as draft. Complete the USD payment on the next screen, then
-                publish it.
+                Job will be saved as draft. Complete the USD payment on the next screen, then publish it. Tester payouts remain denominated in EUR.
               </p>
             </CardContent>
           </Card>

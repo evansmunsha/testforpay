@@ -57,7 +57,7 @@ function VerifyEmailContent() {
       return 'The link may be expired or invalid. You can request a new one below.'
     }
     if (sent) {
-      return `We sent a verification link to ${email || 'your email address'}.`
+      return `We sent a verification link to ${email || 'your email address'}. Open it to activate your account before signing in.`
     }
     return 'Verify your email address to unlock the main product flows.'
   }, [email, sent, state])
@@ -122,14 +122,14 @@ function VerifyEmailContent() {
         <CardFooter className="flex flex-col gap-2">
           <Link href="/login" className="w-full">
             <Button variant="outline" className="w-full">
-              Back to login
+              {state === 'success' ? 'Continue to sign in' : 'Back to login'}
             </Button>
           </Link>
-          <Link href="/dashboard" className="w-full">
-            <Button variant="ghost" className="w-full">
-              Go to dashboard
-            </Button>
-          </Link>
+          {state === 'success' && (
+            <p className="text-center text-xs text-gray-500">
+              Your account is ready. Sign in to continue.
+            </p>
+          )}
         </CardFooter>
       </Card>
     </div>

@@ -130,6 +130,15 @@ function DeveloperDashboard() {
         </Link>
       </div>
 
+      <Card className="border-blue-200 bg-blue-50/70">
+        <CardContent className="py-4">
+          <p className="text-sm font-semibold text-blue-900">Getting started</p>
+          <p className="mt-1 text-sm text-blue-800">
+            Create your first testing job, review applications, and keep the verification steps moving.
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {statsConfig.map((stat) => {
@@ -361,6 +370,15 @@ function TesterDashboard() {
           </Button>
         </Link>
       </div>
+
+      <Card className="border-purple-200 bg-purple-50/70">
+        <CardContent className="py-4">
+          <p className="text-sm font-semibold text-purple-900">Getting started</p>
+          <p className="mt-1 text-sm text-purple-800">
+            Browse jobs, apply, and complete each step so your testing flow stays clear.
+          </p>
+        </CardContent>
+      </Card>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">

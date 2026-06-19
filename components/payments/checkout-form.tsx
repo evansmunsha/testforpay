@@ -11,7 +11,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Loader2, Lock } from 'lucide-react'
-import { formatUsdFromEurCents } from '@/lib/currency'
+import { formatEurFromCents } from '@/lib/currency'
 import type { Cents } from '@/types/money'
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
@@ -89,7 +89,7 @@ function CheckoutFormContent({ jobId, amountEurCents }: CheckoutFormProps) {
         ) : (
           <>
             <Lock className="mr-2 h-4 w-4" />
-            Pay {formatUsdFromEurCents(amountEurCents)}
+            Pay {formatEurFromCents(amountEurCents)}
           </>
         )}
       </Button>
@@ -160,10 +160,16 @@ export function CheckoutForm({ jobId, amountEurCents, onSuccess }: CheckoutFormP
       <CardHeader>
         <CardTitle>Payment Details</CardTitle>
         <CardDescription>
-          Complete your USD payment to publish the job
+          Complete your EUR payment to publish the job
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <div className="rounded-lg border border-blue-100 bg-blue-50 p-3 text-sm text-blue-800 mb-4">
+          <p className="font-semibold">Developer payment</p>
+          <p>
+            Pay {formatEurFromCents(amountEurCents)} now. This will be charged in EUR.
+          </p>
+        </div>
         <Elements
           stripe={stripePromise}
           options={{

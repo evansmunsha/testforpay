@@ -58,6 +58,7 @@ export const getMinorUnitFactor = (currency: string) => {
 export const toMinorUnits = (amount: number, currency: string) =>
   Math.round(amount * getMinorUnitFactor(currency))
 
+// Keep conversion helpers for reference, but primary checkout currency is EUR.
 export const eurCentsToUsdCents = (amountCents: number) =>
   toMinorUnits(eurToUsd(fromCents(amountCents)), 'usd')
 

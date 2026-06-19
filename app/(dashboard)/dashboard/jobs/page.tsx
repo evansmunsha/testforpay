@@ -123,7 +123,12 @@ export default function JobsPage() {
             <div className="text-center py-12 text-gray-500">
               <Briefcase className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <p className="font-medium mb-2">No jobs yet</p>
-              <p className="text-sm mb-4">Create your first testing job to get started</p>
+              <p className="text-sm mb-4">Create your first testing job to begin the flow.</p>
+              <ul className="mx-auto max-w-md text-left text-sm text-gray-600 space-y-1 mb-4">
+                <li>• Add your app details and testing goals</li>
+                <li>• Set the tester need and payout</li>
+                <li>• Review applications and publish the job</li>
+              </ul>
               <Link href="/dashboard/jobs/new">
                 <Button>Create Job</Button>
               </Link>

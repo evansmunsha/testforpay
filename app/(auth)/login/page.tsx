@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,7 +8,11 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function LoginPage() {
-  const router = useRouter()
+  const redirectTarget =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('redirect')
+      : null
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -35,12 +38,11 @@ export default function LoginPage() {
         return
       }
 
-      // Redirect based on user role (use full page navigation to ensure cookie is sent)
-      if (data.user.role === 'DEVELOPER') {
-        window.location.href = '/dashboard'
-      } else {
-        window.location.href = '/dashboard/browse'
-      }
+      // Redirect based on user role, while preserving the intended destination when available
+      const defaultPath = data.user.role === 'DEVELOPER' ? '/dashboard' : '/dashboard/browse'
+      const targetPath = redirectTarget && redirectTarget.startsWith('/') ? redirectTarget : defaultPath
+
+      window.location.href = targetPath
     } catch (err) {
       setError('Something went wrong. Please try again.')
       setLoading(false)

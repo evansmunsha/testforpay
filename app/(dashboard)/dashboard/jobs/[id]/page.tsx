@@ -558,8 +558,8 @@ You will receive a partial refund for unused budget.`
             <DollarSign className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatUsdFromEurCents(totalChargeEurCents)}</div>
-            <p className="text-xs text-gray-500 mt-1">Charged in USD</p>
+            <div className="text-2xl font-bold">{formatEurFromCents(totalChargeEurCents)}</div>
+            <p className="text-xs text-gray-500 mt-1">Charged in EUR</p>
           </CardContent>
         </Card>
       </div>
@@ -805,13 +805,13 @@ You will receive a partial refund for unused budget.`
               </div>
               <div className="border-t pt-3">
                 <div className="flex justify-between">
-                  <span className="font-semibold">Escrow basis</span>
+                  <span className="font-semibold">EUR job cost basis</span>
                   <span className="font-bold text-lg">
                     {formatEurFromCents(totalChargeEurCents)}
                   </span>
                 </div>
                 <p className="mt-2 text-xs text-gray-500">
-                  Developers are charged in USD. Tester payouts remain denominated in EUR.
+                  Developers are charged in USD at checkout. Tester payouts remain denominated in EUR.
                 </p>
               </div>
             </CardContent>

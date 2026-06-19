@@ -212,7 +212,12 @@ export default function ApplicationsPage() {
             <div className="text-center py-12 text-gray-500">
               <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <p className="font-medium mb-2">No applications yet</p>
-              <p className="text-sm mb-4">Apply to testing jobs to see them here</p>
+              <p className="text-sm mb-4">Apply to testing jobs to start tracking your progress here.</p>
+              <ul className="mx-auto max-w-md text-left text-sm text-gray-600 space-y-1 mb-4">
+                <li>• Browse available jobs</li>
+                <li>• Submit your application</li>
+                <li>• Complete the opt-in and verification steps</li>
+              </ul>
               <Link href="/dashboard/browse">
                 <Button>Browse Jobs</Button>
               </Link>

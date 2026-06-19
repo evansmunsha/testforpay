@@ -130,9 +130,18 @@ export default function PaymentsPage() {
           {isDeveloper ? 'Payments' : 'Earnings'}
         </h2>
         <p className="text-gray-600 mt-1">
-          {isDeveloper ? 'Track your payment history' : 'View your earnings and payouts'}
+          {isDeveloper ? 'Track your EUR-based job and tester transactions. Developer checkout is processed in USD at publish time.' : 'View your earnings and payouts'}
         </p>
       </div>
+
+      <Card className="border-blue-200 bg-blue-50/70 md:col-span-3">
+        <CardContent className="py-4">
+          <p className="text-sm font-semibold text-blue-900">How payments work</p>
+          <p className="mt-1 text-sm text-blue-800">
+            Payments are held in escrow while testers complete the testing flow. Once the job is verified and completed, funds move to the next step in the payout process.
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="grid md:grid-cols-3 gap-6">
         <Card>
