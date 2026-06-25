@@ -810,9 +810,9 @@ You will receive a partial refund for unused budget.`
                     {formatEurFromCents(totalChargeEurCents)}
                   </span>
                 </div>
-                <p className="mt-2 text-xs text-gray-500">
+                {/* <p className="mt-2 text-xs text-gray-500">
                   Developers are charged in USD at checkout. Tester payouts remain denominated in EUR.
-                </p>
+                </p> */}
               </div>
             </CardContent>
           </Card>
@@ -821,7 +821,7 @@ You will receive a partial refund for unused budget.`
             <Card className="bg-blue-50 border-blue-200">
               <CardContent className="pt-6">
                 <p className="text-sm text-blue-900 mb-4">
-                  Complete the USD payment first, then publish the job to make it visible to testers.
+                  Complete the EUR payment first, then publish the job to make it visible to testers.
                 </p>
                 <div className="mb-4">
                   <CheckoutForm jobId={job.id} amountEurCents={totalChargeEurCents} />

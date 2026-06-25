@@ -130,7 +130,7 @@ export default function PaymentsPage() {
           {isDeveloper ? 'Payments' : 'Earnings'}
         </h2>
         <p className="text-gray-600 mt-1">
-          {isDeveloper ? 'Track your EUR-based job and tester transactions. Developer checkout is processed in USD at publish time.' : 'View your earnings and payouts'}
+          {isDeveloper ? 'Track your EUR-based job and tester transactions. Developer checkout is processed in EUR at publish time.' : 'View your earnings and payouts'}
         </p>
       </div>
 

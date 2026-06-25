@@ -18,7 +18,7 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 
 interface CheckoutFormProps {
   jobId: string
-  /** Total job cost stored in integer EUR cents, charged to developers in USD. */
+  /** Total job cost stored in integer EUR cents, charged to developers in EUR. */
   amountEurCents: Cents
   onSuccess?: () => void
 }
