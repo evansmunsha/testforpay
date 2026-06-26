@@ -23,7 +23,9 @@ import {
   XCircle,
   ShieldAlert,
   Flag,
-  MessageSquare
+  MessageSquare,
+  Eye,
+  Trash2
 } from 'lucide-react'
 import { formatEurFromCents } from '@/lib/currency'
 import type { Cents } from '@/types/money'
@@ -36,6 +38,7 @@ interface Stats {
   activeJobs: number
   completedJobs: number
   totalApplications: number
+  totalContactMessages: number
   /** Platform fees in integer cents (EUR). */
   totalRevenue: Cents
   pendingPayments: number
@@ -84,6 +87,16 @@ interface Payment {
     job: { id: string; appName: string }
     tester: { id: string; email: string; name: string | null }
   }
+}
+
+interface ContactMessage {
+  id: string
+  name: string
+  email: string
+  subject: string
+  message: string
+  ipAddress: string | null
+  createdAt: string
 }
 
 interface FraudStats {
@@ -152,6 +165,8 @@ export default function AdminDashboard() {
   const [jobs, setJobs] = useState<Job[]>([])
   const [applications, setApplications] = useState<Application[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
+  const [contactMessages, setContactMessages] = useState<ContactMessage[]>([])
+  const [selectedContact, setSelectedContact] = useState<ContactMessage | null>(null)
   const [fraudStats, setFraudStats] = useState<FraudStats | null>(null)
   const [fraudLogs, setFraudLogs] = useState<FraudLog[]>([])
   const [feedbackReports, setFeedbackReports] = useState<FeedbackReport[]>([])
@@ -316,6 +331,7 @@ export default function AdminDashboard() {
       else if (activeTab === 'jobs') fetchJobs()
       else if (activeTab === 'applications') fetchApplications()
       else if (activeTab === 'payments') fetchPayments()
+      else if (activeTab === 'contacts') fetchContactMessages()
       else if (activeTab === 'reports') fetchFeedbackReports()
       else if (activeTab === 'testimonials') fetchTestimonials()
       else if (activeTab === 'fraud') fetchFraudData()
@@ -397,6 +413,52 @@ export default function AdminDashboard() {
     } finally {
       setLoadingTab(false)
     }
+  }
+
+  const fetchContactMessages = async () => {
+    setLoadingTab(true)
+    try {
+      const response = await fetch('/api/admin/contact')
+      const data = await response.json()
+      console.log('✉️ Contact messages response:', { status: response.status, count: data.messages?.length })
+      if (response.ok) {
+        setContactMessages(data.messages || [])
+      }
+    } catch (error) {
+      console.error('❌ Failed to fetch contact messages:', error)
+    } finally {
+      setLoadingTab(false)
+    }
+  }
+
+  const handleDeleteContactMessage = async (messageId: string) => {
+    setActionLoading(messageId)
+    try {
+      const response = await fetch(`/api/admin/contact/${messageId}`, {
+        method: 'DELETE',
+      })
+      const data = await response.json()
+      if (response.ok) {
+        toast({ title: 'Deleted', description: data.message || 'Message deleted', variant: 'success' })
+        setContactMessages((prev) => prev.filter((message) => message.id !== messageId))
+        if (selectedContact?.id === messageId) setSelectedContact(null)
+      } else {
+        toast({ title: 'Error', description: data.error || 'Failed to delete message', variant: 'destructive' })
+      }
+    } catch (error) {
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const confirmDeleteContactMessage = (message: ContactMessage) => {
+    openConfirm({
+      title: 'Delete contact message?',
+      description: `Are you sure you want to permanently delete the message from ${message.name}? This cannot be undone.`,
+      confirmLabel: 'Delete',
+      onConfirm: async () => handleDeleteContactMessage(message.id),
+    })
   }
 
   const fetchFraudData = async () => {
@@ -754,6 +816,7 @@ export default function AdminDashboard() {
           <TabsTrigger value="users">Users ({stats?.totalUsers || 0})</TabsTrigger>
           <TabsTrigger value="jobs">Jobs ({stats?.totalJobs || 0})</TabsTrigger>
           <TabsTrigger value="applications">Applications ({stats?.totalApplications || 0})</TabsTrigger>
+          <TabsTrigger value="contacts">Messages ({stats?.totalContactMessages || 0})</TabsTrigger>
           <TabsTrigger value="payments">Payments</TabsTrigger>
           <TabsTrigger value="reports">Reports ({unresolvedReportsCount})</TabsTrigger>
           <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
@@ -971,6 +1034,104 @@ export default function AdminDashboard() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="contacts">
+          <Card>
+            <CardHeader>
+              <CardTitle>Contact Message Archive</CardTitle>
+              <CardDescription>View and manage messages submitted through the contact form</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {loadingTab ? (
+                <div className="flex justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+                </div>
+              ) : contactMessages.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                  <p>No contact messages yet</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-2">Name</th>
+                        <th className="text-left py-3 px-2">Email</th>
+                        <th className="text-left py-3 px-2">Subject</th>
+                        <th className="text-left py-3 px-2">Received</th>
+                        <th className="text-left py-3 px-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {contactMessages.map((message) => (
+                        <tr key={message.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-2 font-medium">{message.name}</td>
+                          <td className="py-3 px-2 text-blue-600 underline">{message.email}</td>
+                          <td className="py-3 px-2 text-gray-700">{message.subject}</td>
+                          <td className="py-3 px-2 text-gray-500">{new Date(message.createdAt).toLocaleDateString()}</td>
+                          <td className="py-3 px-2">
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setSelectedContact(message)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => confirmDeleteContactMessage(message)}
+                                disabled={actionLoading === message.id}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Dialog open={Boolean(selectedContact)} onOpenChange={(open) => !open && setSelectedContact(null)}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Contact Message</DialogTitle>
+                <DialogDescription>{selectedContact?.subject}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4">
+                <div className="rounded-lg border bg-gray-50 p-4">
+                  <p className="text-sm text-gray-500">From</p>
+                  <p className="font-medium">{selectedContact?.name}</p>
+                  <p className="text-sm text-blue-600">{selectedContact?.email}</p>
+                  {selectedContact?.ipAddress && (
+                    <p className="text-xs text-gray-500 mt-1">IP: {selectedContact.ipAddress}</p>
+                  )}
+                </div>
+                <div className="rounded-lg border p-4">
+                  <p className="text-sm text-gray-500">Message</p>
+                  <p className="whitespace-pre-wrap text-gray-700">{selectedContact?.message}</p>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setSelectedContact(null)}>
+                  Close
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => selectedContact && confirmDeleteContactMessage(selectedContact)}
+                >
+                  Delete
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </TabsContent>
 
         <TabsContent value="payments">

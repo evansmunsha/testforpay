@@ -106,9 +106,9 @@ We're looking for:
 
 ⏰ SUBMISSION REQUIREMENTS
 • Keep the app installed for the full ${application.job.testDuration}-day period
-• Use the app at least 2-3 times during the testing period
+• Use the app at least 2-3 times a day during the testing period
 • Submit your feedback through the app feedback form
-• Check back after 14 days for final feedback
+• Check back after: ${application.job.testDuration} days for final feedback
 
 📝 FEEDBACK FORM
 • Submit detailed feedback after testing

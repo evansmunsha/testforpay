@@ -438,3 +438,18 @@ model ProductionQuestionnaire {
   
   @@index([developerId])
 }
+
+// Persist contact form submissions so admins can review and audit messages
+model ContactMessage {
+  id          String   @id @default(cuid())
+  name        String
+  email       String
+  subject     String
+  message     String   @db.Text
+  ipAddress   String?
+  userId      String?  // optional if the sender is a registered user
+  createdAt   DateTime @default(now())
+
+  @@index([email])
+  @@index([createdAt])
+}

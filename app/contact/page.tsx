@@ -23,16 +23,30 @@ export default function ContactPage() {
     setError('')
     setLoading(true)
 
-    // For now, just simulate sending
-    // In production, you'd send this to an API endpoint
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Open mail client as fallback
-    const mailtoLink = `mailto:evansensteen@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`From: ${name} (${email})\n\n${message}`)}`
-    window.location.href = mailtoLink
-    
-    setSent(true)
-    setLoading(false)
+    // Send to server endpoint in production (Resend) with fallback to mail client
+    try {
+      const res = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message }),
+      })
+
+      const json = await res.json()
+      if (!res.ok) {
+        setError(json.error || 'Failed to send message')
+        setLoading(false)
+        return
+      }
+
+      setSent(true)
+    } catch (err) {
+      // Fallback: open mail client
+      const mailtoLink = `mailto:testforpays@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(`From: ${name} (${email})\n\n${message}`)}`
+      window.location.href = mailtoLink
+      setSent(true)
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -63,8 +77,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <p className="font-medium text-gray-900">Email</p>
-                    <a href="mailto:evansensteen@gmail.com" className="text-blue-600 hover:underline">
-                      evansensteen@gmail.com
+                    <a href="mailto:testforpays@gmail.com" className="text-blue-600 hover:underline">
+                      testforpays@gmail.com
                     </a>
                     <p className="text-sm text-gray-500 mt-1">We typically respond within 24 hours</p>
                   </div>
@@ -139,6 +153,9 @@ export default function ContactPage() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Message Sent!</h3>
                   <p className="text-gray-600 mb-4">
                     Thank you for contacting us. We'll get back to you soon.
+                  </p>
+                  <p className="text-sm text-gray-700 mb-4">
+                    We'll reply to: <strong>{email || 'the address you provided'}</strong>
                   </p>
                   <Button variant="outline" onClick={() => setSent(false)}>
                     Send Another Message

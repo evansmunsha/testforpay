@@ -41,6 +41,7 @@ export async function GET() {
     const pendingPayments = await prisma.payment.count({
       where: { status: { in: ['PENDING', 'PROCESSING'] } }
     })
+    const totalContactMessages = await prisma.contactMessage.count()
 
     return NextResponse.json({
       success: true,
@@ -52,6 +53,7 @@ export async function GET() {
         activeJobs,
         completedJobs,
         totalApplications,
+        totalContactMessages,
         totalRevenue,
         pendingPayments,
       }
