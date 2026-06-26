@@ -412,11 +412,13 @@ You will receive a partial refund for unused budget.`
   const isCompleted = job.status === 'COMPLETED'
   const isActive = ['ACTIVE', 'IN_PROGRESS'].includes(job.status)
   const totalChargeEurCents = job.totalBudget + job.platformFee
-  const paymentReceived = !isDraft && !isCancelled
+  const paymentReceived = !isDraft && !!job.stripePaymentIntent
   const paymentSummary = isDraft
     ? 'Awaiting payment. Complete checkout to publish this job.'
     : isCancelled
-      ? 'Job cancelled. Refunds and partial payouts (if any) have been processed.'
+      ? paymentReceived
+        ? 'Job cancelled. Refunds and partial payouts (if any) have been processed.'
+        : 'Job cancelled before payment was completed.'
       : isCompleted
         ? 'Testing completed. Payouts are being processed.'
         : isActive
@@ -581,7 +583,11 @@ You will receive a partial refund for unused budget.`
               <div>
                 <p className="font-medium">Payment received</p>
                 <p className="text-xs text-gray-600">
-                  {paymentReceived ? 'Paid and held in escrow.' : 'Not paid yet.'}
+                  {paymentReceived
+                    ? isCancelled
+                      ? 'Payment was captured; refund processing has started.'
+                      : 'Paid and held in escrow.'
+                    : 'Not paid yet.'}
                 </p>
               </div>
             </div>
