@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Star } from 'lucide-react'
 
 interface Feedback {
@@ -27,9 +27,13 @@ interface TestimonialsProps {
 export function Testimonials({ limit = 6, type, onStateChange }: TestimonialsProps) {
   const [testimonials, setTestimonials] = useState<Feedback[]>([])
   const [loading, setLoading] = useState(true)
+  const hasFetchedRef = useRef(false)
 
   useEffect(() => {
-    onStateChange?.({ loading: true, hasContent: false })
+    if (hasFetchedRef.current) return
+    hasFetchedRef.current = true
+
+    onStateChange?.({ loading: true, hasContent: true })
 
     const fetchTestimonials = async () => {
       try {
@@ -60,10 +64,8 @@ export function Testimonials({ limit = 6, type, onStateChange }: TestimonialsPro
 
   if (loading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-gray-100 rounded-lg h-64 animate-pulse" />
-        ))}
+      <div className="rounded-lg border border-gray-200 bg-gray-50 px-6 py-10 text-center text-sm text-gray-600">
+        Loading testimonials...
       </div>
     )
   }
