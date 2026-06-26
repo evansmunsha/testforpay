@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -14,38 +14,40 @@ function VerifyEmailContent() {
   const email = searchParams?.get('email') || ''
   const sent = searchParams?.get('sent') === '1'
 
-  const [state, setState] = useState<VerifyState>(token ? 'loading' : 'idle')
+  const [state, setState] = useState<VerifyState>('idle')
   const [message, setMessage] = useState('')
   const [resending, setResending] = useState(false)
 
-  useEffect(() => {
+  // Do NOT auto-run verification on page load. Some email providers and
+  // security scanners prefetch links which would consume the token before
+  // the real user clicks the button. Require an explicit user click to
+  // confirm verification.
+  const handleConfirm = async () => {
     if (!token) return
+    setState('loading')
+    setMessage('')
+    try {
+      const response = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+      const data = await response.json()
 
-    const verifyEmail = async () => {
-      try {
-        const response = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
-        const data = await response.json()
-
-        if (response.ok) {
-          setState('success')
-          setMessage(data.message || 'Email verified successfully.')
-        } else {
-          setState('error')
-          setMessage(data.error || 'Verification failed.')
-        }
-      } catch {
+      if (response.ok) {
+        setState('success')
+        setMessage(data.message || 'Email verified successfully.')
+      } else {
         setState('error')
-        setMessage('Verification failed. Please try again.')
+        setMessage(data.error || 'Verification failed.')
       }
+    } catch {
+      setState('error')
+      setMessage('Verification failed. Please try again.')
     }
-
-    void verifyEmail()
-  }, [token])
+  }
 
   const heading = useMemo(() => {
     if (state === 'success') return 'Email verified'
     if (state === 'error') return 'Verification failed'
-    if (token) return 'Verifying email'
+    if (token && state === 'idle') return 'Confirm your email'
+    if (state === 'loading') return 'Verifying email'
     return 'Check your email'
   }, [state, token])
 
@@ -115,6 +117,13 @@ function VerifyEmailContent() {
               {resending ? 'Sending...' : 'Resend verification email'}
             </Button>
           )}
+
+          {token && state !== 'loading' && state !== 'success' && (
+            <Button onClick={handleConfirm} className="w-full">
+              Confirm verification
+            </Button>
+          )}
+
           {token && state === 'loading' && (
             <div className="text-sm text-gray-600">Please wait while we verify your email.</div>
           )}
