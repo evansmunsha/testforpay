@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import { AlertCircle, CheckCircle2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 
@@ -58,7 +59,7 @@ function VerifyEmailContent() {
 
   const heading = useMemo(() => {
     if (state === 'success') return 'Email verified'
-    if (state === 'error') return 'Verification failed'
+    if (state === 'error') return 'This link doesn\'t work anymore'
     if (token && state === 'idle') return 'Confirm your email'
     if (state === 'loading') return 'Verifying email'
     return 'Check your email'
@@ -66,10 +67,10 @@ function VerifyEmailContent() {
 
   const description = useMemo(() => {
     if (state === 'success') {
-      return 'Your account is now ready for job creation, applications, and payouts.'
+      return 'Your email address is now verified. You can sign in and continue using TestForPay.'
     }
     if (state === 'error') {
-      return 'The link may be expired or invalid. You can request a new one below.'
+      return 'This can happen if the email is already verified, the link is broken, or it has expired. To get a new confirmation email, use the button below.'
     }
     if (sent) {
       return `We sent a verification link to ${email || 'your email address'}. Open it to activate your account before signing in.`
@@ -107,7 +108,14 @@ function VerifyEmailContent() {
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-8">
       <Card className="w-full max-w-md shadow-lg">
-        <CardHeader>
+        <CardHeader className="space-y-4">
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-full ${
+              state === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+            }`}
+          >
+            {state === 'success' ? <CheckCircle2 className="h-6 w-6" /> : <AlertCircle className="h-6 w-6" />}
+          </div>
           <CardTitle>{heading}</CardTitle>
           <CardDescription>{description}</CardDescription>
         </CardHeader>
