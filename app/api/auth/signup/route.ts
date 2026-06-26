@@ -82,6 +82,11 @@ export async function POST(request: Request) {
         verificationToken,
       })
       verificationEmailSent = true
+      console.info('Signup verification email sent', {
+        userId: user.id,
+        email: user.email,
+        ip: signupIp,
+      })
     } catch (emailError) {
       console.error('Signup verification email error:', emailError)
     }

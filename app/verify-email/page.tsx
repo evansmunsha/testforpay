@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -13,10 +13,23 @@ function VerifyEmailContent() {
   const token = searchParams?.get('token') || ''
   const email = searchParams?.get('email') || ''
   const sent = searchParams?.get('sent') === '1'
+  const status = searchParams?.get('status') || ''
+  const statusMessage = searchParams?.get('message') || ''
 
   const [state, setState] = useState<VerifyState>('idle')
   const [message, setMessage] = useState('')
   const [resending, setResending] = useState(false)
+
+  useEffect(() => {
+    if (!status) return
+    if (status === 'success') {
+      setState('success')
+      setMessage(statusMessage || 'Email verified successfully.')
+    } else if (status === 'error') {
+      setState('error')
+      setMessage(statusMessage || 'Verification failed. The link may be expired or invalid.')
+    }
+  }, [status, statusMessage])
 
   // Do NOT auto-run verification on page load. Some email providers and
   // security scanners prefetch links which would consume the token before

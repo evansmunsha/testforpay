@@ -46,10 +46,12 @@ export async function POST(request: Request) {
         email: user.email,
       })
 
+      console.info('Resend verification requested', { userId: user.id, email: user.email, ip: getClientIp(request) })
       await sendEmailVerificationEmail(user.email, {
         name: user.name,
         verificationToken,
       })
+      console.info('Resend verification email sent', { userId: user.id, email: user.email })
     }
 
     return NextResponse.json({

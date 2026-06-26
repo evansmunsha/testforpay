@@ -2,17 +2,14 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function DELETE(request: Request, context: any) {
   try {
     const currentUser = await getCurrentUser()
     if (!currentUser || currentUser.role !== 'ADMIN') {
       return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
     }
-
-    const { id } = params
+    const params = context?.params
+    const id = params?.id || (await params)?.id
     if (!id) {
       return NextResponse.json({ error: 'Message ID is required' }, { status: 400 })
     }
