@@ -31,16 +31,27 @@ export async function POST(request: Request) {
     const user = currentUser
       ? await prisma.user.findUnique({
           where: { id: currentUser.userId },
-          select: { id: true, email: true, name: true, emailVerified: true },
+          select: { id: true, email: true, name: true, emailVerified: true, lastVerificationSentAt: true },
         })
       : requestedEmail
         ? await prisma.user.findUnique({
             where: { email: requestedEmail },
-            select: { id: true, email: true, name: true, emailVerified: true },
+            select: { id: true, email: true, name: true, emailVerified: true, lastVerificationSentAt: true },
           })
         : null
 
+    const MIN_INTERVAL_MS = parseInt(process.env.VERIFICATION_RESEND_INTERVAL_MS || '') || 10 * 60 * 1000
+
     if (user && !user.emailVerified) {
+      // If we recently sent a verification email, skip sending again to avoid duplicates
+      if (user.lastVerificationSentAt) {
+        const last = new Date(user.lastVerificationSentAt).getTime()
+        if (Date.now() - last < MIN_INTERVAL_MS) {
+          console.info('Skipping resend - recently sent verification email', { userId: user.id, email: user.email })
+          return NextResponse.json({ success: true, message: 'If an account exists and still needs verification, a new link has been sent.' })
+        }
+      }
+
       const verificationToken = generateEmailVerificationToken({
         userId: user.id,
         email: user.email,
@@ -51,6 +62,11 @@ export async function POST(request: Request) {
         name: user.name,
         verificationToken,
       })
+      try {
+        await prisma.user.update({ where: { id: user.id }, data: { lastVerificationSentAt: new Date() } })
+      } catch (uErr) {
+        console.error('Failed to update lastVerificationSentAt on resend:', uErr)
+      }
       console.info('Resend verification email sent', { userId: user.id, email: user.email })
     }
 

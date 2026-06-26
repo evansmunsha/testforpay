@@ -82,6 +82,12 @@ export async function POST(request: Request) {
         verificationToken,
       })
       verificationEmailSent = true
+      // Persist the lastVerificationSentAt timestamp to avoid immediate duplicates
+      try {
+        await prisma.user.update({ where: { id: user.id }, data: { lastVerificationSentAt: new Date() } })
+      } catch (uErr) {
+        console.error('Failed to update lastVerificationSentAt on signup:', uErr)
+      }
       console.info('Signup verification email sent', {
         userId: user.id,
         email: user.email,
