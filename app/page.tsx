@@ -17,7 +17,7 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
-  const [showTestimonialsSection, setShowTestimonialsSection] = useState(false);
+  const [showTestimonialsSection, setShowTestimonialsSection] = useState(true);
 
   useEffect(() => {
     // Check if user is logged in
