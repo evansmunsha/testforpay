@@ -17,6 +17,7 @@ export default function LandingPage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [showTestimonialsSection, setShowTestimonialsSection] = useState(false);
 
   useEffect(() => {
     // Check if user is logged in
@@ -565,7 +566,21 @@ export default function LandingPage() {
         </div>
       </section>
 
-      <Testimonials limit={6} />
+      {showTestimonialsSection && (
+        <section className="py-20 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-10">
+              <h2 className="text-4xl font-bold">What Our Users Say</h2>
+              <p className="mt-4 text-center text-gray-600 text-lg">
+                Real feedback from developers and testers using TestForPay
+              </p>
+            </div>
+            <div className="mt-2">
+              <Testimonials limit={6} onStateChange={({ hasContent }) => setShowTestimonialsSection(hasContent)} />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* FAQ */}
       <section id="faq" className="bg-gray-50 py-20">
