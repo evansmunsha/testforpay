@@ -5,6 +5,61 @@ import { getCurrentUser } from '@/lib/auth'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
+function looksLikeSpam(subject: unknown, message: unknown, name: unknown, email: unknown) {
+  const text = [subject, message, name, email]
+    .filter((value): value is string => typeof value === 'string')
+    .join(' ')
+    .toLowerCase()
+
+  if (!text.trim()) return false
+
+  const suspiciousTerms = [
+    'seo',
+    'search engine',
+    'search engines',
+    'rank higher',
+    'backlinks',
+    'traffic',
+    'lead generation',
+    'marketing',
+    'digital marketing',
+    'social media',
+    'optimize your website',
+    'attract more users',
+    'more users',
+    'website',
+  ]
+
+  const legitimateTerms = [
+    'help',
+    'question',
+    'issue',
+    'bug',
+    'refund',
+    'payment',
+    'job',
+    'tester',
+    'developer',
+    'stripe',
+    'verification',
+    'account',
+    'app',
+    'google play',
+    'dashboard',
+    'support',
+  ]
+
+  const hasSuspiciousTerm = suspiciousTerms.some((term) => text.includes(term))
+  const hasLegitimateTerm = legitimateTerms.some((term) => text.includes(term))
+  const isGenericSalesPitch =
+    text.includes('help') &&
+    text.includes('more users') &&
+    text.includes('website') &&
+    (text.includes('seo') || text.includes('search engines'))
+
+  return (hasSuspiciousTerm && !hasLegitimateTerm) || isGenericSalesPitch
+}
+
 export async function POST(request: Request) {
   try {
     if (process.env.NODE_ENV === 'production') {
@@ -19,7 +74,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, email, subject, message } = body || {}
+    const { name, email, subject, message, company, website } = body || {}
 
     if (!name || !email || !subject || !message) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -27,6 +82,14 @@ export async function POST(request: Request) {
 
     if (typeof email !== 'string' || !email.includes('@')) {
       return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
+    }
+
+    if (company || website) {
+      return NextResponse.json({ error: 'Your message was flagged as spam.' }, { status: 400 })
+    }
+
+    if (looksLikeSpam(subject, message, name, email)) {
+      return NextResponse.json({ error: 'Your message was flagged as spam.' }, { status: 400 })
     }
 
     const safeHtml = `<p><strong>From:</strong> ${name} (${email})</p><p><strong>Subject:</strong> ${subject}</p><div>${String(message).replace(/\n/g, '<br/>')}</div>`
