@@ -42,10 +42,10 @@ export async function createConnectedAccount(email: string, testerId: string) {
         type: 'express',
       },
       fees: {
-        payer: 'account',
+        payer: 'application',
       },
       losses: {
-        payments: 'stripe',
+        payments: 'application',
       },
       requirement_collection: 'stripe',
     },
