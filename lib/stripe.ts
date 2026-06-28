@@ -32,19 +32,31 @@ export async function createJobPaymentIntent(
 }
 
 // Create Stripe Connect account for tester
-export async function createConnectedAccount(email: string, testerId: string, country: string = 'US') {
+export async function createConnectedAccount(email: string, testerId: string) {
+  // Using controller properties (compatible with API version 2025-12-15.clover and later).
+  // This is the equivalent of type: 'express' — Stripe-hosted dashboard, Stripe collects fees,
+  // Stripe owns loss liability.
   const account = await stripe.accounts.create({
-    type: 'express',
-    country,
-    email,
+    controller: {
+      stripe_dashboard: {
+        type: 'express',
+      },
+      fees: {
+        payer: 'account',
+      },
+      losses: {
+        payments: 'stripe',
+      },
+      requirement_collection: 'stripe',
+    },
     capabilities: {
-      card_payments: { requested: true },
       transfers: { requested: true },
     },
+    email,
     metadata: {
       testerId,
     },
-  })
+  } as Parameters<typeof stripe.accounts.create>[0])
 
   return account
 }
