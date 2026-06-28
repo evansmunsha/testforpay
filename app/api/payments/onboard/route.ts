@@ -68,6 +68,22 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('Stripe onboarding error:', error)
+
+    // Surface Stripe-specific error messages to help diagnose issues
+    if (error instanceof Error) {
+      const stripeError = error as Error & { type?: string; code?: string; statusCode?: number }
+      console.error('Stripe error details:', {
+        message: stripeError.message,
+        type: stripeError.type,
+        code: stripeError.code,
+        statusCode: stripeError.statusCode,
+      })
+      return NextResponse.json(
+        { error: stripeError.message || 'Failed to create onboarding link' },
+        { status: stripeError.statusCode ?? 500 }
+      )
+    }
+
     return NextResponse.json(
       { error: 'Failed to create onboarding link' },
       { status: 500 }

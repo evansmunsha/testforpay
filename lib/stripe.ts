@@ -51,10 +51,18 @@ export async function createConnectedAccount(email: string, testerId: string, co
 
 // Create account link for tester onboarding
 export async function createAccountLink(accountId: string) {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (!appUrl) {
+    throw new Error('NEXT_PUBLIC_APP_URL environment variable is not set')
+  }
+
+  // Strip trailing slash to avoid double slashes
+  const baseUrl = appUrl.replace(/\/$/, '')
+
   const accountLink = await stripe.accountLinks.create({
     account: accountId,
-    refresh_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings?setup=refresh`,
-    return_url: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/settings?setup=complete`,
+    refresh_url: `${baseUrl}/dashboard/settings?setup=refresh`,
+    return_url: `${baseUrl}/dashboard/settings?setup=complete`,
     type: 'account_onboarding',
   })
 
