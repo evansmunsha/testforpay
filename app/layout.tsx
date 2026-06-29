@@ -12,9 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
-  ),
+  metadataBase: new URL('https://www.testforpay.com'),
   title: {
     default: "TestForPay - Get Paid to Test Apps on Google Play",
     template: "%s | TestForPay",
@@ -54,8 +52,96 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      // Organization schema — tells Google who you are
+      {
+        '@type': 'Organization',
+        '@id': 'https://www.testforpay.com/#organization',
+        name: 'TestForPay',
+        url: 'https://www.testforpay.com',
+        logo: 'https://www.testforpay.com/images/logo.svg',
+        contactPoint: {
+          '@type': 'ContactPoint',
+          email: 'testforpays@gmail.com',
+          contactType: 'customer support',
+        },
+      },
+      // WebSite schema — enables Google sitelinks search box
+      {
+        '@type': 'WebSite',
+        '@id': 'https://www.testforpay.com/#website',
+        url: 'https://www.testforpay.com',
+        name: 'TestForPay',
+        description: 'Connect app developers with paid Google Play beta testers.',
+        publisher: { '@id': 'https://www.testforpay.com/#organization' },
+      },
+      // FAQPage schema — unlocks FAQ rich results in Google search
+      {
+        '@type': 'FAQPage',
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: 'How does TestForPay ensure testers are real?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'All testers must verify their email and Google Play account. We track opt-in status and activity throughout the 14-day period to ensure genuine participation.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Is TestForPay compliant with Google Play policies?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Yes. TestForPay connects developers with real users who genuinely opt-in to test apps. This fully complies with Google Play closed testing requirements.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'When do developers pay for testing jobs?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Payment is held in escrow and only released when testers complete the full 14-day testing period. Developers only pay for verified, completed tests.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'How long until I get 20 testers on Google Play?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Most testing jobs are fully filled within 24 hours. Our large pool of active testers ensures fast matching.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'How do testers get paid on TestForPay?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Testers set up a Stripe payout account in Settings and receive payment automatically after completing the 14-day testing period.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'Can testers write reviews for apps they test?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Testers provide feedback directly through the TestForPay platform. We do not incentivize public reviews to maintain Google Play policy compliance.',
+            },
+          },
+        ],
+      },
+    ],
+  }
+
   return (
     <html lang="en">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ToastProvider>
           {children}

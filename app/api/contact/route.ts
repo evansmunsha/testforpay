@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { name, email, subject, message, company, website } = body || {}
+    const { name, email, subject, message, company, website, formDuration } = body || {}
 
     if (!name || !email || !subject || !message) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
@@ -84,7 +84,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid email' }, { status: 400 })
     }
 
+    // Honeypot checks — real users never fill these hidden fields
     if (company || website) {
+      return NextResponse.json({ error: 'Your message was flagged as spam.' }, { status: 400 })
+    }
+
+    // Time check — bots submit in milliseconds, humans take at least 3 seconds
+    if (typeof formDuration === 'number' && formDuration < 3000) {
       return NextResponse.json({ error: 'Your message was flagged as spam.' }, { status: 400 })
     }
 

@@ -15,6 +15,8 @@ export default function ContactPage() {
   const [subject, setSubject] = useState('')
   const [message, setMessage] = useState('')
   const [company, setCompany] = useState('')
+  const [website, setWebsite] = useState('')
+  const [formLoadTime] = useState(() => Date.now())
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
@@ -29,7 +31,7 @@ export default function ContactPage() {
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, subject, message, company }),
+        body: JSON.stringify({ name, email, subject, message, company, website, formDuration: Date.now() - formLoadTime }),
       })
 
       const json = await res.json()
@@ -224,6 +226,17 @@ export default function ContactPage() {
                     className="hidden"
                     tabIndex={-1}
                     autoComplete="off"
+                  />
+                  {/* Second honeypot — bots fill this, humans never see it */}
+                  <input
+                    type="text"
+                    name="website"
+                    value={website}
+                    onChange={(e) => setWebsite(e.target.value)}
+                    style={{ display: 'none' }}
+                    tabIndex={-1}
+                    autoComplete="off"
+                    aria-hidden="true"
                   />
 
                   <Button type="submit" className="w-full" disabled={loading}>
