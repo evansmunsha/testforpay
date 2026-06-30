@@ -86,6 +86,10 @@ model User {
   // Email verification tracking
   lastVerificationSentAt DateTime?
   
+  // Activity tracking
+  lastLoginAt            DateTime?
+  loginCount             Int       @default(0)
+  
   // Tester fields
   stripeAccountId  String?  @unique
   muteDeveloperReplies Boolean @default(false)

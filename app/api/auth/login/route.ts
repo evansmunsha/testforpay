@@ -75,6 +75,16 @@ export async function POST(request: Request) {
     
     // Set cookie
     await setAuthCookie(token)
+
+    // Record last login time and increment login count
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        lastLoginAt: new Date(),
+        loginCount: { increment: 1 },
+        lastIpAddress: getClientIp(request) || undefined,
+      },
+    })
     
     return NextResponse.json({
       success: true,
