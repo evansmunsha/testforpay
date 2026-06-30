@@ -24,6 +24,9 @@ export async function GET() {
         suspended: true,
         suspendReason: true,
         suspendedAt: true,
+        lastLoginAt: true,
+        loginCount: true,
+        emailVerified: true,
         _count: {
           select: {
             developedJobs: true,

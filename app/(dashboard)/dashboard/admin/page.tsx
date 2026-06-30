@@ -43,6 +43,7 @@ interface Stats {
 interface User {
   id: string; email: string; name: string | null; role: string; createdAt: string
   stripeAccountId: string | null; suspended: boolean; suspendReason: string | null
+  lastLoginAt: string | null; loginCount: number; emailVerified: boolean
   _count: { developedJobs: number; applications: number }
 }
 
@@ -560,7 +561,15 @@ export default function AdminDashboard() {
                               : <Badge variant="outline" className="flex items-center gap-1 w-fit text-green-600 border-green-300"><CheckCircle className="h-3 w-3" />Active</Badge>}
                             {u.suspendReason && <div className="text-xs text-red-400 mt-1 max-w-[120px] truncate">{u.suspendReason}</div>}
                           </td>
-                          <td className="py-3 px-2 text-xs text-gray-400">—</td>
+                          <td className="py-3 px-2 text-xs text-gray-400">
+                            {u.lastLoginAt
+                              ? <div>
+                                  <div className="font-medium text-gray-600">{new Date(u.lastLoginAt).toLocaleDateString()}</div>
+                                  <div>{u.loginCount} login{u.loginCount !== 1 ? 's' : ''}</div>
+                                  {!u.emailVerified && <div className="text-amber-500 font-medium">Email unverified</div>}
+                                </div>
+                              : <span className="text-gray-300">Never logged in</span>}
+                          </td>
                           <td className="py-3 px-2">{u.stripeAccountId ? <CheckCircle className="h-4 w-4 text-green-500" /> : <span className="text-gray-300">—</span>}</td>
                           <td className="py-3 px-2">
                             {u.role !== 'ADMIN' && (
