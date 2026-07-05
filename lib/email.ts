@@ -433,3 +433,146 @@ export async function sendEmailVerificationEmail(
   })
 }
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Job posted — developer confirmation
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendJobPostedEmail(
+  to: string,
+  data: {
+    developerName?: string | null
+    appName: string
+    testersNeeded: number
+    paymentPerTesterCents: number
+    jobId: string
+  }
+) {
+  const greeting = data.developerName ? `Hi ${data.developerName},` : 'Hi there,'
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `🚀 Your job is live — ${data.appName}`,
+    html: emailShell(`
+      <h2 style="color: #1e293b; margin-top: 0;">Your testing job is live! 🚀</h2>
+      <p style="color: #374151; line-height: 1.6;">${greeting}</p>
+      <p style="color: #374151; line-height: 1.6;">
+        <strong>${data.appName}</strong> is now visible to testers. Applications will start coming in shortly.
+      </p>
+
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px 20px; border-radius: 8px; margin: 24px 0;">
+        <p style="color: #166534; font-weight: 600; margin: 0 0 10px;">Job summary</p>
+        <table style="width: 100%; font-size: 14px; color: #166534;">
+          <tr><td style="padding: 4px 0;">App</td><td style="padding: 4px 0; font-weight: 600;">${data.appName}</td></tr>
+          <tr><td style="padding: 4px 0;">Testers needed</td><td style="padding: 4px 0; font-weight: 600;">${data.testersNeeded}</td></tr>
+          <tr><td style="padding: 4px 0;">Pay per tester</td><td style="padding: 4px 0; font-weight: 600;">${formatEurFromCents(data.paymentPerTesterCents)}</td></tr>
+        </table>
+      </div>
+
+      <p style="color: #374151; line-height: 1.6;">
+        <strong>What happens next:</strong><br/>
+        Testers will apply — you'll get an email for each one. Review their device info and approve or reject.
+        Once 20+ testers are verified and testing, Google will recognise your closed test within 14 days.
+      </p>
+
+      ${btn('View Applications →', `${APP_URL}/dashboard/jobs/${data.jobId}`)}
+
+      <p style="color: #6b7280; font-size: 13px; margin-top: 24px;">
+        Most jobs fill within 24 hours. If you need help or want to adjust your job, reply here.<br/>
+        <strong>Evans</strong>, TestForPay
+      </p>
+    `),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Testing complete — developer summary
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendJobCompletedEmail(
+  to: string,
+  data: {
+    developerName?: string | null
+    appName: string
+    completedTesters: number
+    jobId: string
+  }
+) {
+  const greeting = data.developerName ? `Hi ${data.developerName},` : 'Hi there,'
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `✅ Testing complete — ${data.appName} is ready to publish`,
+    html: emailShell(`
+      <h2 style="color: #1e293b; margin-top: 0;">Testing complete ✅</h2>
+      <p style="color: #374151; line-height: 1.6;">${greeting}</p>
+      <p style="color: #374151; line-height: 1.6;">
+        The 14-day testing period for <strong>${data.appName}</strong> has ended.
+        <strong>${data.completedTesters} tester${data.completedTesters !== 1 ? 's' : ''}</strong> completed the full period.
+      </p>
+
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; padding: 16px 20px; border-radius: 8px; margin: 24px 0;">
+        <p style="color: #1e40af; font-weight: 600; margin: 0 0 8px;">You can now publish to production</p>
+        <p style="color: #1e40af; font-size: 14px; margin: 0;">
+          Go to Google Play Console → Testing → Closed testing → and request production access.
+          Google recognises your completed closed test and unlocks the production track.
+        </p>
+      </div>
+
+      <p style="color: #374151; line-height: 1.6;">
+        Before you publish, review the feedback your testers left — it often surfaces small issues
+        worth fixing before going live.
+      </p>
+
+      ${btn('View Feedback & Publish →', `${APP_URL}/dashboard/jobs/${data.jobId}`)}
+
+      <p style="color: #6b7280; font-size: 13px; margin-top: 24px;">
+        Tester payouts are being processed automatically.<br/>
+        Congratulations on reaching production — <strong>Evans</strong>, TestForPay
+      </p>
+    `),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Job cancelled — developer refund notice
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendJobCancelledEmail(
+  to: string,
+  data: {
+    developerName?: string | null
+    appName: string
+    refundCents: number
+    jobId: string
+  }
+) {
+  const greeting = data.developerName ? `Hi ${data.developerName},` : 'Hi there,'
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `Job cancelled — ${data.appName}`,
+    html: emailShell(`
+      <h2 style="color: #1e293b; margin-top: 0;">Job cancelled</h2>
+      <p style="color: #374151; line-height: 1.6;">${greeting}</p>
+      <p style="color: #374151; line-height: 1.6;">
+        Your testing job for <strong>${data.appName}</strong> has been cancelled.
+      </p>
+
+      <div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 16px 20px; border-radius: 8px; margin: 24px 0;">
+        <p style="color: #374151; margin: 0 0 6px;"><strong>Refund amount:</strong> ${formatEurFromCents(data.refundCents)}</p>
+        <p style="color: #6b7280; font-size: 14px; margin: 0;">
+          Your refund will be returned to the original payment method within 5–10 business days.
+          Testers who had already started testing were compensated proportionally.
+        </p>
+      </div>
+
+      <p style="color: #374151; line-height: 1.6;">
+        If you'd like to post a new job or have questions about the cancellation, reply here.
+      </p>
+
+      ${btn('Post a New Job →', `${APP_URL}/dashboard/jobs/new`)}
+
+      <p style="color: #6b7280; font-size: 13px; margin-top: 24px;">
+        <strong>Evans</strong>, TestForPay
+      </p>
+    `),
+  })
+}

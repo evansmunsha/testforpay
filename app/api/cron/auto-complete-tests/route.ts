@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { processPaymentById } from '@/lib/payouts'
+import { sendJobCompletedEmail } from '@/lib/email'
 
 // This endpoint should be called by a cron service (e.g., Vercel Cron)
 // Runs daily to auto-complete testing applications after testing period expires
@@ -192,6 +193,33 @@ export async function GET(request: Request) {
           daysExpired,
           status: 'success',
         })
+
+        // Check if ALL testing applications for this job are now complete
+        // and send the developer a "ready to publish" email (once per job)
+        try {
+          const remainingTesting = await prisma.application.count({
+            where: { jobId: application.jobId, status: 'TESTING' },
+          })
+          if (remainingTesting === 0) {
+            const completedCount = await prisma.application.count({
+              where: { jobId: application.jobId, status: 'COMPLETED' },
+            })
+            const job = await prisma.testingJob.findUnique({
+              where: { id: application.jobId },
+              include: { developer: { select: { email: true, name: true } } },
+            })
+            if (job && job.developer) {
+              await sendJobCompletedEmail(job.developer.email, {
+                developerName: job.developer.name,
+                appName: job.appName,
+                completedTesters: completedCount,
+                jobId: job.id,
+              })
+            }
+          }
+        } catch (emailErr) {
+          console.error('Failed to send job completed email:', emailErr)
+        }
       } catch (error: any) {
         console.error(`❌ Failed to auto-complete application ${application.id}:`, error)
 

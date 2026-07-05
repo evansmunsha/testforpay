@@ -3,6 +3,7 @@ import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
+import { sendJobPostedEmail } from '@/lib/email'
 
 // This is CRITICAL for Stripe webhooks
 export const runtime = 'nodejs'
@@ -52,6 +53,27 @@ export async function POST(request: Request) {
       case 'payment_intent.succeeded': {
         const paymentIntent = event.data.object as Stripe.PaymentIntent
         console.log('Payment intent succeeded:', paymentIntent.id)
+
+        // Activate the job and send confirmation email to developer
+        if (paymentIntent.metadata?.jobId) {
+          try {
+            const job = await prisma.testingJob.update({
+              where: { id: paymentIntent.metadata.jobId },
+              data: { status: 'ACTIVE', publishedAt: new Date(), stripePaymentIntent: paymentIntent.id },
+              include: { developer: { select: { email: true, name: true } } },
+            })
+
+            await sendJobPostedEmail(job.developer.email, {
+              developerName: job.developer.name,
+              appName: job.appName,
+              testersNeeded: job.testersNeeded,
+              paymentPerTesterCents: job.paymentPerTester,
+              jobId: job.id,
+            })
+          } catch (e) {
+            console.error('Failed to activate job or send confirmation email:', e)
+          }
+        }
         break
       }
 
