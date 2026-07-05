@@ -183,12 +183,24 @@ export default function LandingPage() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           <div className="text-center lg:text-left">
             <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              Meet Google Play's
-              <span className="text-blue-600"> Testing Requirements</span>
-              <br /> — in 24 Hours
+              {userType === 'developer' ? (
+                <>
+                  Meet Google Play's
+                  <span className="text-blue-600"> Testing Requirements</span>
+                  <br /> — in 24 Hours
+                </>
+              ) : (
+                <>
+                  Get Paid to Test
+                  <span className="text-blue-600"> Android Apps</span>
+                  <br /> From Your Phone
+                </>
+              )}
             </h1>
             <p className="text-xl text-gray-600 mb-8">
-              Connect with verified real testers instantly. Get your 20+ Google-compliant opt-ins for 14-day closed testing and publish faster.
+              {userType === 'developer'
+                ? 'Connect with verified real testers instantly. Get your 20+ Google-compliant opt-ins for 14-day closed testing and publish faster.'
+                : 'Developers pay you to try their apps before they go live. Install the app, use it for 14 days, get paid. No experience needed — just an Android phone.'}
             </p>
 
             {/* User Type Selection */}
@@ -234,7 +246,7 @@ export default function LandingPage() {
             <p className="text-sm text-gray-500">
               {userType === 'developer' 
                 ? '🚀 Get 20+ testers in 24 hours • No upfront payment required'
-                : '💰 Earn €5-€15 per app test • Get paid weekly'}
+                : '💰 Earn €5–€15 per app • Get paid straight to your bank • No experience needed'}
             </p>
           </div>
 
@@ -572,6 +584,63 @@ export default function LandingPage() {
             title="What Our Users Say"
             intro="Real feedback from developers and testers using TestForPay"
           />
+        </div>
+      </section>
+
+      {/* Comparison Section */}
+      <section className="py-20 bg-white">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-4xl font-bold text-center mb-4">Why TestForPay over free tester swaps?</h2>
+          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
+            Free platforms match developers with other developers. That's not what Google wants — and it's a risk to your Play account.
+          </p>
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* Free swap platforms */}
+            <div className="rounded-2xl border-2 border-gray-200 p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-lg">≠</div>
+                <h3 className="text-xl font-bold text-gray-700">Free Tester Swap Platforms</h3>
+              </div>
+              <ul className="space-y-3">
+                {[
+                  'Testers are other developers, not real end users',
+                  'Accounts share similar IPs and device patterns — Google detects this',
+                  'No real motivation to stay opted in — testers drop off',
+                  'No communication during the 14-day period',
+                  'Risk of account association and flagging by Google',
+                  'Zero payment — no accountability for quality',
+                ].map(item => (
+                  <li key={item} className="flex items-start gap-3 text-sm text-gray-600">
+                    <span className="text-red-400 mt-0.5 shrink-0">✗</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            {/* TestForPay */}
+            <div className="rounded-2xl border-2 border-blue-500 p-8 relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">Recommended</div>
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">✓</div>
+                <h3 className="text-xl font-bold text-blue-700">TestForPay</h3>
+              </div>
+              <ul className="space-y-3">
+                {[
+                  'Real Android users — not developers — test your app',
+                  'Diverse devices, IPs, and locations across the world',
+                  'Paid testers stay opted in — they have real financial motivation',
+                  'Daily check-ins keep you updated throughout testing',
+                  'Google-compliant: genuine users, genuine opt-ins',
+                  'Escrow payments — you only pay when testing is complete',
+                ].map(item => (
+                  <li key={item} className="flex items-start gap-3 text-sm text-gray-700">
+                    <span className="text-green-500 mt-0.5 shrink-0">✓</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 

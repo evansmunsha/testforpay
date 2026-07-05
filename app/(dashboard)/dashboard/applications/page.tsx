@@ -9,6 +9,7 @@ import { VerificationUploader } from '@/components/applications/verification-upl
 import { FileText, DollarSign, Clock, Calendar, ExternalLink, Upload, MessageSquare, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { FeedbackForm } from '@/components/applications/feedback-form'
+import { DailyCheckInPanel } from '@/components/applications/daily-checkin-panel'
 import { formatEurFromCents } from '@/lib/currency'
 import type { Cents } from '@/types/money'
 
@@ -386,6 +387,11 @@ export default function ApplicationsPage() {
                     </div>
                     
                     {/* Feedback Form for Testing */}
+                    <DailyCheckInPanel
+                      applicationId={app.id}
+                      applicationStatus={app.status}
+                      testingStartDate={app.testingStartDate}
+                    />
                     <FeedbackForm
                       applicationId={app.id}
                       appName={app.job.appName}

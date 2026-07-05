@@ -9,7 +9,7 @@ import {
 } from '@/lib/auth'
 import { signupSchema } from '@/lib/validators'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
-import { sendEmailVerificationEmail } from '@/lib/email'
+import { sendEmailVerificationEmail, sendDeveloperWelcomeEmail, sendTesterWelcomeEmail } from '@/lib/email'
 
 export async function POST(request: Request) {
   try {
@@ -99,6 +99,17 @@ export async function POST(request: Request) {
     
     // Set cookie
     await setAuthCookie(token)
+
+    // Send role-specific welcome email (fire and forget — don't block signup)
+    try {
+      if (user.role === 'DEVELOPER') {
+        await sendDeveloperWelcomeEmail(user.email, { name: user.name })
+      } else if (user.role === 'TESTER') {
+        await sendTesterWelcomeEmail(user.email, { name: user.name })
+      }
+    } catch (welcomeEmailError) {
+      console.error('Welcome email error:', welcomeEmailError)
+    }
     
     return NextResponse.json({
       success: true,

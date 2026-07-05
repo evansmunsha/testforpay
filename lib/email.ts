@@ -6,6 +6,183 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM_EMAIL = 'TestForPay <noreply@testforpay.com>'
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Shared HTML shell — keeps all emails visually consistent
+// ─────────────────────────────────────────────────────────────────────────────
+function emailShell(content: string) {
+  return `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
+      <div style="background: #2563eb; padding: 24px 32px;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.3px;">TestForPay</h1>
+        <p style="color: #bfdbfe; margin: 4px 0 0; font-size: 13px;">Get paid to test apps · Publish faster on Google Play</p>
+      </div>
+      <div style="padding: 32px; border: 1px solid #e5e7eb; border-top: none;">
+        ${content}
+      </div>
+      <div style="padding: 20px 32px; background: #f9fafb; border: 1px solid #e5e7eb; border-top: none; text-align: center;">
+        <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+          TestForPay · Zambia ·
+          <a href="${APP_URL}" style="color: #9ca3af;">testforpay.com</a>
+        </p>
+        <p style="color: #9ca3af; font-size: 11px; margin: 6px 0 0;">
+          You're receiving this because you signed up for TestForPay.
+        </p>
+      </div>
+    </div>
+  `
+}
+
+function btn(label: string, href: string, color = '#2563eb') {
+  return `
+    <a href="${href}"
+       style="display: inline-block; background: ${color}; color: #ffffff; padding: 13px 28px;
+              text-decoration: none; border-radius: 7px; font-weight: 600; font-size: 15px; margin: 8px 0;">
+      ${label}
+    </a>
+  `
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Welcome email — DEVELOPER
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendDeveloperWelcomeEmail(
+  to: string,
+  data: { name?: string | null }
+) {
+  const greeting = data.name ? `Hi ${data.name},` : 'Hi there,'
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: 'Welcome to TestForPay — post your first testing job',
+    html: emailShell(`
+      <h2 style="color: #1e293b; margin-top: 0;">Welcome aboard 👋</h2>
+      <p style="color: #374151; line-height: 1.6;">${greeting}</p>
+      <p style="color: #374151; line-height: 1.6;">
+        Thanks for joining TestForPay. You're here because you need real testers for your Android app —
+        and that's exactly what we do.
+      </p>
+
+      <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0;">
+        <p style="color: #1e40af; font-weight: 600; margin: 0 0 8px;">Here's how it works:</p>
+        <ol style="color: #1e40af; margin: 0; padding-left: 20px; line-height: 1.8;">
+          <li>Post your app details and set a budget</li>
+          <li>Verified testers apply and opt in to your Google Play closed test</li>
+          <li>Testers use your app for 14 days and send you daily check-ins</li>
+          <li>Testing completes — Google unlocks production publishing for you</li>
+          <li>You pay only when testing is done (escrow model)</li>
+        </ol>
+      </div>
+
+      <p style="color: #374151; line-height: 1.6;">
+        Most jobs fill within <strong>24 hours</strong>. Your testers are real Android users —
+        not developers, not bots. Google-compliant by design.
+      </p>
+
+      ${btn('Post Your First Testing Job →', `${APP_URL}/dashboard/jobs/new`)}
+
+      <p style="color: #6b7280; font-size: 14px; margin-top: 28px; line-height: 1.6;">
+        Any questions? Just reply to this email — I read every one.<br/>
+        <strong>Evans</strong>, founder of TestForPay
+      </p>
+    `),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Nudge email — DEVELOPER hasn't posted a job after 48h
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendDeveloperNudgeEmail(
+  to: string,
+  data: { name?: string | null }
+) {
+  const greeting = data.name ? `Hi ${data.name},` : 'Hi there,'
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: 'Still need testers? Your first job takes 2 minutes to post',
+    html: emailShell(`
+      <h2 style="color: #1e293b; margin-top: 0;">Ready when you are 🚀</h2>
+      <p style="color: #374151; line-height: 1.6;">${greeting}</p>
+      <p style="color: #374151; line-height: 1.6;">
+        You signed up for TestForPay but haven't posted a testing job yet.
+        We have testers ready and waiting — they're notified the moment a new job goes live.
+      </p>
+
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px 20px; border-radius: 8px; margin: 24px 0;">
+        <p style="color: #166534; font-weight: 600; margin: 0 0 6px;">What you need to post a job:</p>
+        <ul style="color: #166534; margin: 0; padding-left: 20px; line-height: 1.8;">
+          <li>Your app name and Google Play closed test link</li>
+          <li>How many testers you need (minimum 20)</li>
+          <li>How much to pay per tester (€5–€50)</li>
+        </ul>
+        <p style="color: #166534; margin: 10px 0 0; font-size: 14px;">Takes about 2 minutes. Payment is held in escrow — you don't pay until testing completes.</p>
+      </div>
+
+      ${btn('Post a Testing Job Now →', `${APP_URL}/dashboard/jobs/new`)}
+
+      <p style="color: #6b7280; font-size: 14px; margin-top: 28px; line-height: 1.6;">
+        Got stuck or have questions? Reply here and I'll help directly.<br/>
+        <strong>Evans</strong>, TestForPay
+      </p>
+    `),
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Welcome email — TESTER
+// ─────────────────────────────────────────────────────────────────────────────
+export async function sendTesterWelcomeEmail(
+  to: string,
+  data: { name?: string | null }
+) {
+  const greeting = data.name ? `Hi ${data.name},` : 'Hi there,'
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: 'Welcome to TestForPay — here\'s how to get paid',
+    html: emailShell(`
+      <h2 style="color: #1e293b; margin-top: 0;">You're in! 🎉</h2>
+      <p style="color: #374151; line-height: 1.6;">${greeting}</p>
+      <p style="color: #374151; line-height: 1.6;">
+        Welcome to TestForPay. You'll earn money by testing Android apps before they go live on Google Play.
+        Developers pay you to install their app, use it normally for 14 days, and share your experience.
+      </p>
+
+      <div style="background: #faf5ff; border-left: 4px solid #7c3aed; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0;">
+        <p style="color: #5b21b6; font-weight: 600; margin: 0 0 8px;">How to get your first payout:</p>
+        <ol style="color: #5b21b6; margin: 0; padding-left: 20px; line-height: 1.8;">
+          <li><strong>Set up Stripe</strong> — go to Settings and connect your bank account</li>
+          <li><strong>Browse jobs</strong> — find an app you'd like to test</li>
+          <li><strong>Apply</strong> — wait for the developer to approve you</li>
+          <li><strong>Install the app</strong> — opt in to the Google Play test</li>
+          <li><strong>Test for 14 days</strong> — use the app and send daily check-ins</li>
+          <li><strong>Get paid</strong> — payment lands in your bank automatically</li>
+        </ol>
+      </div>
+
+      <p style="color: #374151; line-height: 1.6;">
+        <strong>Important:</strong> Set up your Stripe payout account now so you're ready to receive payment
+        the moment your first test completes. It takes about 5 minutes.
+      </p>
+
+      ${btn('Set Up Payout Account →', `${APP_URL}/dashboard/settings`, '#7c3aed')}
+
+      <div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 14px 18px; border-radius: 8px; margin: 24px 0;">
+        <p style="color: #374151; margin: 0; font-size: 14px;">
+          💡 <strong>Tip:</strong> Enable notifications in the dashboard so you're alerted the moment
+          a new testing job goes live — spots fill fast.
+        </p>
+      </div>
+
+      <p style="color: #6b7280; font-size: 14px; margin-top: 28px; line-height: 1.6;">
+        Questions? Reply here anytime.<br/>
+        <strong>Evans</strong>, TestForPay
+      </p>
+    `),
+  })
+}
+
+
 
 export async function sendApplicationApprovedEmail(
   to: string,

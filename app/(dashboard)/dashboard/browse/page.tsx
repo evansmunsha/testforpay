@@ -218,15 +218,56 @@ export default function BrowsePage() {
 
   return (
     <div className="space-y-6">
+
+      {/* Welcome banner — shown to new testers who haven't applied to anything yet */}
+      {!loading && applications.length === 0 && (
+        <Card className="border-blue-300 bg-gradient-to-r from-blue-50 to-purple-50">
+          <CardContent className="p-6">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+              <div className="text-4xl">👋</div>
+              <div className="flex-1">
+                <p className="text-lg font-bold text-gray-900">Welcome to TestForPay!</p>
+                <p className="text-sm text-gray-600 mt-1">
+                  Here's how it works: developers pay you to try their Android apps before they go live on Google Play.
+                  You install the app, use it normally for 14 days, and get paid straight to your bank account.
+                </p>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <span className="bg-white border border-blue-200 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">1. Browse jobs below</span>
+                  <span className="bg-white border border-blue-200 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">2. Apply to one you like</span>
+                  <span className="bg-white border border-blue-200 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">3. Install & test for 14 days</span>
+                  <span className="bg-white border border-blue-200 text-blue-700 text-xs font-medium px-3 py-1 rounded-full">4. Get paid 💰</span>
+                </div>
+              </div>
+              <Link href="/dashboard/tutorial">
+                <Button variant="outline" size="sm" className="shrink-0 border-blue-300 text-blue-700 hover:bg-blue-50">
+                  Full guide →
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* No jobs yet — explain they will be notified */}
+      {!loading && jobs.length === 0 && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="p-5">
+            <p className="font-semibold text-amber-900">No testing jobs available yet</p>
+            <p className="text-sm text-amber-700 mt-1">
+              New jobs are posted regularly. Make sure your notifications are enabled and check back soon —
+              spots fill fast when a new job goes live.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex justify-between items-start">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Browse Jobs</h2>
-          <p className="text-gray-600 mt-1">
-            Find testing opportunities and start earning €
-          </p>
+          <p className="text-gray-600 mt-1">Find testing opportunities and start earning €</p>
         </div>
-        <Button 
-          variant="outline" 
+        <Button
+          variant="outline"
           size="sm"
           onClick={handleRefresh}
           disabled={refreshing}

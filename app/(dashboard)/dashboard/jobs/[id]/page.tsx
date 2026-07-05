@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ApplicationCard } from '@/components/applications/application-card'
+import { DailyCheckInPanel } from '@/components/applications/daily-checkin-panel'
 import { CheckoutForm } from '@/components/payments/checkout-form'
 import { useToast } from '@/components/ui/toast-provider'
 import { TestingReportViewer } from '@/components/jobs/testing-report-viewer'
@@ -25,7 +26,8 @@ import {
   ExternalLink,
   AlertCircle,
   Info,
-  RefreshCw
+  RefreshCw,
+  MessageSquare
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatEurFromCents, formatUsdFromEurCents } from '@/lib/currency'
@@ -608,7 +610,7 @@ You will receive a partial refund for unused budget.`
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs defaultValue="applications" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="applications">
                 All ({job.applications.length})
               </TabsTrigger>
@@ -619,7 +621,10 @@ You will receive a partial refund for unused budget.`
                 Active ({activeApplications.length})
               </TabsTrigger>
               <TabsTrigger value="completed">
-                Completed ({completedApplications.length})
+                Done ({completedApplications.length})
+              </TabsTrigger>
+              <TabsTrigger value="checkins">
+                Check-ins
               </TabsTrigger>
               <TabsTrigger value="report">
                 Report
@@ -719,6 +724,34 @@ You will receive a partial refund for unused budget.`
                     key={application.id}
                     application={application}
                   />
+                ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="checkins" className="space-y-4">
+              {activeApplications.length === 0 && completedApplications.length === 0 ? (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center py-8 text-gray-500">
+                      <MessageSquare className="h-10 w-10 mx-auto mb-3 text-gray-400" />
+                      <p className="font-medium">No active testers yet</p>
+                      <p className="text-sm mt-1">Check-ins appear here once testers start their 14-day testing period.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                [...activeApplications, ...completedApplications].map(application => (
+                  <div key={application.id}>
+                    <p className="text-sm font-medium text-gray-600 mb-2">
+                      {application.tester.name || application.tester.email}
+                    </p>
+                    <DailyCheckInPanel
+                      applicationId={application.id}
+                      applicationStatus={application.status}
+                      testingStartDate={application.testingStartDate}
+                      isDeveloperView={true}
+                    />
+                  </div>
                 ))
               )}
             </TabsContent>

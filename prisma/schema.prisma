@@ -105,6 +105,7 @@ model User {
   feedbacks         Feedback[]
   feedbackReports   FeedbackReport[]
   usageLogs         AppUsageLog[] @relation("UsageLogs")
+  checkIns          DailyCheckIn[] @relation("TesterCheckIns")
   
   // Ratings
   averageRating    Float?   @default(0)
@@ -248,6 +249,7 @@ model Application {
   // Engagement tracking
   engagementScore   Int?                @default(0) // 0-100 score based on testing activity
   usageLogs         AppUsageLog[]
+  dailyCheckIns     DailyCheckIn[]
   
   // Payment
   payment           Payment?
@@ -458,5 +460,35 @@ model ContactMessage {
   createdAt   DateTime @default(now())
 
   @@index([email])
+  @@index([createdAt])
+}
+
+// Daily check-ins from testers to developers during the 14-day testing period
+model DailyCheckIn {
+  id            String      @id @default(cuid())
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  testerId      String
+  tester        User        @relation("TesterCheckIns", fields: [testerId], references: [id], onDelete: Cascade)
+
+  // Day number in the testing period (1–14+)
+  dayNumber     Int
+
+  // What the tester did today
+  message       String      @db.Text  // e.g. "Tested login flow, found a crash on Samsung Galaxy"
+  usedApp       Boolean     @default(true)
+  issuesFound   Boolean     @default(false)
+  issueDetails  String?     @db.Text
+
+  // Developer acknowledgement
+  devAcknowledged   Boolean   @default(false)
+  devAcknowledgedAt DateTime?
+  devNote           String?   @db.Text  // optional short reply from dev
+
+  createdAt     DateTime    @default(now())
+
+  @@unique([applicationId, dayNumber]) // one check-in per day per application
+  @@index([applicationId])
+  @@index([testerId])
   @@index([createdAt])
 }

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/dashboard/sidebar'
 import { DashboardNav } from '@/components/dashboard/nav'
 import { useAuth } from '@/hooks/use-auth'
+import { NotificationPrompt } from '@/components/shared/notification-prompt'
 import { Menu } from 'lucide-react'
 
 export default function DashboardLayout({
@@ -64,6 +65,7 @@ export default function DashboardLayout({
           {children}
         </main>
       </div>
+      <NotificationPrompt />
     </div>
   )
 }
