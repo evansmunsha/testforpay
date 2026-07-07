@@ -1,10 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { UploadButton } from '@uploadthing/react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Star, Send, CheckCircle } from 'lucide-react'
+import { Star, Send, CheckCircle, Image as ImageIcon, Video, X, Paperclip } from 'lucide-react'
+import type { OurFileRouter } from '@/app/api/uploadthing/core'
 
 interface FeedbackFormProps {
   applicationId: string
@@ -45,17 +47,21 @@ export function FeedbackForm({
   const [followupText, setFollowupText] = useState('')
   const [followupLoading, setFollowupLoading] = useState(false)
   const [followupMessage, setFollowupMessage] = useState('')
+  const [attachments, setAttachments] = useState<Array<{ url: string; type: 'image' | 'video' }>>([])
 
   const combinedFeedback = [
     `What I liked:\n${positiveNotes.trim()}`,
     `Problems or bugs:\n${issuesFound.trim()}`,
     `Suggestions:\n${improvementIdeas.trim()}`,
   ].join('\n\n')
-  const displayFeedback = existingFeedback || (success ? combinedFeedback : '')
+  const displayFeedback = existingFeedback || (success ? [combinedFeedback, attachments.length > 0 ? `Attachments:\n${attachments.map((attachment, index) => `${index + 1}. ${attachment.type === 'video' ? 'Screen recording' : 'Screenshot'}: ${attachment.url}`).join('\n')}` : ''].filter(Boolean).join('\n\n') : '')
 
   const handleSubmit = async () => {
-    if (positiveNotes.trim().length < 5 || issuesFound.trim().length < 5 || improvementIdeas.trim().length < 5) {
-      setError('Please fill all three sections (at least 5 characters each)')
+    const hasTextContent = [positiveNotes, issuesFound, improvementIdeas].some((field) => field.trim().length > 0)
+    const hasAttachments = attachments.length > 0
+
+    if (!hasTextContent && !hasAttachments) {
+      setError('Please add a note or upload at least one screenshot or recording')
       return
     }
 
@@ -71,7 +77,11 @@ export function FeedbackForm({
       const response = await fetch(`/api/applications/${applicationId}/feedback`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ feedback: combinedFeedback.trim(), rating }),
+        body: JSON.stringify({
+          feedback: combinedFeedback.trim(),
+          rating,
+          attachments,
+        }),
       })
 
       const data = await response.json()
@@ -87,6 +97,28 @@ export function FeedbackForm({
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleImageUploadComplete = (res: any) => {
+    if (res?.length) {
+      setAttachments((prev) => [
+        ...prev,
+        ...res.map((file: any) => ({ url: file.url, type: 'image' as const })),
+      ])
+    }
+  }
+
+  const handleVideoUploadComplete = (res: any) => {
+    if (res?.length) {
+      setAttachments((prev) => [
+        ...prev,
+        ...res.map((file: any) => ({ url: file.url, type: 'video' as const })),
+      ])
+    }
+  }
+
+  const removeAttachment = (index: number) => {
+    setAttachments((prev) => prev.filter((_, itemIndex) => itemIndex !== index))
   }
 
   const handleReport = async () => {
@@ -383,12 +415,89 @@ export function FeedbackForm({
           </p>
         </div>
 
+        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-3 sm:p-4">
+          <div className="flex items-start gap-2 mb-3">
+            <Paperclip className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-gray-800">Add screenshots or a screen recording</p>
+              <p className="text-xs text-gray-600 mt-1">
+                Works well on phones. You can attach a screenshot, recording, notes, or all three.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="rounded-lg border border-gray-200 bg-white p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <ImageIcon className="h-4 w-4 text-indigo-600" />
+                <p className="text-sm font-medium text-gray-800">Screenshot</p>
+              </div>
+              <UploadButton<OurFileRouter, 'feedbackImage'>
+                endpoint="feedbackImage"
+                onClientUploadComplete={handleImageUploadComplete}
+                onUploadError={(error: Error) => setError(error.message)}
+                appearance={{
+                  button: 'w-full bg-indigo-600 text-white px-3 py-2 rounded-lg hover:bg-indigo-700 font-medium text-sm',
+                  allowedContent: 'text-xs text-gray-500 mt-2',
+                }}
+              />
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-white p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Video className="h-4 w-4 text-emerald-600" />
+                <p className="text-sm font-medium text-gray-800">Screen recording</p>
+              </div>
+              <UploadButton<OurFileRouter, 'feedbackVideo'>
+                endpoint="feedbackVideo"
+                onClientUploadComplete={handleVideoUploadComplete}
+                onUploadError={(error: Error) => setError(error.message)}
+                appearance={{
+                  button: 'w-full bg-emerald-600 text-white px-3 py-2 rounded-lg hover:bg-emerald-700 font-medium text-sm',
+                  allowedContent: 'text-xs text-gray-500 mt-2',
+                }}
+              />
+            </div>
+          </div>
+
+          {attachments.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {attachments.map((attachment, index) => (
+                <div key={`${attachment.url}-${index}`} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-2">
+                  <div className="shrink-0">
+                    {attachment.type === 'video' ? (
+                      <Video className="h-4 w-4 text-emerald-600" />
+                    ) : (
+                      <ImageIcon className="h-4 w-4 text-indigo-600" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-gray-800 truncate">
+                      {attachment.type === 'video' ? 'Screen recording' : 'Screenshot'}
+                    </p>
+                    <p className="text-[11px] text-gray-500 truncate">{attachment.url}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(index)}
+                    className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-red-600"
+                    aria-label="Remove attachment"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
         {/* Tips */}
         <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
           <p className="text-sm font-medium text-blue-800 mb-1">Why this structure helps:</p>
           <ul className="text-xs text-blue-700 space-y-1">
             <li>• Developers can scan feedback faster</li>
             <li>• Clear bugs are easier to fix</li>
+            <li>• Screenshots and recordings make issues obvious</li>
             <li>• Suggestions guide product decisions</li>
           </ul>
         </div>

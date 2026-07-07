@@ -19,11 +19,25 @@ export async function POST(
 
     const { id } = await params
     const body = await request.json()
-    const { feedback, rating } = body
+    const { feedback, rating, attachments } = body
 
-    if (!feedback || feedback.trim().length < 10) {
+    const normalizedFeedback = typeof feedback === 'string' ? feedback.trim() : ''
+    const normalizedAttachments = Array.isArray(attachments)
+      ? attachments.filter((attachment: any) => attachment?.url && typeof attachment.url === 'string' && attachment.url.trim())
+      : []
+
+    if (!normalizedFeedback && normalizedAttachments.length === 0) {
       return NextResponse.json(
-        { error: 'Feedback must be at least 10 characters' },
+        { error: 'Please add a note, a screenshot, or a screen recording' },
+        { status: 400 }
+      )
+    }
+
+    if (!normalizedFeedback && normalizedAttachments.length > 0) {
+      // Allow attachments without long text, but still require a rating.
+    } else if (normalizedFeedback.length < 10 && normalizedAttachments.length === 0) {
+      return NextResponse.json(
+        { error: 'Feedback must be at least 10 characters or include an attachment' },
         { status: 400 }
       )
     }
@@ -71,12 +85,19 @@ export async function POST(
       )
     }
 
+    const attachmentText = normalizedAttachments.length > 0
+      ? `\n\nAttachments:\n${normalizedAttachments.map((attachment: any, index: number) => `${index + 1}. ${attachment.type === 'video' ? 'Screen recording' : 'Screenshot'}: ${attachment.url}`).join('\n')}`
+      : ''
+
+    const finalFeedback = [normalizedFeedback, attachmentText].filter(Boolean).join('\n\n').trim()
+
     // Update application with feedback
     const updatedApplication = await prisma.application.update({
       where: { id },
       data: {
-        feedback: feedback.trim(),
+        feedback: finalFeedback,
         rating,
+        feedbackSubmittedAt: new Date(),
       },
     })
 

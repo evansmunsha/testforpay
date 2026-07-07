@@ -19,6 +19,33 @@ export const ourFileRouter = {
       
       return { uploadedBy: metadata.userId, url: file.url }
     }),
+
+  // Feedback attachment uploader for screenshots and recordings
+  feedbackImage: f({ image: { maxFileSize: "4MB", maxFileCount: 3 } })
+    .middleware(async () => {
+      const user = await getCurrentUser()
+
+      if (!user) throw new Error("Unauthorized")
+
+      return { userId: user.userId }
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Feedback image upload complete for userId:", metadata.userId)
+      return { uploadedBy: metadata.userId, url: file.url, type: "image" }
+    }),
+
+  feedbackVideo: f({ video: { maxFileSize: "16MB", maxFileCount: 1 } })
+    .middleware(async () => {
+      const user = await getCurrentUser()
+
+      if (!user) throw new Error("Unauthorized")
+
+      return { userId: user.userId }
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      console.log("Feedback video upload complete for userId:", metadata.userId)
+      return { uploadedBy: metadata.userId, url: file.url, type: "video" }
+    }),
 } satisfies FileRouter
 
 export type OurFileRouter = typeof ourFileRouter
