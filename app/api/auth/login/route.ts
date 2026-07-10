@@ -81,6 +81,7 @@ export async function POST(request: Request) {
       where: { id: user.id },
       data: {
         lastLoginAt: new Date(),
+        lastActiveAt: new Date(),
         loginCount: { increment: 1 },
         lastIpAddress: getClientIp(request) || undefined,
       },

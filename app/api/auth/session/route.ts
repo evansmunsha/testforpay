@@ -40,11 +40,13 @@ export async function GET() {
       user,
     })
   } catch (error) {
-    console.error('Session error:', error)
+    console.error('Session error:', error instanceof Error ? error.message : error)
     
+    // Return 503 Service Unavailable for database/infra errors so clients
+    // can distinguish infra issues (retry) from auth failures (don't retry).
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: 'Service temporarily unavailable', reason: 'database' },
+      { status: 503 }
     )
   }
 }

@@ -60,6 +60,7 @@ export async function POST(request: Request) {
         role: validatedData.role,
         signupIp,
         lastIpAddress: signupIp,
+        lastActiveAt: new Date(),
       },
     })
     

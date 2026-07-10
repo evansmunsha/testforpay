@@ -12,6 +12,10 @@ export default function LoginPage() {
     typeof window !== 'undefined'
       ? new URLSearchParams(window.location.search).get('redirect')
       : null
+  const inactivityReason =
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('reason')
+      : null
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -63,6 +67,12 @@ export default function LoginPage() {
             {error && (
               <div className="bg-red-50 text-red-600 p-3 rounded-md text-sm">
                 {error}
+              </div>
+            )}
+
+            {inactivityReason === 'inactivity' && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-700 p-3 rounded-md text-sm">
+                Your session ended because you were inactive for too long. Please sign in again.
               </div>
             )}
             

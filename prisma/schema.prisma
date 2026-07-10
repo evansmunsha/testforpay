@@ -88,6 +88,7 @@ model User {
   
   // Activity tracking
   lastLoginAt            DateTime?
+  lastActiveAt           DateTime?
   loginCount             Int       @default(0)
   
   // Tester fields

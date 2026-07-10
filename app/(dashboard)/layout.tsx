@@ -6,6 +6,7 @@ import { Sidebar } from '@/components/dashboard/sidebar'
 import { DashboardNav } from '@/components/dashboard/nav'
 import { useAuth } from '@/hooks/use-auth'
 import { NotificationPrompt } from '@/components/shared/notification-prompt'
+import { SessionTimeoutHandler } from '@/components/shared/session-timeout-handler'
 import { Menu } from 'lucide-react'
 
 export default function DashboardLayout({
@@ -13,7 +14,7 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const { user, loading } = useAuth()
+  const { user, loading, connectionIssue } = useAuth()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
@@ -59,6 +60,12 @@ export default function DashboardLayout({
       />
       
       <div className="flex-1 flex flex-col min-w-0">
+        <SessionTimeoutHandler />
+        {connectionIssue ? (
+          <div className="border-b border-yellow-200 bg-yellow-50 text-yellow-900 px-4 py-2 text-sm">
+            Connection issue detected. We are retrying to validate your session.
+          </div>
+        ) : null}
         <DashboardNav />
         
         <main className="flex-1 ms:px-0 py-4 sm:py-6 pt-16 lg:pt-6">

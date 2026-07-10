@@ -1,7 +1,21 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { verifyToken } from './lib/auth'
+import { verifyToken } from './lib/jwt'
 
+/**
+ * Middleware: Fast, lightweight auth gate using JWT verification only.
+ * This runs in Edge runtime and DOES NOT access the database.
+ *
+ * Edge runtime cannot use Prisma, so this middleware:
+ * - Rejects requests with missing/invalid JWTs early (before hitting any API)
+ * - Redirects authenticated users away from login/signup pages
+ * - Delegates authoritative checks (idle timeout, suspension, role) to getCurrentUser()
+ *   which runs in Node runtime and can access Prisma.
+ *
+ * This is a harmless defensive layer: if getCurrentUser() is also called by the
+ * API route (e.g., /api/auth/session), both checks run but only one can access
+ * the DB, so the Node-side check is authoritative.
+ */
 export function proxy(request: NextRequest) {
   const token = request.cookies.get('auth-token')?.value
 
