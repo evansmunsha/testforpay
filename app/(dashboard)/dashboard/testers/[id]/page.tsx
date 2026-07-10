@@ -37,7 +37,17 @@ export default function TesterProfilePage() {
         const res = await fetch(`/api/testers/${params.id}/profile`)
 
         if (!res.ok) {
-          throw new Error('Profile not found')
+          let message = 'Profile not found'
+          try {
+            const data = await res.json()
+            if (data?.error) {
+              message = data.error
+            }
+          } catch {
+            // Ignore JSON parse issues and fall back to the default message.
+          }
+
+          throw new Error(message)
         }
 
         const data = await res.json()

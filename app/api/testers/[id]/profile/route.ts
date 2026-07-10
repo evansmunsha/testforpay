@@ -22,18 +22,13 @@ export async function GET(
 
     const { id } = await params
 
-    // SECURITY: Only developers/admins (or the tester themself) can view profiles.
-    if (
-      currentUser.role !== 'ADMIN' &&
-      currentUser.role !== 'DEVELOPER' &&
-      currentUser.userId !== id
-    ) {
-      return NextResponse.json(
-        { error: 'Not authorized' },
-        { status: 403 }
-      )
-    }
+    const isAdmin = currentUser.role === 'ADMIN'
+    const isSelf = currentUser.userId === id
+    const isDeveloper = currentUser.role === 'DEVELOPER'
 
+    // Public profile access is allowed for any authenticated user.
+    // Sensitive fields remain restricted to admins, the tester themself,
+    // or developers who have previously worked together with that tester.
     const tester = await prisma.user.findUnique({
       where: { id },
       select: {
@@ -62,10 +57,6 @@ export async function GET(
         { status: 404 }
       )
     }
-
-    const isAdmin = currentUser.role === 'ADMIN'
-    const isSelf = currentUser.userId === id
-    const isDeveloper = currentUser.role === 'DEVELOPER'
 
     let hasWorkedTogether = false
     if (isDeveloper && !isAdmin && !isSelf) {
