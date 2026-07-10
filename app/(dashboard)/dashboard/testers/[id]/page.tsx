@@ -9,6 +9,7 @@ import { ArrowLeft, Star, TrendingUp, Briefcase, DollarSign, Calendar } from 'lu
 import Link from 'next/link'
 import { TesterActions } from '@/components/applications/tester-actions'
 import { formatEurFromCents } from '@/lib/currency'
+import { useAuth } from '@/hooks/use-auth'
 import type { Cents } from '@/types/money'
 
 interface TesterProfile {
@@ -26,6 +27,7 @@ interface TesterProfile {
 export default function TesterProfilePage() {
   const params = useParams()
   const router = useRouter()
+  const { isDeveloper } = useAuth()
   const [profile, setProfile] = useState<TesterProfile | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -112,7 +114,7 @@ export default function TesterProfilePage() {
               <div>
                 <h1 className="text-3xl font-bold">{profile.name || 'Anonymous Tester'}</h1>
                 <p className="text-gray-600">
-                  {profile.email ?? 'testers Email available after apply'}
+                  {profile.email ?? 'Contact details available after apply'}
                 </p>
                 <p className="text-sm text-gray-500 mt-2">
                   Member for {memberDays} days
@@ -188,98 +190,102 @@ export default function TesterProfilePage() {
               </div>
             </div>
 
-            {/* Tester Actions - Bookmark & Verify */}
-            <div className="pt-6 border-t">
-              <TesterActions testerId={profile.id} testerName={profile.name || 'this tester'} />
-            </div>
+            {/* Developer-only actions */}
+            {isDeveloper && (
+              <div className="pt-6 border-t">
+                <TesterActions testerId={profile.id} testerName={profile.name || 'this tester'} />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Engagement Breakdown */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5" />
-            Engagement Score Breakdown
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="font-medium">Feedback Quality</span>
-                <span className="text-sm text-gray-600">25 pts</span>
+      {/* Engagement Breakdown - only relevant for developers */}
+      {isDeveloper && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Engagement Score Breakdown
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-medium">Feedback Quality</span>
+                  <span className="text-sm text-gray-600">25 pts</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full"
+                    style={{ width: '100%' }}
+                  />
+                </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full"
-                  style={{ width: '100%' }}
-                />
+
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-medium">Verification</span>
+                  <span className="text-sm text-gray-600">20 pts</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-medium">Testing Duration</span>
+                  <span className="text-sm text-gray-600">20 pts</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-medium">Response Time</span>
+                  <span className="text-sm text-gray-600">15 pts</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <div className="flex justify-between mb-1">
+                  <span className="font-medium">Rating Submission</span>
+                  <span className="text-sm text-gray-600">10 pts</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-500 h-2 rounded-full"
+                    style={{ width: '100%' }}
+                  />
+                </div>
               </div>
             </div>
 
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="font-medium">Verification</span>
-                <span className="text-sm text-gray-600">20 pts</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full"
-                  style={{ width: '100%' }}
-                />
-              </div>
+            <div className="pt-4 border-t text-sm text-gray-600">
+              <p>
+                This tester's engagement score is calculated based on their testing activities. Higher scores
+                indicate more thorough and responsive testing.
+              </p>
             </div>
-
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="font-medium">Testing Duration</span>
-                <span className="text-sm text-gray-600">20 pts</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full"
-                  style={{ width: '100%' }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="font-medium">Response Time</span>
-                <span className="text-sm text-gray-600">15 pts</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full"
-                  style={{ width: '100%' }}
-                />
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between mb-1">
-                <span className="font-medium">Rating Submission</span>
-                <span className="text-sm text-gray-600">10 pts</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full"
-                  style={{ width: '100%' }}
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="pt-4 border-t text-sm text-gray-600">
-            <p>
-              This tester's engagement score is calculated based on their testing activities. Higher scores
-              indicate more thorough and responsive testing.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Badges Section */}
       <Card>
