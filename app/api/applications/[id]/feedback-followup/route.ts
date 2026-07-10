@@ -69,17 +69,21 @@ export async function POST(
       )
     }
 
-    if (application.testerFollowupReply) {
+    if (application.status !== 'TESTING') {
       return NextResponse.json(
-        { error: 'Follow-up reply already sent' },
-        { status: 409 }
+        { error: 'Tester follow-ups are only allowed while testing is in progress' },
+        { status: 400 }
       )
     }
+
+    const formattedReply = application.testerFollowupReply
+      ? `${application.testerFollowupReply}\n\nTester follow-up (${new Date().toLocaleString()}):\n${reply.trim()}`
+      : `Tester follow-up (${new Date().toLocaleString()}):\n${reply.trim()}`
 
     const updated = await prisma.application.update({
       where: { id },
       data: {
-        testerFollowupReply: reply.trim(),
+        testerFollowupReply: formattedReply,
         testerFollowupAt: new Date(),
       },
     })

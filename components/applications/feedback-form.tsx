@@ -11,6 +11,7 @@ import type { OurFileRouter } from '@/app/api/uploadthing/core'
 interface FeedbackFormProps {
   applicationId: string
   appName: string
+  applicationStatus?: string
   existingFeedback?: string
   existingRating?: number
   existingDeveloperReply?: string
@@ -23,6 +24,7 @@ interface FeedbackFormProps {
 export function FeedbackForm({
   applicationId,
   appName,
+  applicationStatus,
   existingFeedback,
   existingRating,
   existingDeveloperReply,
@@ -54,7 +56,45 @@ export function FeedbackForm({
     `Problems or bugs:\n${issuesFound.trim()}`,
     `Suggestions:\n${improvementIdeas.trim()}`,
   ].join('\n\n')
-  const displayFeedback = existingFeedback || (success ? [combinedFeedback, attachments.length > 0 ? `Attachments:\n${attachments.map((attachment, index) => `${index + 1}. ${attachment.type === 'video' ? 'Screen recording' : 'Screenshot'}: ${attachment.url}`).join('\n')}` : ''].filter(Boolean).join('\n\n') : '')
+
+  const parseThread = (feedback?: string, developer?: string, testerFollowup?: string) => {
+    type Msg = { author: 'tester' | 'developer'; timestamp?: number | null; label?: string; text: string }
+    const msgs: Msg[] = []
+
+    if (feedback) {
+      msgs.push({ author: 'tester', timestamp: null, label: 'Feedback', text: feedback })
+    }
+
+    const extract = (source: string | undefined, kind: 'developer' | 'tester') => {
+      if (!source) return [] as Msg[]
+      const re = kind === 'developer'
+        ? /Developer reply \(([^)]+)\):\n([\s\S]*?)(?=(\n\nDeveloper reply \(|$))/g
+        : /Tester follow-up \(([^)]+)\):\n([\s\S]*?)(?=(\n\nTester follow-up \(|$))/g
+
+      const out: Msg[] = []
+      let m: RegExpExecArray | null
+      while ((m = re.exec(source)) !== null) {
+        const rawTs = m[1]
+        const text = (m[2] || '').trim()
+        let ts = Date.parse(rawTs)
+        if (Number.isNaN(ts)) ts = Date.parse(new Date(rawTs).toString()) || 0
+        out.push({ author: kind === 'developer' ? 'developer' : 'tester', timestamp: ts || null, label: kind === 'developer' ? 'Developer' : 'Tester', text })
+      }
+      return out
+    }
+
+    msgs.push(...extract(developer, 'developer'))
+    msgs.push(...extract(testerFollowup, 'tester'))
+
+    // sort by timestamp when available, keep original order for null timestamps
+    msgs.sort((a, b) => {
+      const ta = a.timestamp || 0
+      const tb = b.timestamp || 0
+      return ta - tb
+    })
+
+    return msgs
+  }
 
   const handleSubmit = async () => {
     const hasTextContent = [positiveNotes, issuesFound, improvementIdeas].some((field) => field.trim().length > 0)
@@ -192,23 +232,41 @@ export function FeedbackForm({
               <p className="text-sm text-green-600">Thank you for your feedback.</p>
             </div>
           </div>
-          {displayFeedback && (
-            <div className="mt-4 p-3 bg-white rounded-lg border border-green-200">
-              <div className="flex items-center gap-1 mb-2">
-                {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className={`h-4 w-4 ${
-                      star <= (existingRating || rating)
-                        ? 'text-yellow-400 fill-yellow-400'
-                        : 'text-gray-300'
-                    }`}
-                  />
-                ))}
+          {(() => {
+            const msgs = parseThread(existingFeedback, existingDeveloperReply, existingTesterFollowup)
+            return (
+              <div className="mt-4 bg-white rounded-lg border border-green-200 p-3 space-y-3">
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star
+                      key={star}
+                      className={`h-4 w-4 ${
+                        star <= (existingRating || rating)
+                          ? 'text-yellow-400 fill-yellow-400'
+                          : 'text-gray-300'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="space-y-2">
+                  {msgs.map((m, i) => (
+                    <div
+                      key={`msg-${i}`}
+                      className={`p-3 rounded-lg max-w-full ${m.author === 'tester' ? 'bg-green-50 border border-green-100 self-start' : 'bg-blue-50 border border-blue-100 self-end'}`}
+                    >
+                      <div className="flex items-baseline justify-between gap-2">
+                        <p className={`text-sm font-medium ${m.author === 'tester' ? 'text-green-800' : 'text-blue-800'}`}>{m.label || (m.author === 'tester' ? 'Tester' : 'Developer')}</p>
+                        {m.timestamp ? (
+                          <p className="text-xs text-gray-500 ml-2">{new Date(m.timestamp).toLocaleString()}</p>
+                        ) : null}
+                      </div>
+                      <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{m.text}</p>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">{displayFeedback}</p>
-            </div>
-          )}
+            )
+          })()}
           {existingDeveloperReply && (
             <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
               <p className="text-sm font-semibold text-blue-900 mb-1">Developer reply</p>
@@ -276,7 +334,7 @@ export function FeedbackForm({
           {existingDeveloperReply && (
             <div className="mt-3 p-3 rounded-lg border border-amber-200 bg-amber-50">
               <p className="text-sm font-semibold text-amber-900 mb-1">Your follow-up</p>
-              {existingTesterFollowup ? (
+              {existingTesterFollowup && (
                 <>
                   <p className="text-sm text-amber-800 whitespace-pre-wrap">{existingTesterFollowup}</p>
                   {existingTesterFollowupAt && (
@@ -285,10 +343,12 @@ export function FeedbackForm({
                     </p>
                   )}
                 </>
-              ) : (
+              )}
+
+              {applicationStatus === 'TESTING' ? (
                 <>
                   <p className="text-xs text-amber-700 mb-2">
-                    You can send one follow-up message to clarify or add details.
+                    You can send another follow-up while testing is still in progress.
                   </p>
                   {followupMessage && (
                     <p className="text-xs text-gray-600 mb-2">{followupMessage}</p>
@@ -311,6 +371,12 @@ export function FeedbackForm({
                     </Button>
                   </div>
                 </>
+              ) : (
+                !existingTesterFollowup && (
+                  <p className="text-xs text-amber-700">
+                    Follow-up is available only while testing is active.
+                  </p>
+                )
               )}
             </div>
           )}

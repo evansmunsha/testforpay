@@ -1,23 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
-import { 
-  User, 
-  Mail, 
-  Calendar, 
-  Smartphone, 
-  CheckCircle, 
+import {
+  Mail,
+  Calendar,
+  Smartphone,
+  CheckCircle,
   XCircle,
   Clock,
   AlertCircle,
   Image as ImageIcon,
-  TrendingUp
+  TrendingUp,
 } from 'lucide-react'
 import { getEngagementBadgeColor, getEngagementLevel } from '@/lib/engagement-scoring'
 
@@ -28,7 +27,6 @@ interface ApplicationCardProps {
     createdAt: string
     testingStartDate: string | null
     testingEndDate: string | null
-    optInVerified: boolean
     verificationImage: string | null
     verificationImage2?: string | null
     feedback: string | null
@@ -58,12 +56,12 @@ interface ApplicationCardProps {
   loading?: boolean
 }
 
-export function ApplicationCard({ 
-  application, 
-  onApprove, 
-  onReject, 
+export function ApplicationCard({
+  application,
+  onApprove,
+  onReject,
   onVerify,
-  loading = false 
+  loading = false,
 }: ApplicationCardProps) {
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [engagementScore, setEngagementScore] = useState<number | null>(application.engagementScore || null)
@@ -75,11 +73,10 @@ export function ApplicationCard({
   const [developerReplyAt, setDeveloperReplyAt] = useState<string | null>(application.developerReplyAt || null)
 
   useEffect(() => {
-    // Calculate engagement score when feedback is submitted
     if (application.feedback && engagementScore === null && application.status === 'COMPLETED') {
       calculateScore()
     }
-  }, [application.feedback])
+  }, [application.feedback, application.status, engagementScore])
 
   const calculateScore = async () => {
     try {
@@ -126,10 +123,15 @@ export function ApplicationCard({
         setReplyError(data.error || 'Failed to send reply')
         return
       }
-      setDeveloperReply(trimmed)
+      setDeveloperReply((current) =>
+        current
+          ? `${current}\n\nDeveloper reply (${new Date().toLocaleDateString()}):\n${trimmed}`
+          : trimmed
+      )
       setDeveloperReplyAt(new Date().toISOString())
       setReplyText('')
     } catch (error) {
+      console.error('Failed to send developer reply:', error)
       setReplyError('Something went wrong. Please try again.')
     } finally {
       setReplyLoading(false)
@@ -243,9 +245,12 @@ export function ApplicationCard({
                     onClick={() => setImageDialogOpen(true)}
                     className="cursor-pointer hover:opacity-80 transition-opacity"
                   >
-                    <img
+                        <Image
                       src={application.verificationImage}
                       alt="Verification screenshot 1"
+                      width={640}
+                      height={360}
+                      unoptimized
                       className="max-w-full h-auto rounded border border-indigo-200"
                     />
                   </div>
@@ -255,9 +260,12 @@ export function ApplicationCard({
                     onClick={() => setImageDialogOpen(true)}
                     className="cursor-pointer hover:opacity-80 transition-opacity"
                   >
-                    <img
+                        <Image
                       src={application.verificationImage2}
                       alt="Verification screenshot 2"
+                      width={640}
+                      height={360}
+                      unoptimized
                       className="max-w-full h-auto rounded border border-indigo-200"
                     />
                   </div>
@@ -295,7 +303,7 @@ export function ApplicationCard({
                 <p className="text-sm text-gray-700 whitespace-pre-wrap">{application.feedback}</p>
               </div>
 
-              {developerReply ? (
+              {developerReply && (
                 <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                   <p className="text-sm font-semibold text-blue-900 mb-1">Your reply</p>
                   <p className="text-sm text-blue-800 whitespace-pre-wrap">{developerReply}</p>
@@ -305,18 +313,26 @@ export function ApplicationCard({
                     </p>
                   )}
                 </div>
-              ) : repliesMuted ? (
+              )}
+
+              {!developerReply && repliesMuted && (
                 <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                   <p className="text-sm font-semibold text-gray-800">Replies are muted</p>
                   <p className="text-xs text-gray-600 mt-1">
                     This tester has opted out of developer replies.
                   </p>
                 </div>
-              ) : (
+              )}
+
+              {application.status === 'TESTING' && !repliesMuted ? (
                 <div className="bg-white p-3 rounded-lg border border-blue-200">
-                  <p className="text-sm font-semibold text-blue-900 mb-1">Reply to tester</p>
+                  <p className="text-sm font-semibold text-blue-900 mb-1">
+                    {developerReply ? 'Send another reply' : 'Reply to tester'}
+                  </p>
                   <p className="text-xs text-blue-700 mb-2">
-                    One reply only. Keep it short and helpful.
+                    {developerReply
+                      ? 'Continue the conversation while testing is in progress.'
+                      : 'One reply only while testing is active.'}
                   </p>
                   {replyError && (
                     <div className="text-xs text-red-600 mb-2">{replyError}</div>
@@ -339,7 +355,14 @@ export function ApplicationCard({
                     </Button>
                   </div>
                 </div>
-              )}
+              ) : !developerReply && !repliesMuted ? (
+                <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
+                  <p className="text-sm font-semibold text-gray-800">Replies are available during testing</p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    You can send a reply once the application enters the testing phase.
+                  </p>
+                </div>
+              ) : null}
 
               {application.testerFollowupReply && (
                 <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
@@ -485,16 +508,22 @@ export function ApplicationCard({
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {application.verificationImage && (
-              <img
+              <Image
                 src={application.verificationImage}
                 alt="Verification screenshot 1"
+                width={800}
+                height={450}
+                unoptimized
                 className="w-full h-auto rounded"
               />
             )}
             {application.verificationImage2 && (
-              <img
+              <Image
                 src={application.verificationImage2}
                 alt="Verification screenshot 2"
+                width={800}
+                height={450}
+                unoptimized
                 className="w-full h-auto rounded"
               />
             )}

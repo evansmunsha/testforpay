@@ -395,6 +395,7 @@ export default function ApplicationsPage() {
                     <FeedbackForm
                       applicationId={app.id}
                       appName={app.job.appName}
+                      applicationStatus={app.status}
                       existingFeedback={app.feedback || undefined}
                       existingRating={app.rating || undefined}
                       existingDeveloperReply={app.developerReply || undefined}
@@ -418,6 +419,7 @@ export default function ApplicationsPage() {
                     <FeedbackForm
                       applicationId={app.id}
                       appName={app.job.appName}
+                      applicationStatus={app.status}
                       existingFeedback={app.feedback || undefined}
                       existingRating={app.rating || undefined}
                       existingDeveloperReply={app.developerReply || undefined}

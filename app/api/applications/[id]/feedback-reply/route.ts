@@ -75,6 +75,13 @@ export async function POST(
       )
     }
 
+    if (application.status !== 'TESTING') {
+      return NextResponse.json(
+        { error: 'Developer replies are only allowed while testing is in progress' },
+        { status: 400 }
+      )
+    }
+
     if (application.tester.muteDeveloperReplies) {
       return NextResponse.json(
         { error: 'Tester has muted developer replies' },
@@ -82,17 +89,14 @@ export async function POST(
       )
     }
 
-    if (application.developerReply) {
-      return NextResponse.json(
-        { error: 'Reply already sent' },
-        { status: 409 }
-      )
-    }
+    const formattedReply = application.developerReply
+      ? `${application.developerReply}\n\nDeveloper reply (${new Date().toLocaleString()}):\n${reply.trim()}`
+      : `Developer reply (${new Date().toLocaleString()}):\n${reply.trim()}`
 
     const updated = await prisma.application.update({
       where: { id },
       data: {
-        developerReply: reply.trim(),
+        developerReply: formattedReply,
         developerReplyAt: new Date(),
       },
     })
