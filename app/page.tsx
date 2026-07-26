@@ -187,6 +187,13 @@ export default function LandingPage() {
         )}
       </nav>
 
+      {/* Founding Developer Banner */}
+      <div className="bg-amber-400 text-gray-900 py-3 text-center font-semibold text-sm md:text-base">
+        🚀 Founding Developer Pricing — First 20 customers only. 
+        <span className="hidden md:inline"> Regular price resumes after slots are filled.</span>
+        <button onClick={() => scrollToSection('pricing')} className="underline ml-1 hover:text-blue-800">See prices →</button>
+      </div>
+
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
         <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -208,7 +215,7 @@ export default function LandingPage() {
             </h1>
             <p className="text-xl text-gray-600 mb-8">
               {userType === 'developer'
-                ? 'Connect with verified real Android users for Google Play closed testing. Fair pay keeps testers engaged for the full 14 days, so you meet requirements and publish on schedule.'
+                ? 'Connect with verified real Android users for Google Play closed testing. Fair pay keeps testers engaged for the full 14 days, so you meet requirements and publish on schedule. Founding price: $29 for your first test.'
                 : 'Developers pay you to try their apps before they go live. Install the app, use it for 14 days, get paid $2.50–$3.00 per test. No experience needed — just an Android phone.'}
             </p>
 
@@ -254,7 +261,7 @@ export default function LandingPage() {
 
             <p className="text-sm text-gray-500">
               {userType === 'developer' 
-                ? '12 testers • 14-day testing • Approval guarantee • Pay only on success'
+                ? '12 testers • 14-day testing • Approval guarantee • Founding price: $29 (20 slots)'
                 : 'Earn $2.50–$3.00 per app • Paid via PayPal or bank transfer • No experience needed'}
             </p>
           </div>
@@ -481,16 +488,19 @@ export default function LandingPage() {
       {/* Pricing */}
       <section id="pricing" className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center mb-4">Simple, Transparent Pricing</h2>
+          <h2 className="text-4xl font-bold text-center mb-4">Founding Developer Pricing</h2>
           <p className="text-center text-gray-600 mb-16">
-            Fair pay for testers. Fair price for you. Approval guaranteed or your money back.
+            Fair pay for testers. Fair price for you. Founding price locks in forever for your account. Regular pricing resumes after 20 slots..
           </p>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="bg-white rounded-xl shadow-lg p-8 border-2 border-gray-200">
               <h3 className="text-2xl font-bold mb-2">Starter</h3>
-              <div className="text-4xl font-bold mb-4">$35</div>
-              <p className="text-gray-600 mb-6">Perfect for first-time publishers</p>
+              <div className="flex items-baseline gap-2 mb-1">
+                <div className="text-4xl font-bold">$29</div>
+                <div className="text-lg text-gray-400 line-through">$39</div>
+              </div>
+              <p className="text-amber-700 text-sm font-semibold mb-6">🚀 Founding price — limited slots</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-600" />
@@ -513,7 +523,6 @@ export default function LandingPage() {
                   <span>Approval guarantee</span>
                 </li>
               </ul>
-              
               <button 
                 onClick={handleGetStarted}
                 className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800"
@@ -527,8 +536,11 @@ export default function LandingPage() {
                 Most Popular
               </div>
               <h3 className="text-2xl font-bold mb-2 text-white">Growth</h3>
-              <div className="text-4xl font-bold mb-4 text-white">$49</div>
-              <p className="text-blue-100 mb-6">For developers shipping regularly</p>
+              <div className="flex items-baseline gap-2 mb-1">
+                <div className="text-4xl font-bold text-white">$49</div>
+                <div className="text-lg text-blue-200 line-through">$59</div>
+              </div>
+              <p className="text-blue-100 text-sm font-semibold mb-6">⭐ Most popular — best value</p>
               <ul className="space-y-3 mb-8 text-white">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5" />
@@ -555,7 +567,6 @@ export default function LandingPage() {
                   <span>Approval guarantee</span>
                 </li>
               </ul>
-              
               <button 
                 onClick={handleGetStarted}
                 className="w-full bg-white text-blue-600 py-3 rounded-lg hover:bg-gray-100 font-semibold"
@@ -566,8 +577,11 @@ export default function LandingPage() {
 
             <div className="bg-white rounded-xl shadow-lg p-8 border-2 border-gray-200">
               <h3 className="text-2xl font-bold mb-2">Pro</h3>
-              <div className="text-4xl font-bold mb-4">$79</div>
-              <p className="text-gray-600 mb-6">Maximum safety & insights</p>
+              <div className="flex items-baseline gap-2 mb-1">
+                <div className="text-4xl font-bold">$79</div>
+                <div className="text-lg text-gray-400 line-through">$89</div>
+              </div>
+              <p className="text-gray-600 text-sm font-semibold mb-6">🛡️ Maximum safety for serious apps</p>
               <ul className="space-y-3 mb-8">
                 <li className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-green-600" />
@@ -594,7 +608,6 @@ export default function LandingPage() {
                   <span>Approval guarantee</span>
                 </li>
               </ul>
-              
               <button 
                 onClick={handleGetStarted}
                 className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800"
@@ -653,8 +666,8 @@ export default function LandingPage() {
                 <ol className="list-decimal list-inside space-y-2 ml-2">
                   <li>Go to <strong>Google Play Console → Testing → Closed testing</strong> and open your track.</li>
                   <li>In the <strong>Testers</strong> tab, create an email list.</li>
-                  <li>In your TestForPay dashboard, click 'View tester emails' for your job. You'll see the list of verified testers who applied. Copy those emails and paste them into your Play Console list, then save.</li>
-                  <li>Google will show you an <strong>opt-in link</strong> on the same page. Copy that link and paste it into your TestForPay dashboard.</li>
+                  <li>In your <strong>TestForPay dashboard</strong>, click <strong>"View tester emails"</strong> for your job. You'll see the list of verified testers who applied. Copy those emails and paste them into your Play Console list, then save.</li>
+                  <li>Google will show you an <strong>opt-in link</strong> on the same page. Copy that link and paste it back into your TestForPay dashboard.</li>
                   <li>Our testers use that link to join your closed test. That's it — you're done.</li>
                 </ol>
                 <p className="text-sm text-gray-500 mt-3">If the opt-in link doesn't show up or your console looks different, email us a screenshot and we'll walk you through it.</p>
@@ -747,7 +760,7 @@ export default function LandingPage() {
           >
             Start from $35 <ArrowRight className="h-5 w-5" />
           </button>
-          <p className="text-blue-100 mt-4">Approval guaranteed or your money back</p>
+          <p className="text-blue-100 mt-4">Founding price locks in forever for your account. Regular pricing resumes after 20 slots.</p>
         </div>
       </section>
 
@@ -799,7 +812,7 @@ export default function LandingPage() {
           <div className="border-t border-gray-800 mt-8 pt-8 text-sm text-center">
             <p>© 2026 TestForPay. All rights reserved.</p>
             <p className="mt-2">Made with ❤️ in Zambia by Evans Munsha</p>
-            <p className="mt-1 text-gray-500">Questions? hello@testforpay.com</p>
+            <p className="mt-1 text-gray-500">Questions? testforpays@gmail.com</p>
           </div>
         </div>
       </footer>
