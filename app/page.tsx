@@ -513,10 +513,7 @@ export default function LandingPage() {
                   <span>Approval guarantee</span>
                 </li>
               </ul>
-              <div className="bg-amber-50 rounded-lg p-3 mb-6 text-sm text-amber-800">
-                <TrendingUp className="h-4 w-4 inline mr-1" />
-                Testers earn <strong>$2.50 each</strong> for 14 days of testing
-              </div>
+              
               <button 
                 onClick={handleGetStarted}
                 className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800"
@@ -558,10 +555,7 @@ export default function LandingPage() {
                   <span>Approval guarantee</span>
                 </li>
               </ul>
-              <div className="bg-blue-500 rounded-lg p-3 mb-6 text-sm text-white">
-                <TrendingUp className="h-4 w-4 inline mr-1" />
-                Testers earn <strong>$3.00 each</strong> for 14 days of testing
-              </div>
+              
               <button 
                 onClick={handleGetStarted}
                 className="w-full bg-white text-blue-600 py-3 rounded-lg hover:bg-gray-100 font-semibold"
@@ -600,10 +594,7 @@ export default function LandingPage() {
                   <span>Approval guarantee</span>
                 </li>
               </ul>
-              <div className="bg-amber-50 rounded-lg p-3 mb-6 text-sm text-amber-800">
-                <TrendingUp className="h-4 w-4 inline mr-1" />
-                Testers earn <strong>$3.00 each</strong> — 25 testers = $75 to the community
-              </div>
+              
               <button 
                 onClick={handleGetStarted}
                 className="w-full bg-gray-900 text-white py-3 rounded-lg hover:bg-gray-800"
