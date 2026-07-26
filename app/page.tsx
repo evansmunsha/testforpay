@@ -735,10 +735,6 @@ export default function LandingPage() {
               <p className="mt-4 text-gray-700">Internal testing is for your own team — up to 100 people, no 14-day rule. Closed testing is for external users and requires at least 12 testers for 14 continuous days before you can go to production. Google uses closed testing to make sure real people can install and use your app without problems.</p>
             </details>
 
-            <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer text-lg">How much do testers earn?</summary>
-              <p className="mt-4 text-gray-700">Testers earn $2.50 per completed test on Starter and $3.00 on Growth and Pro. They are only paid after finishing the full 14 days. Payments go straight to their PayPal or bank account.</p>
-            </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
               <summary className="font-semibold cursor-pointer text-lg">What if a tester leaves before day 14?</summary>
