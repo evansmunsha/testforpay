@@ -208,8 +208,8 @@ export default function LandingPage() {
             </h1>
             <p className="text-xl text-gray-600 mb-8">
               {userType === 'developer'
-                ? 'Connect with verified real Android users for Google Play closed testing. We pay our testers 2× more than the competition — so they actually stay opted in for the full 14 days.'
-                : 'Developers pay you fairly to try their apps before they go live. Install the app, use it for 14 days, get paid $2.50–$3.00 per test. No experience needed — just an Android phone.'}
+                ? 'Connect with verified real Android users for Google Play closed testing. Fair pay keeps testers engaged for the full 14 days, so you meet requirements and publish on schedule.'
+                : 'Developers pay you to try their apps before they go live. Install the app, use it for 14 days, get paid $2.50–$3.00 per test. No experience needed — just an Android phone.'}
             </p>
 
             {/* User Type Selection */}
@@ -254,7 +254,7 @@ export default function LandingPage() {
 
             <p className="text-sm text-gray-500">
               {userType === 'developer' 
-                ? '12 testers • 14-day testing • Fair-pay guarantee • Approval guarantee • Pay only on success'
+                ? '12 testers • 14-day testing • Approval guarantee • Pay only on success'
                 : 'Earn $2.50–$3.00 per app • Paid via PayPal or bank transfer • No experience needed'}
             </p>
           </div>
@@ -298,17 +298,7 @@ export default function LandingPage() {
       </section>
 
       {/* Fair Pay Banner */}
-      <section className="bg-amber-50 py-12 border-y border-amber-100">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <Heart className="h-10 w-10 text-amber-600 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">We Pay Testers 2× More — So They Actually Stay</h2>
-          <p className="text-gray-700">
-            Most platforms pay testers $1.00–$1.50 for 14 days of work. That\'s why they drop out. 
-            <strong> We pay $2.50–$3.00 per test.</strong> Our testers earn real income, stay opted in, and finish the full 14 days. 
-            That means fewer headaches for you and faster approval.
-          </p>
-        </div>
-      </section>
+      
 
       {/* How It Works */}
       <section id="how-it-works" className="py-20">
@@ -363,15 +353,15 @@ export default function LandingPage() {
                 <div className="flex gap-4">
                   <div className="shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">2</div>
                   <div>
-                    <h4 className="font-semibold mb-1">Testers Apply & Opt-In</h4>
-                    <p className="text-gray-600">Real users opt-in to your closed test on Google Play within hours</p>
+                    <h4 className="font-semibold mb-1">Add Testers to Play Console</h4>
+                    <p className="text-gray-600">We send you a list of verified tester emails. You paste them into your Play Console closed testing track — takes about 3 minutes.</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
                   <div className="shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-bold">3</div>
                   <div>
-                    <h4 className="font-semibold mb-1">Track Progress in Real Time</h4>
-                    <p className="text-gray-600">Monitor tester opt-in status, engagement, and dropout alerts on your dashboard</p>
+                    <h4 className="font-semibold mb-1">Testers Opt-In & You Track Progress</h4>
+                    <p className="text-gray-600">Testers click your opt-in link and join your closed test. You monitor who has joined, who is active, and who has dropped out — all in one dashboard.</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
@@ -427,7 +417,7 @@ export default function LandingPage() {
                 <div className="flex gap-4">
                   <div className="shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">4</div>
                   <div>
-                    <h4 className="font-semibold mb-1">Get Paid Fairly</h4>
+                    <h4 className="font-semibold mb-1">Get Paid</h4>
                     <p className="text-gray-600">Receive $2.50–$3.00 per completed test via PayPal or bank transfer</p>
                   </div>
                 </div>
@@ -525,7 +515,7 @@ export default function LandingPage() {
               </ul>
               <div className="bg-amber-50 rounded-lg p-3 mb-6 text-sm text-amber-800">
                 <TrendingUp className="h-4 w-4 inline mr-1" />
-                Testers earn <strong>$2.50 each</strong> — 2×
+                Testers earn <strong>$2.50 each</strong> for 14 days of testing
               </div>
               <button 
                 onClick={handleGetStarted}
@@ -570,7 +560,7 @@ export default function LandingPage() {
               </ul>
               <div className="bg-blue-500 rounded-lg p-3 mb-6 text-sm text-white">
                 <TrendingUp className="h-4 w-4 inline mr-1" />
-                Testers earn <strong>$3.00 each</strong> — best retention rate
+                Testers earn <strong>$3.00 each</strong> for 14 days of testing
               </div>
               <button 
                 onClick={handleGetStarted}
@@ -656,112 +646,107 @@ export default function LandingPage() {
       </section>
 
       {/* Comparison Section */}
-      <section className="py-20 bg-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center mb-4">Real Users. Real Opt-ins. Real Compliance.</h2>
-          <p className="text-center text-gray-600 mb-12 max-w-2xl mx-auto">
-            Google Play wants genuine users testing your app — not developers swapping favors. Here\'s how we deliver that.
-          </p>
-          <div className="grid md:grid-cols-2 gap-6">
-            {/* Free swap platforms */}
-            <div className="rounded-2xl border-2 border-gray-200 p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 font-bold text-lg">≠</div>
-                <h3 className="text-xl font-bold text-gray-700">Developer Swap Groups</h3>
-              </div>
-              <ul className="space-y-3">
-                {[
-                  'Testers are other developers, not real end users',
-                  'Accounts share similar IPs and device patterns',
-                  'No financial motivation — testers drop off early',
-                  'No tracking or replacement if someone leaves',
-                  'Risk of account association by Google',
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-gray-600">
-                    <span className="text-red-400 mt-0.5 shrink-0">✗</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-            {/* TestForPay */}
-            <div className="rounded-2xl border-2 border-blue-500 p-8 relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs font-semibold px-3 py-1 rounded-full">TestForPay</div>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-lg">✓</div>
-                <h3 className="text-xl font-bold text-blue-700">Verified Real Users</h3>
-              </div>
-              <ul className="space-y-3">
-                {[
-                  'Real Android users from 40+ countries',
-                  'Diverse devices, IPs, and locations',
-                  'Paid testers stay opted in for the full 14 days',
-                  'Live dashboard + automatic dropout replacement',
-                  'Google-compliant: genuine users, genuine opt-ins',
-                  'Escrow payments — pay only when testing completes',
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-gray-700">
-                    <span className="text-green-500 mt-0.5 shrink-0">✓</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
+      
 
       {/* FAQ */}
       <section id="faq" className="bg-gray-50 py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center mb-16">Frequently Asked Questions</h2>
+          <h2 className="text-4xl font-bold text-center mb-4">Questions & Answers</h2>
+          <p className="text-center text-gray-600 mb-6">Can't find your question? <a href="mailto:hello@testforpay.com" className="text-blue-600 hover:underline font-medium">Email us</a> and a real person will reply fast.</p>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer">How much do testers actually get paid?</summary>
-              <p className="mt-3 text-gray-600">We pay testers $2.50 per test on the Starter plan and $3.00 per test on Growth and Pro plans. That\'s 2× what most competing platforms pay. Testers are paid only after completing the full 14-day testing period, which motivates them to stay opted in.</p>
+              <summary className="font-semibold cursor-pointer text-lg">How do I get your testers into my Play Console?</summary>
+              <div className="mt-4 text-gray-700 space-y-3">
+                <p>It takes about 3 minutes:</p>
+                <ol className="list-decimal list-inside space-y-2 ml-2">
+                  <li>Go to <strong>Google Play Console → Testing → Closed testing</strong> and open your track.</li>
+                  <li>In the <strong>Testers</strong> tab, create an email list.</li>
+                  <li>In your TestForPay dashboard, click 'View tester emails' for your job. You'll see the list of verified testers who applied. Copy those emails and paste them into your Play Console list, then save.</li>
+                  <li>Google will show you an <strong>opt-in link</strong> on the same page. Copy that link and paste it into your TestForPay dashboard.</li>
+                  <li>Our testers use that link to join your closed test. That's it — you're done.</li>
+                </ol>
+                <p className="text-sm text-gray-500 mt-3">If the opt-in link doesn't show up or your console looks different, email us a screenshot and we'll walk you through it.</p>
+              </div>
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer">How does TestForPay ensure testers are real?</summary>
-              <p className="mt-3 text-gray-600">All testers must verify their email and Google Play account. We track opt-in status and activity throughout the 14-day period to ensure genuine participation. Because we pay fairly, testers have real motivation to stay engaged and complete the full period.</p>
+              <summary className="font-semibold cursor-pointer text-lg">Is this allowed by Google Play?</summary>
+              <p className="mt-4 text-gray-700">Yes. Google Play requires 12 real users to join your closed test and stay opted in for 14 days. We connect you with real Android users who genuinely install your app and remain in the test. No bots, no fake accounts, no review manipulation. This is exactly what Google asks for.</p>
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer">Is this compliant with Google Play policies?</summary>
-              <p className="mt-3 text-gray-600">Yes. We connect you with real users who genuinely opt-in to test your app. This fully complies with Google Play\'s closed testing requirements. We do not incentivize public reviews or ratings.</p>
+              <summary className="font-semibold cursor-pointer text-lg">What exactly is the 14-day closed testing rule?</summary>
+              <p className="mt-4 text-gray-700">Before you can publish to production, Google requires at least 12 testers to stay in your closed test for 14 full days. If too many testers leave before day 14, your testing period may reset. That's why keeping testers engaged matters — and why we pay them fairly so they don't drop out.</p>
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer">When do I pay?</summary>
-              <p className="mt-3 text-gray-600">Payment is held in escrow when you post your job and only released when testers complete the full 14-day testing period. You only pay for verified, completed tests. If testing fails due to our fault, you get a full refund.</p>
+              <summary className="font-semibold cursor-pointer text-lg">Are your testers real people or fake accounts?</summary>
+              <p className="mt-4 text-gray-700">They are 100% real people. Every tester verifies their email and Google Play account before joining. They use real Android devices. We track their opt-in status for the full 14 days to confirm they are genuinely participating. They are not developers trading favors, and they are not bots.</p>
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer">How long until I get my 12 testers?</summary>
-              <p className="mt-3 text-gray-600">Most testing jobs are fully filled within 6 hours. Our large pool of active testers across 40+ countries ensures fast matching, even for niche apps.</p>
+              <summary className="font-semibold cursor-pointer text-lg">Do testers need to live in my target country?</summary>
+              <p className="mt-4 text-gray-700">No. Google Play does not require testers to be in specific countries for closed testing. What matters is that they are real users with real devices. Our testers are spread across 40+ countries, which actually shows Google that your app works for a diverse audience.</p>
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer">What if a tester drops out before day 14?</summary>
-              <p className="mt-3 text-gray-600">On our Growth and Pro plans, we automatically replace dropouts at no extra cost. On the Starter plan, you can purchase replacements individually. We monitor opt-in status daily and alert you immediately if someone leaves.</p>
+              <summary className="font-semibold cursor-pointer text-lg">How quickly can testing start?</summary>
+              <p className="mt-4 text-gray-700">Most jobs are fully filled within 6 hours. Once you paste the tester emails into Play Console and share the opt-in link with us, testers start joining right away. You'll see live updates in your dashboard as each one opts in.</p>
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer">What is the approval guarantee?</summary>
-              <p className="mt-3 text-gray-600">If Google Play rejects your app specifically due to tester compliance issues (e.g., not enough genuine testers, suspicious account patterns) after you used TestForPay correctly, we refund 100% of your payment. This does not cover rejections due to app quality, policy violations, or incorrect setup on your end.</p>
+              <summary className="font-semibold cursor-pointer text-lg">Do I need to manage testers during the 14 days?</summary>
+              <p className="mt-4 text-gray-700">Not really. Your only job is to keep your app available in the closed test track and check your dashboard now and then. If a tester drops out, we alert you and replace them automatically on Growth and Pro plans. You never have to chase testers or message them one by one.</p>
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer">Can testers write public reviews?</summary>
-              <p className="mt-3 text-gray-600">Testers provide feedback to you directly through our platform. We do not incentivize public reviews to maintain Google Play policy compliance.</p>
+              <summary className="font-semibold cursor-pointer text-lg">What happens when the 14 days are done?</summary>
+              <p className="mt-4 text-gray-700">Once 12 testers have stayed opted in for 14 full days, you have met Google's requirement. You can then request production access in Play Console. We only release payment to testers after the 14 days are successfully completed. If you update your app later and need to test again, just post a new job.</p>
+            </details>
+
+            <details className="bg-white p-6 rounded-lg shadow-sm">
+              <summary className="font-semibold cursor-pointer text-lg">What do I actually get for $35?</summary>
+              <p className="mt-4 text-gray-700">On the Starter plan, you get 12 verified testers who join your closed test and stay for 14 days. You get a live dashboard to track who has joined and who is active. You get email support. And you get our approval guarantee — if Google rejects your app because of tester issues, we refund your full payment.</p>
+            </details>
+
+            <details className="bg-white p-6 rounded-lg shadow-sm">
+              <summary className="font-semibold cursor-pointer text-lg">How do I pay? How do testers get paid?</summary>
+              <p className="mt-4 text-gray-700">You pay by card through Stripe when you post your job. Your money sits in escrow and is only released after the 14-day testing period is complete. Testers are paid via PayPal or bank transfer, whichever works for them. If testing fails, you get your money back.</p>
+            </details>
+
+            <details className="bg-white p-6 rounded-lg shadow-sm">
+              <summary className="font-semibold cursor-pointer text-lg">What if Google rejects my app?</summary>
+              <p className="mt-4 text-gray-700">If Google rejects your app specifically because of tester problems — not enough real testers, suspicious accounts, or dropouts we failed to replace — we refund 100% of what you paid. This does not cover rejections caused by bugs in your app, policy violations, or mistakes in your Play Console setup.</p>
+            </details>
+
+            <details className="bg-white p-6 rounded-lg shadow-sm">
+              <summary className="font-semibold cursor-pointer text-lg">My last closed test failed. Can you help?</summary>
+              <p className="mt-4 text-gray-700">Yes. A lot of developers come to us after free tester groups or cheap services let them down. We can run a fresh test with our verified pool. Because we pay testers properly, they actually stick around for the full 14 days instead of disappearing on day 3.</p>
+            </details>
+
+            <details className="bg-white p-6 rounded-lg shadow-sm">
+              <summary className="font-semibold cursor-pointer text-lg">Can I test multiple apps?</summary>
+              <p className="mt-4 text-gray-700">Yes. Each app needs its own testing job, and each job is billed separately. If you publish apps regularly or run an agency, email us and we can set up a custom plan.</p>
+            </details>
+
+            <details className="bg-white p-6 rounded-lg shadow-sm">
+              <summary className="font-semibold cursor-pointer text-lg">What is the difference between internal and closed testing?</summary>
+              <p className="mt-4 text-gray-700">Internal testing is for your own team — up to 100 people, no 14-day rule. Closed testing is for external users and requires at least 12 testers for 14 continuous days before you can go to production. Google uses closed testing to make sure real people can install and use your app without problems.</p>
+            </details>
+
+            <details className="bg-white p-6 rounded-lg shadow-sm">
+              <summary className="font-semibold cursor-pointer text-lg">How much do testers earn?</summary>
+              <p className="mt-4 text-gray-700">Testers earn $2.50 per completed test on Starter and $3.00 on Growth and Pro. They are only paid after finishing the full 14 days. Payments go straight to their PayPal or bank account.</p>
+            </details>
+
+            <details className="bg-white p-6 rounded-lg shadow-sm">
+              <summary className="font-semibold cursor-pointer text-lg">What if a tester leaves before day 14?</summary>
+              <p className="mt-4 text-gray-700">On Growth and Pro plans, we replace dropouts automatically at no extra cost. On Starter, you can buy replacement testers if needed. We check opt-in status every day and notify you immediately if someone leaves, so you are never surprised.</p>
             </details>
           </div>
         </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="bg-blue-600 py-20">
+      </section><section className="bg-blue-600 py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-bold text-white mb-6">
             Ready to Publish Your App?
