@@ -249,7 +249,7 @@ export default function LandingPage() {
                 onClick={handleGetStarted}
                 className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 font-semibold text-lg flex items-center gap-2"
               >
-                {userType === 'developer' ? 'Start from $35' : 'Start Earning'} <ArrowRight className="h-5 w-5" />
+                {userType === 'developer' ? 'Start from $29' : 'Start Earning'} <ArrowRight className="h-5 w-5" />
               </button>
               <button
                 onClick={handleLogin}
@@ -710,7 +710,7 @@ export default function LandingPage() {
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer text-lg">What do I actually get for $35?</summary>
+              <summary className="font-semibold cursor-pointer text-lg">What do I actually get for $29?</summary>
               <p className="mt-4 text-gray-700">On the Starter plan, you get 12 verified testers who join your closed test and stay for 14 days. You get a live dashboard to track who has joined and who is active. You get email support. And you get our approval guarantee — if Google rejects your app because of tester issues, we refund your full payment.</p>
             </details>
 
@@ -758,7 +758,7 @@ export default function LandingPage() {
             onClick={handleGetStarted}
             className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 font-semibold text-lg inline-flex items-center gap-2"
           >
-            Start from $35 <ArrowRight className="h-5 w-5" />
+            Start from $29 <ArrowRight className="h-5 w-5" />
           </button>
           <p className="text-blue-100 mt-4">Founding price locks in forever for your account. Regular pricing resumes after 20 slots.</p>
         </div>
