@@ -5,6 +5,48 @@ import prisma from '@/lib/prisma'
 import { toCents } from '@/lib/currency'
 import type { Prisma } from '@/generated/prisma/client'
 
+type PlanType = 'STARTER' | 'GROWTH' | 'PRO'
+
+interface PlanConfig {
+  testers: number
+  paymentPerTesterEur: number
+  platformFeeEur: number
+  totalEur: number
+  duration: number
+}
+
+const PLANS: Record<PlanType, PlanConfig> = {
+  STARTER: {
+    testers: 12,
+    paymentPerTesterEur: 2.30,
+    platformFeeEur: 0.40,
+    totalEur: 28,
+    duration: 14,
+  },
+  GROWTH: {
+    testers: 15,
+    paymentPerTesterEur: 2.75,
+    platformFeeEur: 6.75,
+    totalEur: 48,
+    duration: 14,
+  },
+  PRO: {
+    testers: 25,
+    paymentPerTesterEur: 2.75,
+    platformFeeEur: 9.25,
+    totalEur: 78,
+    duration: 14,
+  },
+}
+
+function normalizePlanType(plan: string): PlanType | null {
+  const upper = plan?.toUpperCase()
+  if (upper === 'STARTER') return 'STARTER'
+  if (upper === 'GROWTH') return 'GROWTH'
+  if (upper === 'PRO' || upper === 'PROFESSIONAL') return 'PRO'
+  return null
+}
+
 interface CreateJobRequestBody {
   appName?: string
   appDescription?: string
@@ -14,6 +56,8 @@ interface CreateJobRequestBody {
   testersNeeded?: number
   testDuration?: number
   paymentPerTester?: number
+  appCategory?: string
+  minAndroidVersion?: string
 }
 
 const JOB_STATUS_FILTERS = ['DRAFT', 'ACTIVE', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const
@@ -30,12 +74,11 @@ function isJobStatusFilter(status: string): status is JobStatusFilter {
 export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentUser()
-    
+
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // Check if user is a developer
     if (currentUser.role !== 'DEVELOPER') {
       return NextResponse.json(
         { error: 'Only developers can create jobs' },
@@ -43,78 +86,78 @@ export async function POST(request: Request) {
       )
     }
 
-    // SECURITY: Require verified email for critical actions.
-    // TEMPORARILY DISABLED FOR MVP - Comment out when adding email verification requirement back
-    // const developer = await prisma.user.findUnique({
-    //   where: { id: currentUser.userId },
-    //   select: { emailVerified: true },
-    // })
-
-    // if (!developer?.emailVerified) {
-    //   return NextResponse.json(
-    //     { error: 'Please verify your email to create jobs' },
-    //     { status: 403 }
-    //   )
-    // }
-
     const body = await request.json() as CreateJobRequestBody
     const { 
       appName, 
       appDescription, 
       packageName, 
       googlePlayLink, 
-      planType,
-      testersNeeded,
-      testDuration,
-      paymentPerTester: customPaymentPerTester
+      planType: rawPlanType,
+      appCategory,
+      minAndroidVersion,
     } = body
 
     // Validation
     if (!appName || !appDescription || !googlePlayLink) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Missing required fields: appName, appDescription, and googlePlayLink are required' },
         { status: 400 }
       )
     }
 
-    // Minimum requirements
-    const MIN_TESTERS = 12
-    const MIN_DURATION = 14
-    const MIN_PAYMENT_EUR = 5
+    // Validate and resolve plan
+    const planType = normalizePlanType(rawPlanType || '')
+    if (!planType) {
+      return NextResponse.json(
+        { error: 'Invalid plan type. Choose Starter, Growth, or Pro.' },
+        { status: 400 }
+      )
+    }
 
-    // Use values provided by developer (with minimums enforced)
-    const finalTestersNeeded = Math.max(MIN_TESTERS, testersNeeded || 20)
-    const normalizedDuration = typeof testDuration === 'number' ? Math.trunc(testDuration) : undefined
-    const finalTestDuration = Math.max(MIN_DURATION, normalizedDuration || 14)
-    const paymentPerTesterEur = Math.max(MIN_PAYMENT_EUR, customPaymentPerTester || 7.5)
-    const finalPaymentPerTester = toCents(paymentPerTesterEur)
-    const finalTotalBudget = finalPaymentPerTester * finalTestersNeeded
+    const plan = PLANS[planType]
 
-    const platformFeePercent = 0.15
-    const platformFee = Math.round(finalTotalBudget * platformFeePercent)
+    // Validate Google Play link format (basic check)
+    if (!googlePlayLink.includes('play.google.com/apps/testing/')) {
+      return NextResponse.json(
+        { error: 'Invalid Google Play closed test link. It should look like: https://play.google.com/apps/testing/com.example.app' },
+        { status: 400 }
+      )
+    }
+
+    // Convert EUR amounts to cents for storage
+    const paymentPerTesterCents = toCents(plan.paymentPerTesterEur)
+    const totalBudgetCents = toCents(plan.paymentPerTesterEur * plan.testers)
+    const platformFeeCents = toCents(plan.platformFeeEur)
+    const totalCostCents = toCents(plan.totalEur)
 
     // Create job in DRAFT status
     const job = await prisma.testingJob.create({
       data: {
         developerId: currentUser.userId,
-        appName,
-        appDescription,
-        packageName: packageName || null,
-        googlePlayLink,
-        testersNeeded: finalTestersNeeded,
-        testDuration: finalTestDuration,
-        paymentPerTester: finalPaymentPerTester,
-        totalBudget: finalTotalBudget,
-        platformFee,
-        status: 'DRAFT'
+        appName: appName.trim(),
+        appDescription: appDescription.trim(),
+        packageName: packageName?.trim() || null,
+        googlePlayLink: googlePlayLink.trim(),
+        appCategory: appCategory?.trim() || null,
+        minAndroidVersion: minAndroidVersion?.trim() || null,
+        testersNeeded: plan.testers,
+        testDuration: plan.duration,
+        paymentPerTester: paymentPerTesterCents,
+        totalBudget: totalBudgetCents,
+        platformFee: platformFeeCents,
+        status: 'DRAFT',
+        planType: planType,
       }
     })
 
     return NextResponse.json({
       success: true,
       jobId: job.id,
+      planType: planType,
+      totalCostEur: plan.totalEur,
+      totalCostCents: totalCostCents,
       requiresPayment: true,
-      message: 'Job created. Complete payment in EUR before publishing.',
+      message: `Job created with ${plan.label || planType} plan. Complete payment of ${plan.totalEur} EUR before publishing.`,
     })
 
   } catch (error) {
@@ -129,7 +172,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const currentUser = await getCurrentUser()
-    
+
     if (!currentUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }

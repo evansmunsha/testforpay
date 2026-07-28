@@ -2,14 +2,16 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertCircle, DollarSign, Trash2 } from 'lucide-react'
+import { AlertCircle, DollarSign, Trash2, Users, Clock, Shield, MessageSquare, BarChart3, Headphones } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { eurToUsd, formatEur, formatUsd, formatEurFromCents, toCents } from '@/lib/currency'
+import { eurToUsd, formatEur, formatUsd } from '@/lib/currency'
+
+type PlanType = 'STARTER' | 'GROWTH' | 'PRO'
 
 interface JobFormData {
   appName: string
@@ -21,7 +23,70 @@ interface JobFormData {
   testDuration: number
   minAndroidVersion: string
   paymentPerTester: number
-  planType: 'STARTER' | 'PROFESSIONAL' | 'CUSTOM'
+  planType: PlanType
+}
+
+interface PlanConfig {
+  testers: number
+  payment: number
+  total: number
+  fee: number
+  label: string
+  description: string
+  features: string[]
+}
+
+const PLANS: Record<PlanType, PlanConfig> = {
+  STARTER: {
+    testers: 12,
+    payment: 2.30,
+    total: 28,
+    fee: 0.40,
+    label: 'Starter',
+    description: 'Perfect for first-time publishers',
+    features: [
+      '12 verified testers',
+      '14-day testing period',
+      'Google Play opt-in verification',
+      'Basic feedback reports',
+      'Email support',
+      'Approval guarantee',
+    ],
+  },
+  GROWTH: {
+    testers: 15,
+    payment: 2.75,
+    total: 48,
+    fee: 6.75,
+    label: 'Growth',
+    description: 'For developers shipping regularly',
+    features: [
+      '15 verified testers',
+      '14-day testing period',
+      'Google Play opt-in verification',
+      'Detailed feedback reports',
+      'Priority support',
+      'Automatic dropout replacement',
+      'Approval guarantee',
+    ],
+  },
+  PRO: {
+    testers: 25,
+    payment: 2.75,
+    total: 78,
+    fee: 9.25,
+    label: 'Pro',
+    description: 'Maximum safety & insights',
+    features: [
+      '25 verified testers',
+      '14-day testing period',
+      'Google Play opt-in verification',
+      'Advanced analytics',
+      'Dedicated support',
+      'Automatic dropout replacement',
+      'Approval guarantee',
+    ],
+  },
 }
 
 const DEFAULT_JOB_FORM_DATA: JobFormData = {
@@ -30,11 +95,17 @@ const DEFAULT_JOB_FORM_DATA: JobFormData = {
   packageName: '',
   googlePlayLink: '',
   appCategory: '',
-  testersNeeded: 20,
+  testersNeeded: PLANS.STARTER.testers,
   testDuration: 14,
   minAndroidVersion: '',
-  paymentPerTester: 7.5,
+  paymentPerTester: PLANS.STARTER.payment,
   planType: 'STARTER',
+}
+
+function normalizePlanType(plan: string): PlanType {
+  if (plan === 'GROWTH') return 'GROWTH'
+  if (plan === 'PRO' || plan === 'PROFESSIONAL') return 'PRO'
+  return 'STARTER'
 }
 
 function getStoredJobFormState(): {
@@ -52,11 +123,17 @@ function getStoredJobFormState(): {
     }
 
     const parsedData = JSON.parse(savedData) as Partial<JobFormData>
+    const planType = normalizePlanType(parsedData.planType || 'STARTER')
+    const plan = PLANS[planType]
 
     return {
       formData: {
         ...DEFAULT_JOB_FORM_DATA,
         ...parsedData,
+        planType,
+        testersNeeded: plan.testers,
+        paymentPerTester: plan.payment,
+        testDuration: 14,
       },
       hasStoredData: true,
     }
@@ -75,6 +152,8 @@ export function JobForm() {
   const [formData, setFormData] = useState<JobFormData>(initialDraftState.formData)
   const hasHydratedRef = useRef(false)
 
+  const currentPlan = PLANS[formData.planType]
+
   useEffect(() => {
     if (!hasHydratedRef.current) {
       hasHydratedRef.current = true
@@ -88,11 +167,19 @@ export function JobForm() {
     }
   }, [formData])
 
-  const totalBudget = formData.paymentPerTester * formData.testersNeeded
-  const platformFee = totalBudget * 0.15
-  const totalCostEur = totalBudget + platformFee
-  const totalCostEurCents = toCents(totalCostEur)
-  const totalCostUsd = eurToUsd(totalCostEur)
+  const handlePlanChange = (planType: PlanType) => {
+    const plan = PLANS[planType]
+    setFormData((prev) => ({
+      ...prev,
+      planType,
+      testersNeeded: plan.testers,
+      paymentPerTester: plan.payment,
+    }))
+  }
+
+  const handleChange = (field: keyof JobFormData, value: string | number) => {
+    setFormData((prev) => ({ ...prev, [field]: value }))
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -122,51 +209,6 @@ export function JobForm() {
     }
   }
 
-  const MIN_TESTERS = 12
-  const RECOMMENDED_TESTERS = 20
-  const MIN_DURATION = 14
-  const MIN_PAYMENT = 5
-
-  const handlePlanChange = (plan: 'STARTER' | 'PROFESSIONAL' | 'CUSTOM') => {
-    if (plan === 'STARTER') {
-      setFormData((prev) => ({
-        ...prev,
-        planType: 'STARTER',
-        testersNeeded: 20,
-        paymentPerTester: 7.5,
-      }))
-      return
-    }
-
-    if (plan === 'PROFESSIONAL') {
-      setFormData((prev) => ({
-        ...prev,
-        planType: 'PROFESSIONAL',
-        testersNeeded: 35,
-        paymentPerTester: 7.14,
-      }))
-      return
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      planType: 'CUSTOM',
-    }))
-  }
-
-  const handleChange = (field: keyof JobFormData, value: string | number) => {
-    if (
-      field === 'testersNeeded' ||
-      field === 'paymentPerTester' ||
-      field === 'testDuration'
-    ) {
-      setFormData((prev) => ({ ...prev, [field]: value, planType: 'CUSTOM' }))
-      return
-    }
-
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
   const clearSavedData = () => {
     try {
       localStorage.removeItem('jobFormData')
@@ -176,6 +218,9 @@ export function JobForm() {
       console.error('Failed to clear form data:', error)
     }
   }
+
+  const testerTotal = currentPlan.testers * currentPlan.payment
+  const usdApprox = eurToUsd(currentPlan.total)
 
   return (
     <div className="space-y-6">
@@ -213,6 +258,7 @@ export function JobForm() {
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          {/* Plan Selection */}
           <Card>
             <CardHeader>
               <CardTitle>Choose a Plan</CardTitle>
@@ -220,55 +266,32 @@ export function JobForm() {
             </CardHeader>
             <CardContent>
               <div className="grid gap-4 md:grid-cols-3">
-                <button
-                  type="button"
-                  onClick={() => handlePlanChange('STARTER')}
-                  className={`rounded-xl border-2 p-4 text-left transition ${
-                    formData.planType === 'STARTER'
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-200'
-                  }`}
-                >
-                  <p className="text-lg font-bold">{formatUsd(eurToUsd(150))}</p>
-                  <p className="font-semibold">Starter</p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    20 verified testers, payouts set in EUR
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handlePlanChange('PROFESSIONAL')}
-                  className={`rounded-xl border-2 p-4 text-left transition ${
-                    formData.planType === 'PROFESSIONAL'
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-200'
-                  }`}
-                >
-                  <p className="text-lg font-bold">{formatUsd(eurToUsd(250))}</p>
-                  <p className="font-semibold">Professional</p>
-                  <p className="mt-1 text-xs text-gray-500">
-                    35 verified testers, payouts set in EUR
-                  </p>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handlePlanChange('CUSTOM')}
-                  className={`rounded-xl border-2 p-4 text-left transition ${
-                    formData.planType === 'CUSTOM'
-                      ? 'border-blue-600 bg-blue-50'
-                      : 'border-gray-200 hover:border-blue-200'
-                  }`}
-                >
-                  <p className="text-lg font-bold">Custom</p>
-                  <p className="font-semibold">Flexible</p>
-                  <p className="mt-1 text-xs text-gray-500">Set your own rates</p>
-                </button>
+                {(Object.keys(PLANS) as PlanType[]).map((planType) => {
+                  const plan = PLANS[planType]
+                  const isSelected = formData.planType === planType
+                  return (
+                    <button
+                      key={planType}
+                      type="button"
+                      onClick={() => handlePlanChange(planType)}
+                      className={`rounded-xl border-2 p-4 text-left transition ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50'
+                          : 'border-gray-200 hover:border-blue-200'
+                      }`}
+                    >
+                      <p className="text-2xl font-bold">{formatEur(plan.total)}</p>
+                      <p className="text-xs text-gray-400">≈{formatUsd(eurToUsd(plan.total))} USD</p>
+                      <p className="font-semibold mt-2">{plan.label}</p>
+                      <p className="mt-1 text-xs text-gray-500">{plan.testers} testers • €{plan.payment.toFixed(2)} each</p>
+                    </button>
+                  )
+                })}
               </div>
             </CardContent>
           </Card>
 
+          {/* App Information */}
           <Card>
             <CardHeader>
               <CardTitle>App Information</CardTitle>
@@ -351,52 +374,38 @@ export function JobForm() {
             </CardContent>
           </Card>
 
+          {/* Testing Requirements — Locked to Plan */}
           <Card>
             <CardHeader>
               <CardTitle>Testing Requirements</CardTitle>
-              <CardDescription>Define your testing needs</CardDescription>
+              <CardDescription>Locked to your selected plan</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="testersNeeded">Number of Testers *</Label>
+                  <Label htmlFor="testersNeeded">Number of Testers</Label>
                   <Input
                     id="testersNeeded"
                     type="number"
-                    min={MIN_TESTERS}
-                    max="500"
                     value={formData.testersNeeded}
-                    onChange={(e) =>
-                      handleChange(
-                        'testersNeeded',
-                        Math.max(MIN_TESTERS, parseInt(e.target.value, 10) || MIN_TESTERS)
-                      )
-                    }
-                    required
+                    disabled
+                    className="bg-gray-50 text-gray-600"
                   />
                   <p className="text-xs text-gray-500">
-                    Minimum {MIN_TESTERS} testers. Recommended: {RECOMMENDED_TESTERS}+.
+                    {currentPlan.label} plan includes {currentPlan.testers} testers.
                   </p>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="testDuration">Test Duration (days) *</Label>
+                  <Label htmlFor="testDuration">Test Duration (days)</Label>
                   <Input
                     id="testDuration"
                     type="number"
-                    min={MIN_DURATION}
-                    max="90"
-                    step="1"
                     value={formData.testDuration}
-                    onChange={(e) =>
-                      handleChange(
-                        'testDuration',
-                        Math.max(MIN_DURATION, parseInt(e.target.value, 10) || MIN_DURATION)
-                      )
-                    }
-                    required
+                    disabled
+                    className="bg-gray-50 text-gray-600"
                   />
-                  <p className="text-xs text-gray-500">Minimum 14 days for testing</p>
+                  <p className="text-xs text-gray-500">All plans require 14 days minimum</p>
                 </div>
               </div>
 
@@ -422,37 +431,26 @@ export function JobForm() {
             </CardContent>
           </Card>
 
+          {/* Tester Payment — Display Only */}
           <Card>
             <CardHeader>
-              <CardTitle>Payment</CardTitle>
-              <CardDescription>Set your tester payout in EUR</CardDescription>
+              <CardTitle>Tester Payment</CardTitle>
+              <CardDescription>What testers earn for completing this test</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="paymentPerTester">Payment Per Tester (EUR) *</Label>
-                <Input
-                  id="paymentPerTester"
-                  type="number"
-                  min={MIN_PAYMENT}
-                  max="100"
-                  step="0.50"
-                  value={formData.paymentPerTester}
-                  onChange={(e) =>
-                    handleChange(
-                      'paymentPerTester',
-                      Math.max(MIN_PAYMENT, parseFloat(e.target.value) || MIN_PAYMENT)
-                    )
-                  }
-                  required
-                />
-                <p className="text-xs text-gray-500">
-                  Minimum EUR {MIN_PAYMENT}. Higher payouts attract testers faster.
-                </p>
+            <CardContent>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-blue-600">€{currentPlan.payment.toFixed(2)}</span>
+                <span className="text-gray-500">per tester</span>
               </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Each of the {currentPlan.testers} testers receives €{currentPlan.payment.toFixed(2)} after completing the full 14-day period.
+                Total tester payout: {formatEur(testerTotal)}.
+              </p>
             </CardContent>
           </Card>
         </div>
 
+        {/* Cost Summary Sidebar */}
         <div className="lg:col-span-1">
           <Card className="sticky top-20">
             <CardHeader>
@@ -465,42 +463,40 @@ export function JobForm() {
             <CardContent className="space-y-4">
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Plan</span>
+                  <span className="font-medium">{currentPlan.label}</span>
+                </div>
+                <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Testers</span>
-                  <span className="font-medium">{formData.testersNeeded}</span>
+                  <span className="font-medium">{currentPlan.testers}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Payment per tester</span>
-                  <span className="font-medium">EUR {formData.paymentPerTester.toFixed(2)}</span>
+                  <span className="font-medium">€{currentPlan.payment.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Test duration</span>
-                  <span className="font-medium">{formData.testDuration} days</span>
+                  <span className="font-medium">14 days</span>
                 </div>
+
                 <div className="space-y-2 border-t pt-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Tester payments</span>
-                    <span className="font-medium">EUR {totalBudget.toFixed(2)}</span>
+                    <span className="font-medium">{formatEur(testerTotal)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Platform fee (15%)</span>
-                    <span className="font-medium">EUR {platformFee.toFixed(2)}</span>
+                    <span className="text-gray-600">Platform fee</span>
+                    <span className="font-medium">{formatEur(currentPlan.fee)}</span>
                   </div>
                 </div>
+
                 <div className="border-t pt-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">EUR job cost basis</span>
-                    <span className="font-medium">{formatEur(totalCostEur)}</span>
-                  </div>
-                  <div className="border-t pt-3">
-                    <div className="flex justify-between">
-                      <span className="text-lg font-semibold">Developer Charge</span>
-                      <span className="text-2xl font-bold text-blue-600">
-                        {formatEur(totalCostEur)}
-                      </span>
+                  <div className="flex justify-between items-baseline">
+                    <span className="text-lg font-semibold">Total</span>
+                    <div className="text-right">
+                      <span className="text-2xl font-bold text-blue-600">{formatEur(currentPlan.total)}</span>
+                      <p className="text-xs text-gray-400">≈{formatUsd(usdApprox)} USD</p>
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">
-                      You will be charged in EUR at checkout.
-                    </p>
                   </div>
                 </div>
               </div>
@@ -508,11 +504,12 @@ export function JobForm() {
               <div className="space-y-2 rounded-lg bg-blue-50 p-4">
                 <p className="text-sm font-medium text-blue-900">What&apos;s Included:</p>
                 <ul className="space-y-1 text-xs text-blue-700">
-                  <li>- {formData.testersNeeded} verified testers</li>
-                  <li>- {formData.testDuration}-day testing period</li>
-                  <li>- Google Play opt-in verification</li>
-                  <li>- Basic feedback from testers</li>
-                  <li>- Real-time progress tracking</li>
+                  {currentPlan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="mt-0.5">•</span>
+                      {feature}
+                    </li>
+                  ))}
                 </ul>
               </div>
 
@@ -521,7 +518,7 @@ export function JobForm() {
               </Button>
 
               <p className="text-center text-xs text-gray-500">
-                Job will be saved as draft. Complete the EUR payment on the next screen, then publish it.
+                Job will be saved as draft. Complete payment on the next screen, then publish it.
               </p>
             </CardContent>
           </Card>

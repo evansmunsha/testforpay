@@ -27,7 +27,8 @@ import {
   AlertCircle,
   Info,
   RefreshCw,
-  MessageSquare
+  MessageSquare,
+  Package
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatEurFromCents, formatUsdFromEurCents } from '@/lib/currency'
@@ -43,6 +44,7 @@ interface Job {
   testersNeeded: number
   testDuration: number
   minAndroidVersion: string | null
+  planType: string | null
   /** Payment per tester in integer cents (EUR). */
   paymentPerTester: Cents
   /** Total tester budget in integer cents (EUR). */
@@ -92,6 +94,18 @@ interface Application {
       screenSize: string | null
     } | null
   }
+}
+
+const PLAN_LABELS: Record<string, string> = {
+  STARTER: 'Starter',
+  GROWTH: 'Growth',
+  PRO: 'Pro',
+}
+
+const PLAN_COLORS: Record<string, string> = {
+  STARTER: 'bg-gray-100 text-gray-800',
+  GROWTH: 'bg-blue-100 text-blue-800',
+  PRO: 'bg-purple-100 text-purple-800',
 }
 
 export default function JobDetailPage() {
@@ -277,9 +291,8 @@ export default function JobDetailPage() {
   }
 
   const handleCancel = async () => {
-    // Calculate active testers to show in confirmation
     const activeCount = activeApplications.length + approvedApplications.length + completedApplications.length
-    
+
     const confirmMessage = activeCount > 0
       ? `Cancel this job with ${activeCount} active tester(s)?
 
@@ -292,7 +305,7 @@ Testers will be compensated based on their progress:
 
 You will receive a partial refund for unused budget.`
       : 'Are you sure you want to cancel this job? You will receive a full refund.'
-    
+
     openConfirm({
       title: 'Cancel job?',
       description: confirmMessage,
@@ -307,20 +320,19 @@ You will receive a partial refund for unused budget.`
           const data = await response.json()
 
           if (response.ok) {
-            // Build detailed message for successful cancellation
             let message = data.message
-            
+
             if (data.cancellation?.testerPayouts?.length > 0) {
               const paidTesters = data.cancellation.testerPayouts.filter((p: any) => p.amount > 0)
               if (paidTesters.length > 0) {
                 message += `. ${paidTesters.length} tester(s) compensated totaling ${formatEurFromCents(data.cancellation.totalPaidToTesters)}`
               }
             }
-            
+
             if (data.refund?.issued) {
               message += `. Your refund: ${formatEurFromCents(data.refund.amount)}`
             }
-            
+
             toast({ title: 'Job Cancelled', description: message, variant: 'success' })
             router.push('/dashboard/jobs')
           } else {
@@ -400,6 +412,8 @@ You will receive a partial refund for unused budget.`
   }
 
   const progressPercentage = (job._count.applications / job.testersNeeded) * 100
+  const planLabel = job.planType ? (PLAN_LABELS[job.planType] || job.planType) : 'Custom'
+  const planBadgeClass = job.planType ? (PLAN_COLORS[job.planType] || 'bg-gray-100 text-gray-800') : 'bg-gray-100 text-gray-800'
 
   // Group applications by status
   const pendingApplications = job.applications.filter(app => app.status === 'PENDING')
@@ -460,6 +474,10 @@ You will receive a partial refund for unused budget.`
               <Badge className={getStatusColor(job.status)}>
                 {job.status}
               </Badge>
+              <Badge className={planBadgeClass}>
+                <Package className="h-3 w-3 mr-1" />
+                {planLabel}
+              </Badge>
             </div>
             <p className="text-gray-600 mt-1">Job ID: {job.id}</p>
           </div>
@@ -511,6 +529,19 @@ You will receive a partial refund for unused budget.`
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
+              Plan
+            </CardTitle>
+            <Package className="h-4 w-4 text-blue-600" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{planLabel}</div>
+            <p className="text-xs text-gray-500 mt-1">{job.testersNeeded} testers • €{(job.paymentPerTester / 100).toFixed(2)} each</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600">
               Applications
             </CardTitle>
             <Users className="h-4 w-4 text-blue-600" />
@@ -538,19 +569,6 @@ You will receive a partial refund for unused budget.`
           <CardContent>
             <div className="text-2xl font-bold">{job.testDuration} days</div>
             <p className="text-xs text-gray-500 mt-1">Testing period</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">
-              Per Tester
-            </CardTitle>
-            <DollarSign className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{formatEurFromCents(job.paymentPerTester)}</div>
-            <p className="text-xs text-gray-500 mt-1">Payment amount</p>
           </CardContent>
         </Card>
 
@@ -774,10 +792,20 @@ You will receive a partial refund for unused budget.`
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
+                <p className="text-sm text-gray-600 mb-1">Plan</p>
+                <div className="flex items-center gap-2">
+                  <Badge className={planBadgeClass}>
+                    {planLabel}
+                  </Badge>
+                  <span className="text-sm text-gray-500">{job.testersNeeded} testers</span>
+                </div>
+              </div>
+
+              <div>
                 <p className="text-sm text-gray-600 mb-1">Description</p>
                 <p className="text-sm">{job.appDescription}</p>
               </div>
-              
+
               {job.packageName && (
                 <div>
                   <p className="text-sm text-gray-600 mb-1">Package Name</p>
@@ -831,27 +859,42 @@ You will receive a partial refund for unused budget.`
             </CardHeader>
           <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Tester payments</span>
-                <span className="font-medium">{formatEurFromCents(job.totalBudget)}</span>
+                <span className="text-gray-600">Plan</span>
+                <span className="font-medium">{planLabel}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Platform fee (15%)</span>
-                <span className="font-medium">{formatEurFromCents(job.platformFee)}</span>
+                <span className="text-gray-600">Testers</span>
+                <span className="font-medium">{job.testersNeeded}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Developer charge</span>
-                <span className="font-medium">{formatUsdFromEurCents(totalChargeEurCents)}</span>
+                <span className="text-gray-600">Payment per tester</span>
+                <span className="font-medium">{formatEurFromCents(job.paymentPerTester)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Test duration</span>
+                <span className="font-medium">{job.testDuration} days</span>
+              </div>
+
+              <div className="space-y-2 border-t pt-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Tester payments</span>
+                  <span className="font-medium">{formatEurFromCents(job.totalBudget)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-gray-600">Platform fee</span>
+                  <span className="font-medium">{formatEurFromCents(job.platformFee)}</span>
+                </div>
               </div>
               <div className="border-t pt-3">
-                <div className="flex justify-between">
-                  <span className="font-semibold">EUR job cost basis</span>
-                  <span className="font-bold text-lg">
-                    {formatEurFromCents(totalChargeEurCents)}
-                  </span>
+                <div className="flex justify-between items-baseline">
+                  <span className="text-lg font-semibold">Total</span>
+                  <div className="text-right">
+                    <span className="text-2xl font-bold text-blue-600">
+                      {formatEurFromCents(totalChargeEurCents)}
+                    </span>
+                    <p className="text-xs text-gray-400">≈{formatUsdFromEurCents(totalChargeEurCents)} USD</p>
+                  </div>
                 </div>
-                {/* <p className="mt-2 text-xs text-gray-500">
-                  Developers are charged in USD at checkout. Tester payouts remain denominated in EUR.
-                </p> */}
               </div>
             </CardContent>
           </Card>

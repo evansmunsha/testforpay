@@ -175,6 +175,8 @@ model TestingJob {
   id                String      @id @default(cuid())
   developerId       String
   developer         User        @relation(fields: [developerId], references: [id])
+
+  planType String? // 'STARTER' | 'GROWTH' | 'PRO'
   
   // App Details
   appName           String
