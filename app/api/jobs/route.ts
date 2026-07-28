@@ -8,6 +8,7 @@ import type { Prisma } from '@/generated/prisma/client'
 type PlanType = 'STARTER' | 'GROWTH' | 'PRO'
 
 interface PlanConfig {
+  label: string
   testers: number
   paymentPerTesterEur: number
   platformFeeEur: number
@@ -17,6 +18,7 @@ interface PlanConfig {
 
 const PLANS: Record<PlanType, PlanConfig> = {
   STARTER: {
+    label: 'Starter',
     testers: 12,
     paymentPerTesterEur: 2.30,
     platformFeeEur: 0.40,
@@ -24,6 +26,7 @@ const PLANS: Record<PlanType, PlanConfig> = {
     duration: 14,
   },
   GROWTH: {
+    label: 'Growth',
     testers: 15,
     paymentPerTesterEur: 2.75,
     platformFeeEur: 6.75,
@@ -31,6 +34,7 @@ const PLANS: Record<PlanType, PlanConfig> = {
     duration: 14,
   },
   PRO: {
+    label: 'Pro',
     testers: 25,
     paymentPerTesterEur: 2.75,
     platformFeeEur: 9.25,
