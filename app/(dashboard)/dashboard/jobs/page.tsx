@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Plus, Briefcase, Calendar, Users, DollarSign, CheckCircle } from 'lucide-react'
+import { Plus, Briefcase, Calendar, Users, DollarSign, CheckCircle, Package } from 'lucide-react'
 import Link from 'next/link'
 import { formatEurFromCents } from '@/lib/currency'
 import { useAuth } from '@/hooks/use-auth'
@@ -16,13 +16,30 @@ interface Job {
   appName: string
   appDescription: string
   status: string
+  planType: string | null
   testersNeeded: number
   /** Payment per tester in integer cents (EUR). */
   paymentPerTester: Cents
+  /** Total job cost in integer cents (EUR). */
+  totalBudget: Cents
+  /** Platform fee in integer cents (EUR). */
+  platformFee: Cents
   createdAt: string
   _count: {
     applications: number
   }
+}
+
+const PLAN_LABELS: Record<string, string> = {
+  STARTER: 'Starter',
+  GROWTH: 'Growth',
+  PRO: 'Pro',
+}
+
+const PLAN_COLORS: Record<string, string> = {
+  STARTER: 'bg-gray-100 text-gray-800 border-gray-200',
+  GROWTH: 'bg-blue-100 text-blue-800 border-blue-200',
+  PRO: 'bg-purple-100 text-purple-800 border-purple-200',
 }
 
 export default function JobsPage() {
@@ -34,7 +51,6 @@ export default function JobsPage() {
 
   useEffect(() => {
     if (user) {
-      // Check if returning from successful payment
       if (searchParams?.get('payment') === 'success') {
         activatePaidJobs()
       } else {
@@ -45,10 +61,8 @@ export default function JobsPage() {
 
   const activatePaidJobs = async () => {
     try {
-      // Activate any DRAFT jobs that were just paid
       await fetch('/api/jobs/activate-paid', { method: 'POST' })
       setPaymentSuccess(true)
-      // Clear the URL param
       window.history.replaceState({}, '', '/dashboard/jobs')
     } catch (error) {
       console.error('Failed to activate jobs:', error)
@@ -82,6 +96,18 @@ export default function JobsPage() {
       case 'CANCELLED': return 'bg-red-100 text-red-800'
       default: return 'bg-gray-100 text-gray-800'
     }
+  }
+
+  const getPlanBadge = (planType: string | null) => {
+    if (!planType) return null
+    const label = PLAN_LABELS[planType] || planType
+    const colorClass = PLAN_COLORS[planType] || 'bg-gray-100 text-gray-800 border-gray-200'
+    return (
+      <Badge variant="outline" className={`${colorClass} text-xs`}>
+        <Package className="h-3 w-3 mr-1" />
+        {label}
+      </Badge>
+    )
   }
 
   return (
@@ -125,9 +151,9 @@ export default function JobsPage() {
               <p className="font-medium mb-2">No jobs yet</p>
               <p className="text-sm mb-4">Create your first testing job to begin the flow.</p>
               <ul className="mx-auto max-w-md text-left text-sm text-gray-600 space-y-1 mb-4">
-                <li>• Add your app details and testing goals</li>
-                <li>• Set the tester need and payout</li>
-                <li>• Review applications and publish the job</li>
+                <li>• Pick a plan (Starter, Growth, or Pro)</li>
+                <li>• Add your app details and Play Console link</li>
+                <li>• Pay and publish — testers apply instantly</li>
               </ul>
               <Link href="/dashboard/jobs/new">
                 <Button>Create Job</Button>
@@ -137,56 +163,64 @@ export default function JobsPage() {
         </Card>
       ) : (
         <div className="grid gap-6">
-          {jobs.map((job) => (
-            <Link key={job.id} href={`/dashboard/jobs/${job.id}`}>
-              <Card className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <CardTitle className="text-xl">{job.appName}</CardTitle>
-                        <Badge className={getStatusColor(job.status)}>
-                          {job.status}
-                        </Badge>
+          {jobs.map((job) => {
+            const totalCost = job.totalBudget + job.platformFee
+            return (
+              <Link key={job.id} href={`/dashboard/jobs/${job.id}`}>
+                <Card className="hover:shadow-lg transition-shadow cursor-pointer">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2 flex-wrap">
+                          <CardTitle className="text-xl">{job.appName}</CardTitle>
+                          <Badge className={getStatusColor(job.status)}>
+                            {job.status}
+                          </Badge>
+                          {getPlanBadge(job.planType)}
+                        </div>
+                        <CardDescription className="line-clamp-2">
+                          {job.appDescription}
+                        </CardDescription>
                       </div>
-                      <CardDescription className="line-clamp-2">
-                        {job.appDescription}
-                      </CardDescription>
                     </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-wrap gap-6">
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Users className="h-4 w-4" />
-                      <span>
-                        {job._count.applications} / {job.testersNeeded} testers
-                      </span>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-6">
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Users className="h-4 w-4" />
+                        <span>
+                          {job._count.applications} / {job.testersNeeded} testers
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <DollarSign className="h-4 w-4" />
+                        <span>{formatEurFromCents(job.paymentPerTester)} per tester</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <DollarSign className="h-4 w-4" />
+                        <span className="font-medium">{formatEurFromCents(totalCost)} total</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-gray-600">
+                        <Calendar className="h-4 w-4" />
+                        <span>Created {new Date(job.createdAt).toLocaleDateString()}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <DollarSign className="h-4 w-4" />
-                      <span>{formatEurFromCents(job.paymentPerTester)} per tester</span>
+
+                    <div className="mt-4">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div 
+                          className="bg-blue-600 h-2 rounded-full transition-all"
+                          style={{ 
+                            width: `${Math.min((job._count.applications / job.testersNeeded) * 100, 100)}%` 
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-600">
-                      <Calendar className="h-4 w-4" />
-                      <span>Created {new Date(job.createdAt).toLocaleDateString()}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ 
-                          width: `${Math.min((job._count.applications / job.testersNeeded) * 100, 100)}%` 
-                        }}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                  </CardContent>
+                </Card>
+              </Link>
+            )
+          })}
         </div>
       )}
     </div>

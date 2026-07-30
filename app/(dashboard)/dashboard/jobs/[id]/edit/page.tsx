@@ -7,9 +7,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useToast } from '@/components/ui/toast-provider'
-import { ArrowLeft, AlertCircle, Save } from 'lucide-react'
+import { ArrowLeft, AlertCircle, Save, Package } from 'lucide-react'
 import Link from 'next/link'
 import { formatEurFromCents } from '@/lib/currency'
 import type { Cents } from '@/types/money'
@@ -24,9 +25,26 @@ interface Job {
   testersNeeded: number
   testDuration: number
   minAndroidVersion: string | null
+  planType: string | null
   /** Payment per tester in integer cents (EUR). */
   paymentPerTester: Cents
+  /** Total tester budget in integer cents (EUR). */
+  totalBudget: Cents
+  /** Platform fee in integer cents (EUR). */
+  platformFee: Cents
   status: string
+}
+
+const PLAN_LABELS: Record<string, string> = {
+  STARTER: 'Starter',
+  GROWTH: 'Growth',
+  PRO: 'Pro',
+}
+
+const PLAN_COLORS: Record<string, string> = {
+  STARTER: 'bg-gray-100 text-gray-800 border-gray-200',
+  GROWTH: 'bg-blue-100 text-blue-800 border-blue-200',
+  PRO: 'bg-purple-100 text-purple-800 border-purple-200',
 }
 
 export default function EditJobPage() {
@@ -118,6 +136,9 @@ export default function EditJobPage() {
   }
 
   const isActive = job.status === 'ACTIVE' || job.status === 'IN_PROGRESS'
+  const planLabel = job.planType ? (PLAN_LABELS[job.planType] || job.planType) : 'Custom'
+  const planBadgeClass = job.planType ? (PLAN_COLORS[job.planType] || 'bg-gray-100 text-gray-800 border-gray-200') : 'bg-gray-100 text-gray-800 border-gray-200'
+  const totalCost = job.totalBudget + job.platformFee
 
   return (
     <div className="space-y-6">
@@ -257,6 +278,15 @@ export default function EditJobPage() {
                     <span className="text-gray-600">Status</span>
                     <span className="font-medium">{job.status}</span>
                   </div>
+
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-600">Plan</span>
+                    <Badge variant="outline" className={planBadgeClass}>
+                      <Package className="h-3 w-3 mr-1" />
+                      {planLabel}
+                    </Badge>
+                  </div>
+
                   <div className="flex justify-between">
                     <span className="text-gray-600">Testers Needed</span>
                     <span className="font-medium">{job.testersNeeded}</span>
@@ -268,6 +298,18 @@ export default function EditJobPage() {
                   <div className="flex justify-between">
                     <span className="text-gray-600">Payment per Tester</span>
                     <span className="font-medium">{formatEurFromCents(job.paymentPerTester)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Tester Payments</span>
+                    <span className="font-medium">{formatEurFromCents(job.totalBudget)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Platform Fee</span>
+                    <span className="font-medium">{formatEurFromCents(job.platformFee)}</span>
+                  </div>
+                  <div className="border-t pt-2 flex justify-between">
+                    <span className="text-gray-900 font-semibold">Total</span>
+                    <span className="font-bold text-blue-600">{formatEurFromCents(totalCost)}</span>
                   </div>
                 </div>
 
