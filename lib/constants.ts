@@ -1,15 +1,16 @@
 // App Constants
 
 export const APP_NAME = 'TestForPay'
-export const APP_DESCRIPTION = 'Meet Google Play testing requirements in 24 hours'
+export const APP_DESCRIPTION = 'Get 12 real testers in 24 hours. Publish your Android app in 14 days.'
 
 // Platform Configuration
-export const PLATFORM_FEE_PERCENTAGE = 0.15 // 15%
-export const MIN_TESTERS_REQUIRED = 10
-export const MIN_TEST_DURATION_DAYS = 14
-export const MAX_TEST_DURATION_DAYS = 30
-export const MIN_PAYMENT_PER_TESTER = 5
-export const MAX_PAYMENT_PER_TESTER = 50
+// NOTE: Platform fee is now a fixed amount per plan, not a percentage.
+// See PLAN_CONFIG below for actual fees.
+export const PLATFORM_FEE_PERCENTAGE = 0 // deprecated — kept for compatibility only
+export const MIN_TESTERS_REQUIRED = 12
+export const TEST_DURATION_DAYS = 14 // locked to 14 days
+export const MIN_PAYMENT_PER_TESTER = 2 // €2.00 (Starter pays €2.30)
+export const MAX_PAYMENT_PER_TESTER = 5 // €5.00 cap
 
 // Job Status
 export const JOB_STATUS = {
@@ -71,21 +72,33 @@ export const ANDROID_VERSIONS = [
   '9',
 ] as const
 
-// Pricing Tiers
-export const PRICING_TIERS = {
+// Plan Configuration — single source of truth for pricing
+export const PLAN_CONFIG = {
   STARTER: {
     name: 'Starter',
-    price: 150,
-    testers: 20,
+    priceEurCents: 2800, // €28.00
+    testers: 12,
+    paymentPerTesterEurCents: 230, // €2.30
+    platformFeeEurCents: 40, // €0.40
+    durationDays: 14,
   },
-  PROFESSIONAL: {
-    name: 'Professional',
-    price: 250,
-    testers: 35,
+  GROWTH: {
+    name: 'Growth',
+    priceEurCents: 4800, // €48.00
+    testers: 15,
+    paymentPerTesterEurCents: 275, // €2.75
+    platformFeeEurCents: 675, // €6.75
+    durationDays: 14,
   },
-  ENTERPRISE: {
-    name: 'Enterprise',
-    price: null, // Custom pricing
-    testers: 50,
+  PRO: {
+    name: 'Pro',
+    priceEurCents: 7800, // €78.00
+    testers: 25,
+    paymentPerTesterEurCents: 275, // €2.75
+    platformFeeEurCents: 925, // €9.25
+    durationDays: 14,
   },
 } as const
+
+// Deprecated — kept only if old code imports it. Use PLAN_CONFIG instead.
+export const PRICING_TIERS = PLAN_CONFIG

@@ -13,17 +13,15 @@ export const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 })
 
-// Job Schemas
+// Job Schemas — updated for fixed plans
 export const createJobSchema = z.object({
   appName: z.string().min(3, 'App name must be at least 3 characters'),
   appDescription: z.string().min(20, 'Description must be at least 20 characters'),
   packageName: z.string().optional(),
   googlePlayLink: z.string().url('Must be a valid URL'),
   appCategory: z.string().optional(),
-  testersNeeded: z.number().min(12, 'Minimum 12 testers required').max(500),
-  testDuration: z.number().int('Must be a whole number of days').min(14, 'Minimum 14 days required').max(90),
+  planType: z.enum(['STARTER', 'GROWTH', 'PRO']),
   minAndroidVersion: z.string().optional(),
-  paymentPerTester: z.number().min(5, 'Minimum €5 per tester').max(100),
 })
 
 // Application Schemas
