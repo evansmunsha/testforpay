@@ -351,7 +351,7 @@ export default function ClosedTestingGuidePage() {
         <div className="mt-10 sm:mt-14 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="text-sm text-gray-500">
             <p className="font-medium text-gray-700">Questions?</p>
-            <p>Email us at hello@testforpay.com</p>
+            <p>Email us at testforpays@gmail.com</p>
           </div>
           <Link
             href="/"
