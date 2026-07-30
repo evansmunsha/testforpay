@@ -1,3 +1,5 @@
+//components/jobs/job-form.tsx
+
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
@@ -184,6 +186,12 @@ export function JobForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    if (formData.appDescription.trim().length < 100) {
+      setError('Please write at least 100 characters in the description so testers know what to test.')
+      return
+    }
+
     setLoading(true)
 
     try {
@@ -310,16 +318,30 @@ export function JobForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="appDescription">App Description *</Label>
+                <Label htmlFor="appDescription">
+                  App Description *
+                  <span className="text-xs text-gray-400 font-normal ml-2">
+                    ({formData.appDescription.length} / 100+ characters)
+                  </span>
+                </Label>
                 <Textarea
                   id="appDescription"
-                  placeholder="Describe your app and what testers should focus on..."
+                  placeholder="My app is a budget tracker for freelancers. Testers should focus on: 1) Does the signup flow work? 2) Can you add and delete expenses? 3) Does the export to PDF feature crash? 4) Any confusing UI on small screens?"
                   rows={5}
                   value={formData.appDescription}
                   onChange={(e) => handleChange('appDescription', e.target.value)}
                   required
+                  minLength={100}
+                  className={formData.appDescription.length > 0 && formData.appDescription.length < 100 ? 'border-red-300 focus:border-red-500' : ''}
                 />
-                <p className="text-xs text-gray-500">Minimum 20 characters</p>
+                <p className="text-xs text-gray-500">
+                  Be specific — testers need to know what features to try. The more detail you give, the better feedback you get.
+                </p>
+                {formData.appDescription.length > 0 && formData.appDescription.length < 100 && (
+                  <p className="text-xs text-red-600">
+                    Please write at least 100 characters. Current: {formData.appDescription.length}
+                  </p>
+                )}
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -513,7 +535,7 @@ export function JobForm() {
                 </ul>
               </div>
 
-              <Button onClick={handleSubmit} className="w-full" size="lg" disabled={loading}>
+              <Button onClick={handleSubmit} className="w-full" size="lg" disabled={loading || formData.appDescription.length < 100}>
                 {loading ? 'Creating Job...' : 'Create Testing Job'}
               </Button>
 

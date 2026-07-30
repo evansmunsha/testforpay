@@ -16,7 +16,7 @@ export const loginSchema = z.object({
 // Job Schemas — updated for fixed plans
 export const createJobSchema = z.object({
   appName: z.string().min(3, 'App name must be at least 3 characters'),
-  appDescription: z.string().min(20, 'Description must be at least 20 characters'),
+  appDescription: z.string().min(100, 'Please write at least 100 characters so testers know what to test'),
   packageName: z.string().optional(),
   googlePlayLink: z.string().url('Must be a valid URL'),
   appCategory: z.string().optional(),
