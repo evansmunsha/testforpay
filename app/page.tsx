@@ -215,8 +215,8 @@ export default function LandingPage() {
             </h1>
             <p className="text-xl text-gray-600 mb-8">
               {userType === 'developer'
-                ? 'Connect with verified real Android users for Google Play closed testing. Fair pay keeps testers engaged for the full 14 days, so you meet requirements and publish on schedule. Founding price: $29 for your first test.'
-                : 'Developers pay you to try their apps before they go live. Install the app, use it for 14 days, get paid $2.50–$3.00 per test. No experience needed — just an Android phone.'}
+                ? 'Connect with verified real Android users for Google Play closed testing. Fair pay keeps testers engaged for the full 14 days, so you meet requirements and publish on schedule. Founding price: €28 for your first test.'
+                : 'Developers pay you to try their apps before they go live. Install the app, use it for 14 days, get paid €2.50–€3.00 per test. No experience needed — just an Android phone.'}
             </p>
 
             {/* User Type Selection */}
@@ -249,7 +249,7 @@ export default function LandingPage() {
                 onClick={handleGetStarted}
                 className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 font-semibold text-lg flex items-center gap-2"
               >
-                {userType === 'developer' ? 'Start from $29' : 'Start Earning'} <ArrowRight className="h-5 w-5" />
+                {userType === 'developer' ? 'Start from €28' : 'Start Earning'} <ArrowRight className="h-5 w-5" />
               </button>
               <button
                 onClick={handleLogin}
@@ -261,8 +261,8 @@ export default function LandingPage() {
 
             <p className="text-sm text-gray-500">
               {userType === 'developer' 
-                ? '12 testers • 14-day testing • Approval guarantee • Founding price: $29 (20 slots)'
-                : 'Earn $2.50–$3.00 per app • Paid via PayPal or bank transfer • No experience needed'}
+                ? '12 testers • 14-day testing • Approval guarantee • Founding price: €28 (20 slots)'
+                : 'Earn €2.50–€3.00 per app • Paid via PayPal or bank transfer • No experience needed'}
             </p>
           </div>
 
@@ -425,7 +425,7 @@ export default function LandingPage() {
                   <div className="shrink-0 w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 font-bold">4</div>
                   <div>
                     <h4 className="font-semibold mb-1">Get Paid</h4>
-                    <p className="text-gray-600">Receive $2.50–$3.00 per completed test via PayPal or bank transfer</p>
+                    <p className="text-gray-600">Receive €2.50–€3.00 per completed test via PayPal or bank transfer</p>
                   </div>
                 </div>
               </div>
@@ -449,7 +449,7 @@ export default function LandingPage() {
             <div className="bg-white p-6 rounded-xl shadow-sm">
               <Heart className="h-12 w-12 text-rose-500 mb-4" />
               <h3 className="text-xl font-semibold mb-2">Fair Pay = Real Retention</h3>
-              <p className="text-gray-600">We pay testers $2.50–$3.00 per test — 2× what competitors pay. That\'s why our testers stay opted in for the full 14 days.</p>
+              <p className="text-gray-600">We pay testers €2.50–€3.00 per test — 2× what competitors pay. That\'s why our testers stay opted in for the full 14 days.</p>
             </div>
 
             <div className="bg-white p-6 rounded-xl shadow-sm">
@@ -497,8 +497,8 @@ export default function LandingPage() {
             <div className="bg-white rounded-xl shadow-lg p-8 border-2 border-gray-200">
               <h3 className="text-2xl font-bold mb-2">Starter</h3>
               <div className="flex items-baseline gap-2 mb-1">
-                <div className="text-4xl font-bold">$29</div>
-                <div className="text-lg text-gray-400 line-through">$39</div>
+                <div className="text-4xl font-bold">€28</div>
+                <div className="text-lg text-gray-400 line-through">€38</div>
               </div>
               <p className="text-amber-700 text-sm font-semibold mb-6">🚀 Founding price — limited slots</p>
               <ul className="space-y-3 mb-8">
@@ -537,8 +537,8 @@ export default function LandingPage() {
               </div>
               <h3 className="text-2xl font-bold mb-2 text-white">Growth</h3>
               <div className="flex items-baseline gap-2 mb-1">
-                <div className="text-4xl font-bold text-white">$49</div>
-                <div className="text-lg text-blue-200 line-through">$59</div>
+                <div className="text-4xl font-bold text-white">€48</div>
+                <div className="text-lg text-blue-200 line-through">€58</div>
               </div>
               <p className="text-blue-100 text-sm font-semibold mb-6">⭐ Most popular — best value</p>
               <ul className="space-y-3 mb-8 text-white">
@@ -578,8 +578,8 @@ export default function LandingPage() {
             <div className="bg-white rounded-xl shadow-lg p-8 border-2 border-gray-200">
               <h3 className="text-2xl font-bold mb-2">Pro</h3>
               <div className="flex items-baseline gap-2 mb-1">
-                <div className="text-4xl font-bold">$79</div>
-                <div className="text-lg text-gray-400 line-through">$89</div>
+                <div className="text-4xl font-bold">€78</div>
+                <div className="text-lg text-gray-400 line-through">€88</div>
               </div>
               <p className="text-gray-600 text-sm font-semibold mb-6">🛡️ Maximum safety for serious apps</p>
               <ul className="space-y-3 mb-8">
@@ -714,7 +714,7 @@ export default function LandingPage() {
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer text-lg">What do I actually get for $29?</summary>
+              <summary className="font-semibold cursor-pointer text-lg">What do I actually get for €28?</summary>
               <p className="mt-4 text-gray-700">On the Starter plan, you get 12 verified testers who join your closed test and stay for 14 days. You get a live dashboard to track who has joined and who is active. You get email support. And you get our approval guarantee — if Google rejects your app because of tester issues, we refund your full payment.</p>
             </details>
 
@@ -758,7 +758,7 @@ export default function LandingPage() {
             onClick={handleGetStarted}
             className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 font-semibold text-lg inline-flex items-center gap-2"
           >
-            Start from $29 <ArrowRight className="h-5 w-5" />
+            Start from €28 <ArrowRight className="h-5 w-5" />
           </button>
           <p className="text-blue-100 mt-4">Founding price locks in forever for your account. Regular pricing resumes after 20 slots.</p>
         </div>

@@ -62,16 +62,16 @@ export async function sendDeveloperWelcomeEmail(
         and that's exactly what we do.
       </p>
 
-      <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0;">
-        <p style="color: #1e40af; font-weight: 600; margin: 0 0 8px;">Here's how it works:</p>
-        <ol style="color: #1e40af; margin: 0; padding-left: 20px; line-height: 1.8;">
-          <li>Post your app details and set a budget</li>
-          <li>Verified testers apply and opt in to your Google Play closed test</li>
-          <li>Testers use your app for 14 days and send you daily check-ins</li>
-          <li>Testing completes — Google unlocks production publishing for you</li>
-          <li>You pay only when testing is done (escrow model)</li>
-        </ol>
-      </div>
+            <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 16px 20px; border-radius: 0 8px 8px 0; margin: 24px 0;">
+              <p style="color: #1e40af; font-weight: 600; margin: 0 0 8px;">Here's how it works:</p>
+              <ol style="color: #1e40af; margin: 0; padding-left: 20px; line-height: 1.8;">
+                <li>Pick a plan (Starter, Growth, or Pro) and add your app details</li>
+                <li>Verified testers apply and opt in to your Google Play closed test</li>
+                <li>Testers use your app for 14 days and send you daily check-ins</li>
+                <li>Testing completes — Google unlocks production publishing for you</li>
+                <li>You pay once upfront — we hold it in escrow until testing is done</li>
+              </ol>
+            </div>
 
       <p style="color: #374151; line-height: 1.6;">
         Most jobs fill within <strong>24 hours</strong>. Your testers are real Android users —
@@ -112,10 +112,9 @@ export async function sendDeveloperNudgeEmail(
         <p style="color: #166534; font-weight: 600; margin: 0 0 6px;">What you need to post a job:</p>
         <ul style="color: #166534; margin: 0; padding-left: 20px; line-height: 1.8;">
           <li>Your app name and Google Play closed test link</li>
-          <li>How many testers you need (minimum 20)</li>
-          <li>How much to pay per tester (€5–€50)</li>
+          <li>Pick a plan — Starter (12 testers, €28), Growth (15 testers, €48), or Pro (25 testers, €78)</li>
         </ul>
-        <p style="color: #166534; margin: 10px 0 0; font-size: 14px;">Takes about 2 minutes. Payment is held in escrow — you don't pay until testing completes.</p>
+        <p style="color: #166534; margin: 10px 0 0; font-size: 14px;">Takes about 2 minutes. Payment is held in escrow — testers only get paid after 14 days.</p>
       </div>
 
       ${btn('Post a Testing Job Now →', `${APP_URL}/dashboard/jobs/new`)}
@@ -471,7 +470,7 @@ export async function sendJobPostedEmail(
       <p style="color: #374151; line-height: 1.6;">
         <strong>What happens next:</strong><br/>
         Testers will apply — you'll get an email for each one. Review their device info and approve or reject.
-        Once 20+ testers are verified and testing, Google will recognise your closed test within 14 days.
+        Once 12+ testers are verified and opted in, the 14-day clock starts. Keep them engaged and you'll meet Google's requirement on schedule.
       </p>
 
       ${btn('View Applications →', `${APP_URL}/dashboard/jobs/${data.jobId}`)}

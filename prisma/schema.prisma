@@ -186,7 +186,7 @@ model TestingJob {
   appCategory       String?
   
   // Requirements
-  testersNeeded     Int         @default(10)
+  testersNeeded     Int         @default(12)
   testDuration      Int         @default(14)
   minAndroidVersion String?
   
