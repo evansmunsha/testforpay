@@ -714,10 +714,6 @@ export default function LandingPage() {
               <p className="mt-4 text-gray-700">On the Starter plan, you get 12 verified testers who join your closed test and stay for 14 days. You get a live dashboard to track who has joined and who is active. You get email support. And you get our approval guarantee — if Google rejects your app because of tester issues, we refund your full payment.</p>
             </details>
 
-            <details className="bg-white p-6 rounded-lg shadow-sm">
-              <summary className="font-semibold cursor-pointer text-lg">How do I pay? How do testers get paid?</summary>
-              <p className="mt-4 text-gray-700">You pay by card through Stripe when you post your job. Your money sits in escrow and is only released after the 14-day testing period is complete. Testers are paid via PayPal or bank transfer, whichever works for them. If testing fails, you get your money back.</p>
-            </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
               <summary className="font-semibold cursor-pointer text-lg">What if Google rejects my app?</summary>
