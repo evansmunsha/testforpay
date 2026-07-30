@@ -670,7 +670,9 @@ export default function LandingPage() {
                   <li>Google will show you an <strong>opt-in link</strong> on the same page. Copy that link and paste it back into your TestForPay dashboard.</li>
                   <li>Our testers use that link to join your closed test. That's it — you're done.</li>
                 </ol>
-                <p className="text-sm text-gray-500 mt-3">If the opt-in link doesn't show up or your console looks different, email us a screenshot and we'll walk you through it.</p>
+                <p className="text-sm text-gray-500 mt-3">
+                  If the opt-in link doesn't show up or your console looks different, email us a screenshot and we'll walk you through it. Or read our <Link href="/guides/closed-testing-101" className="text-blue-600 hover:underline">step-by-step guide with screenshots →</Link>
+                </p>
               </div>
             </details>
 
@@ -681,7 +683,9 @@ export default function LandingPage() {
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
               <summary className="font-semibold cursor-pointer text-lg">What exactly is the 14-day closed testing rule?</summary>
-              <p className="mt-4 text-gray-700">Before you can publish to production, Google requires at least 12 testers to stay in your closed test for 14 full days. If too many testers leave before day 14, your testing period may reset. That's why keeping testers engaged matters — and why we pay them fairly so they don't drop out.</p>
+              <p className="mt-4 text-gray-700">
+                Before you can publish to production, Google requires at least 12 testers to stay in your closed test for 14 full days. If too many testers leave before day 14, your testing period may reset. That's why keeping testers engaged matters — and why we pay them fairly so they don't drop out. <Link href="/guides/closed-testing-101" className="text-blue-600 hover:underline">Read our complete guide →</Link>
+              </p>
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
