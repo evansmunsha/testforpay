@@ -198,6 +198,9 @@ model TestingJob {
   // Payment tracking (for refunds)
   stripeSessionId   String?     @unique
   stripePaymentIntent String?   @unique
+
+  // Email tracking
+  testimonialEmailSent Boolean @default(false)
   
   // Status
   status            JobStatus   @default(DRAFT)

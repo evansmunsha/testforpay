@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { processPaymentById } from '@/lib/payouts'
-import { sendJobCompletedEmail } from '@/lib/email'
+import { sendJobCompletedEmail, sendTestimonialRequestEmail } from '@/lib/email'
 
 // This endpoint should be called by a cron service (e.g., Vercel Cron)
 // Runs daily to auto-complete testing applications after testing period expires
@@ -45,6 +45,43 @@ export async function GET(request: Request) {
 
     const results: AutoCompleteResult[] = []
     const now = new Date()
+
+    // ─── TESTIMONIAL REQUESTS (jobs completed 3 days ago) ───
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
+    const fourDaysAgo = new Date(now.getTime() - 4 * 24 * 60 * 60 * 1000)
+
+    const jobsNeedingTestimonial = await prisma.testingJob.findMany({
+      where: {
+        status: 'COMPLETED',
+        completedAt: {
+          gte: fourDaysAgo,
+          lte: threeDaysAgo,
+        },
+        testimonialEmailSent: false,
+      },
+      include: {
+        developer: { select: { email: true, name: true } },
+      },
+    })
+
+    for (const job of jobsNeedingTestimonial) {
+      if (job.developer?.email) {
+        try {
+          await sendTestimonialRequestEmail(job.developer.email, {
+            developerName: job.developer.name,
+            appName: job.appName,
+          })
+          await prisma.testingJob.update({
+            where: { id: job.id },
+            data: { testimonialEmailSent: true },
+          })
+          console.log(`📧 Testimonial request sent for job: ${job.id}`)
+        } catch (err) {
+          console.error('Failed to send testimonial request:', err)
+        }
+      }
+    }
+    // ─── END TESTIMONIAL REQUESTS ───
 
     // Find all applications currently in TESTING status where testingEndDate has passed
     const expiredApplications = await prisma.application.findMany({
@@ -209,6 +246,14 @@ export async function GET(request: Request) {
               include: { developer: { select: { email: true, name: true } } },
             })
             if (job && job.developer) {
+              // Mark job as completed and set completedAt
+              await prisma.testingJob.update({
+                where: { id: job.id },
+                data: {
+                  status: 'COMPLETED',
+                  completedAt: new Date(),
+                },
+              })
               await sendJobCompletedEmail(job.developer.email, {
                 developerName: job.developer.name,
                 appName: job.appName,
@@ -264,4 +309,3 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   return GET(request)
 }
-

@@ -575,3 +575,93 @@ export async function sendJobCancelledEmail(
     `),
   })
 }
+
+
+// Day 7 check-in email for developers
+export async function sendDay7CheckInEmail(
+  to: string,
+  data: {
+    developerName?: string | null
+    appName: string
+    activeTesters: number
+    daysRemaining: number
+    jobId: string
+  }
+) {
+  const greeting = data.developerName ? `Hi ${data.developerName},` : 'Hi there,'
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `📊 ${data.appName} — Day 7 update`,
+    html: emailShell(`
+      <h2 style="color: #1e293b; margin-top: 0;">Halfway there 📊</h2>
+      <p style="color: #374151; line-height: 1.6;">${greeting}</p>
+      <p style="color: #374151; line-height: 1.6;">
+        Your testing period for <strong>${data.appName}</strong> is halfway done.
+      </p>
+
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; padding: 16px 20px; border-radius: 8px; margin: 24px 0;">
+        <p style="color: #166534; font-weight: 600; margin: 0 0 6px;">Current status</p>
+        <p style="color: #166534; margin: 0; font-size: 14px;">
+          <strong>${data.activeTesters}</strong> testers still active · 
+          <strong>${data.daysRemaining}</strong> days to go
+        </p>
+      </div>
+
+      <p style="color: #374151; line-height: 1.6;">
+        If any testers dropped out, you'll see them in your dashboard. On Growth and Pro plans, we replace them automatically.
+      </p>
+
+      ${btn('View Dashboard →', `${APP_URL}/dashboard/jobs/${data.jobId}`)}
+
+      <p style="color: #6b7280; font-size: 13px; margin-top: 24px;">
+        You're on track to meet Google's requirement. Keep going.<br/>
+        <strong>Evans</strong>, TestForPay
+      </p>
+    `),
+  })
+}
+
+//send-Testimonial-RequestEmail
+export async function sendTestimonialRequestEmail(
+  to: string,
+  data: {
+    developerName?: string | null
+    appName: string
+  }
+) {
+  const greeting = data.developerName ? `Hi ${data.developerName},` : 'Hi there,'
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `Quick favor — how did ${data.appName} go?`,
+    html: emailShell(`
+      <h2 style="color: #1e293b; margin-top: 0;">How did it go?</h2>
+      <p style="color: #374151; line-height: 1.6;">${greeting}</p>
+      <p style="color: #374151; line-height: 1.6;">
+        Your app <strong>${data.appName}</strong> just passed closed testing with TestForPay. Congrats on reaching production!
+      </p>
+
+      <p style="color: #374151; line-height: 1.6;">
+        I'm a solo founder building this from Zambia. A short sentence from you would mean more than any ad I could buy.
+      </p>
+
+      <div style="background: #f9fafb; border: 1px solid #e5e7eb; padding: 16px 20px; border-radius: 8px; margin: 24px 0;">
+        <p style="color: #374151; margin: 0 0 10px; font-weight: 600;">Just reply to this email with one sentence:</p>
+        <p style="color: #6b7280; margin: 0; font-size: 14px; line-height: 1.6;">
+          "TestForPay got me 12 real testers in 6 hours and my app was approved 14 days later."<br/>
+          — or whatever actually happened. Good or bad, I read everything.
+        </p>
+      </div>
+
+      <p style="color: #374151; line-height: 1.6;">
+        No pressure at all if you're busy. Either way, good luck with the launch.
+      </p>
+
+      <p style="color: #6b7280; font-size: 13px; margin-top: 24px;">
+        <strong>Evans</strong>, TestForPay
+      </p>
+    `),
+  })
+}
+
