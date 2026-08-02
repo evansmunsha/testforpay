@@ -813,6 +813,7 @@ export default function LandingPage() {
                 <li><button onClick={() => scrollToSection('faq')} className="hover:text-white">FAQ</button></li>
               </ul>
             </div>
+            
 
             <div>
               <h4 className="font-semibold text-white mb-4">Company</h4>

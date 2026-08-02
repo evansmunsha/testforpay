@@ -1,4 +1,4 @@
-const CACHE_NAME = 'testforpay-v6';
+const CACHE_NAME = 'testforpay-v7';
 const OFFLINE_URL = '/offline';
 
 const PRECACHE_ASSETS = [
