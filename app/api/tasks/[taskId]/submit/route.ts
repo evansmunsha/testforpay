@@ -11,7 +11,7 @@ const submitSchema = z.object({
 
 export async function POST(
   request: Request,
-  { params }: { params: { taskId: string } }
+  { params }: { params: Promise<{ taskId: string }> }
 ) {
   try {
     const currentUser = await getCurrentUser()
@@ -29,10 +29,11 @@ export async function POST(
     }
 
     const { content, screenshotUrl } = parsed.data
+    const { taskId } = await params
 
     // Verify the task exists and the tester has an active application for its job
     const task = await prisma.dailyTask.findUnique({
-      where: { id: params.taskId },
+      where: { id: taskId },
       include: {
         job: {
           include: {
@@ -62,7 +63,7 @@ export async function POST(
     const existing = await prisma.taskSubmission.findUnique({
       where: {
         taskId_testerId: {
-          taskId: params.taskId,
+          taskId: taskId,
           testerId: currentUser.userId,
         },
       },
@@ -77,7 +78,7 @@ export async function POST(
 
     const submission = await prisma.taskSubmission.create({
       data: {
-        taskId: params.taskId,
+        taskId: taskId,
         testerId: currentUser.userId,
         content,
         screenshotUrl: screenshotUrl || null,

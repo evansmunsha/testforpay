@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma'
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const currentUser = await getCurrentUser()
@@ -13,8 +13,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    const { id } = await params
+
     const job = await prisma.testingJob.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         dailyTasks: {
           orderBy: { dayNumber: 'asc' },
