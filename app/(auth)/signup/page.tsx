@@ -18,9 +18,15 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  // Pre-select role from landing page choice
+  // Pre-select role from URL param (?role=DEVELOPER or ?role=TESTER) or localStorage fallback
   useEffect(() => {
     if (typeof window !== 'undefined') {
+      const urlRole = new URLSearchParams(window.location.search).get('role')?.toUpperCase()
+      if (urlRole === 'DEVELOPER' || urlRole === 'TESTER') {
+        setFormData(f => ({ ...f, role: urlRole }))
+        return
+      }
+      // Legacy localStorage fallback
       const stored = localStorage.getItem('user_type')
       if (stored === 'developer') {
         setFormData(f => ({ ...f, role: 'DEVELOPER' }))

@@ -244,19 +244,19 @@ export default function LandingPage() {
             </div>
 
             {/* CTA Buttons */}
-            <div className="flex justify-center lg:justify-start gap-4 mb-4">
-              <button
-                onClick={handleGetStarted}
-                className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 font-semibold text-lg flex items-center gap-2"
+            <div className="flex flex-col sm:flex-row justify-center lg:justify-start gap-3 mb-4">
+              <a
+                href="/signup?role=DEVELOPER"
+                className="bg-gray-900 text-white px-6 py-3 rounded-lg hover:bg-gray-800 font-semibold text-base flex items-center justify-center gap-2"
               >
-                {userType === 'developer' ? 'Start from €28' : 'Start Earning'} <ArrowRight className="h-5 w-5" />
-              </button>
-              <button
-                onClick={handleLogin}
-                className="bg-white text-blue-600 border-2 border-blue-600 px-8 py-4 rounded-lg hover:bg-blue-50 font-semibold text-lg"
+                I need testers for my app <ArrowRight className="h-4 w-4" />
+              </a>
+              <a
+                href="/signup?role=TESTER"
+                className="border-2 border-gray-900 text-gray-900 px-6 py-3 rounded-lg hover:bg-gray-50 font-semibold text-base flex items-center justify-center gap-2"
               >
-                Sign In
-              </button>
+                I want to test apps and earn
+              </a>
             </div>
 
             <p className="text-sm text-gray-500">
@@ -761,6 +761,30 @@ export default function LandingPage() {
             Start from €28 <ArrowRight className="h-5 w-5" />
           </button>
           <p className="text-blue-100 mt-4">Founding price locks in forever for your account. Regular pricing resumes after 20 slots.</p>
+        </div>
+      </section>
+
+      {/* Tester Recruitment Section — captures the tester job-seeker traffic */}
+      <section className="bg-gray-50 border-t border-gray-200 py-14 px-4">
+        <div className="max-w-2xl mx-auto text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Want to get paid to test Android apps?
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Join testers earning €2.30–€2.75 per 14-day test. No experience needed — just an Android phone and attention to detail.
+          </p>
+          <a
+            href="/signup?role=TESTER"
+            className="inline-flex items-center gap-2 bg-gray-900 text-white px-6 py-3 rounded-lg font-semibold hover:bg-gray-800 transition"
+          >
+            Sign up as a tester <ArrowRight className="h-4 w-4" />
+          </a>
+          <p className="text-xs text-gray-400 mt-4">
+            Already have an app to publish?{' '}
+            <a href="/signup?role=DEVELOPER" className="text-blue-600 hover:underline font-medium">
+              Hire testers instead →
+            </a>
+          </p>
         </div>
       </section>
 
