@@ -32,8 +32,10 @@ export function TaskTemplateSelector({
   onTemplateSelect,
   onCustomTasksChange,
 }: TaskTemplateSelectorProps) {
+  // Start in 'custom' mode if tasks are already configured (restored from draft or template selected)
+  // Only show the template picker on a truly fresh start with no tasks yet
   const [mode, setMode] = useState<'template' | 'custom'>(
-    selectedTemplate ? 'template' : 'custom'
+    customTasks.length > 0 ? 'custom' : 'template'
   )
   const [editingTask, setEditingTask] = useState<number | null>(null)
   const [editText, setEditText] = useState('')

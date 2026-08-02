@@ -174,6 +174,8 @@ export function JobForm() {
 
     try {
       localStorage.setItem('jobFormData', JSON.stringify(formData))
+      // Show the "draft saved" banner once data starts being written
+      setHasStoredData(true)
     } catch (error) {
       console.error('Failed to save form data:', error)
     }
