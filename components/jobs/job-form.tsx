@@ -12,6 +12,8 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { eurToUsd, formatEur, formatUsd } from '@/lib/currency'
+import { TaskTemplateSelector } from '@/components/jobs/task-template-selector'
+import { TASK_TEMPLATES } from '@/lib/constants'
 
 type PlanType = 'STARTER' | 'GROWTH' | 'PRO'
 
@@ -26,6 +28,8 @@ interface JobFormData {
   minAndroidVersion: string
   paymentPerTester: number
   planType: PlanType
+  taskTemplate: string | null
+  customTasks: string[]
 }
 
 interface PlanConfig {
@@ -102,6 +106,8 @@ const DEFAULT_JOB_FORM_DATA: JobFormData = {
   minAndroidVersion: '',
   paymentPerTester: PLANS.STARTER.payment,
   planType: 'STARTER',
+  taskTemplate: 'generic',
+  customTasks: [...TASK_TEMPLATES.generic],
 }
 
 function normalizePlanType(plan: string): PlanType {
@@ -136,6 +142,10 @@ function getStoredJobFormState(): {
         testersNeeded: plan.testers,
         paymentPerTester: plan.payment,
         testDuration: 14,
+        taskTemplate: parsedData.taskTemplate ?? DEFAULT_JOB_FORM_DATA.taskTemplate,
+        customTasks: Array.isArray(parsedData.customTasks) && parsedData.customTasks.length > 0
+          ? parsedData.customTasks
+          : DEFAULT_JOB_FORM_DATA.customTasks,
       },
       hasStoredData: true,
     }
@@ -200,7 +210,6 @@ export function JobForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       })
-
       const data = await response.json()
 
       if (!response.ok) {
@@ -468,6 +477,27 @@ export function JobForm() {
                 Each of the {currentPlan.testers} testers receives €{currentPlan.payment.toFixed(2)} after completing the full 14-day period.
                 Total tester payout: {formatEur(testerTotal)}.
               </p>
+            </CardContent>
+          </Card>
+
+          {/* Daily Missions */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Daily Missions</CardTitle>
+              <CardDescription>
+                Assign one task per day for your testers to complete. This proves structured engagement
+                to Google Play and gives you actionable feedback every day.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TaskTemplateSelector
+                selectedTemplate={formData.taskTemplate}
+                customTasks={formData.customTasks}
+                onTemplateSelect={(key) => handleChange('taskTemplate', key)}
+                onCustomTasksChange={(tasks) =>
+                  setFormData((prev) => ({ ...prev, customTasks: tasks }))
+                }
+              />
             </CardContent>
           </Card>
         </div>

@@ -5,10 +5,11 @@ import { formatEurFromCents } from '@/lib/currency'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Briefcase, Users, Clock, DollarSign, Plus, ArrowRight } from 'lucide-react'
+import { Briefcase, Users, Clock, DollarSign, Plus, ArrowRight, Target } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { DailyMissionCard } from '@/components/tester/daily-mission-card'
 
 export default function DashboardPage() {
   const { user, isDeveloper } = useAuth()
@@ -307,8 +308,21 @@ function TesterDashboard() {
   })
   const [loading, setLoading] = useState(true)
 
+  // Daily mission state
+  const [missionData, setMissionData] = useState<{
+    task: { id: string; taskText: string }
+    dayNumber: number
+    totalDays: number
+    isCompleted: boolean
+    submission: { content: string } | null
+    jobName: string
+  } | null>(null)
+  const [missionLoading, setMissionLoading] = useState(true)
+  const [missionError, setMissionError] = useState('')
+
   useEffect(() => {
     fetchStats()
+    fetchMission()
   }, [])
 
   const fetchStats = async () => {
@@ -323,6 +337,41 @@ function TesterDashboard() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchMission = async () => {
+    try {
+      const response = await fetch('/api/tasks/today')
+      if (response.ok) {
+        const data = await response.json()
+        setMissionData(data)
+      } else if (response.status !== 404 && response.status !== 400) {
+        // 404 = no active job, 400 = testing period not active — both are fine, just no card to show
+        const data = await response.json()
+        setMissionError(data.error ?? 'Failed to load mission')
+      }
+    } catch {
+      // Silently fail — mission card is optional
+    } finally {
+      setMissionLoading(false)
+    }
+  }
+
+  const handleMissionSubmit = async (content: string, screenshotUrl?: string) => {
+    if (!missionData) return
+    const response = await fetch(`/api/tasks/${missionData.task.id}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content, screenshotUrl }),
+    })
+
+    if (!response.ok) {
+      const data = await response.json()
+      throw new Error(data.error ?? 'Submission failed')
+    }
+
+    // Refresh mission data to show completed state
+    await fetchMission()
   }
 
   const statsConfig = [
@@ -380,6 +429,25 @@ function TesterDashboard() {
         </CardContent>
       </Card>
 
+      {/* Daily Mission — shown only when tester has an active job */}
+      {!missionLoading && missionData && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <Target className="h-5 w-5 text-blue-600" />
+            <h3 className="text-lg font-semibold">Today&apos;s Mission</h3>
+          </div>
+          <DailyMissionCard
+            dayNumber={missionData.dayNumber}
+            totalDays={missionData.totalDays}
+            taskText={missionData.task.taskText}
+            isCompleted={missionData.isCompleted}
+            existingContent={missionData.submission?.content ?? null}
+            jobName={missionData.jobName}
+            onSubmit={handleMissionSubmit}
+          />
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         {statsConfig.map((stat) => {
@@ -413,7 +481,7 @@ function TesterDashboard() {
           <CardContent className="space-y-4">
             <p className="text-sm text-gray-600">
               Browse available testing jobs and start earning money by testing apps. 
-              Earn €5-€15 per app!
+              Earn €2.50-€3 per app!
             </p>
             <Link href="/dashboard/browse">
               <Button className="w-full gap-2">

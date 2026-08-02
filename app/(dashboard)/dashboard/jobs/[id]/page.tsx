@@ -14,6 +14,7 @@ import { DailyCheckInPanel } from '@/components/applications/daily-checkin-panel
 import { CheckoutForm } from '@/components/payments/checkout-form'
 import { useToast } from '@/components/ui/toast-provider'
 import { TestingReportViewer } from '@/components/jobs/testing-report-viewer'
+import { TaskSubmissionGrid } from '@/components/jobs/task-submission-grid'
 import { 
   ArrowLeft, 
   Calendar, 
@@ -629,7 +630,7 @@ You will receive a partial refund for unused budget.`
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs defaultValue="applications" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="applications">
                 All ({job.applications.length})
               </TabsTrigger>
@@ -644,6 +645,9 @@ You will receive a partial refund for unused budget.`
               </TabsTrigger>
               <TabsTrigger value="checkins">
                 Check-ins
+              </TabsTrigger>
+              <TabsTrigger value="missions">
+                Missions
               </TabsTrigger>
               <TabsTrigger value="report">
                 Report
@@ -772,10 +776,13 @@ You will receive a partial refund for unused budget.`
               )}
             </TabsContent>
 
+            <TabsContent value="missions" className="space-y-4">
+              <TaskSubmissionGrid jobId={job.id} />
+            </TabsContent>
+
             <TabsContent value="report" className="space-y-4">
               <TestingReportViewer jobId={job.id} />
-            </TabsContent>
-          </Tabs>
+            </TabsContent>          </Tabs>
         </div>
 
         {/* Sidebar */}

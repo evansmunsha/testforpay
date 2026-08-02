@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { toCents } from '@/lib/currency'
+import { TASK_TEMPLATES, type TaskTemplateKey } from '@/lib/constants'
 import type { Prisma } from '@/generated/prisma/client'
 
 type PlanType = 'STARTER' | 'GROWTH' | 'PRO'
@@ -62,6 +63,8 @@ interface CreateJobRequestBody {
   paymentPerTester?: number
   appCategory?: string
   minAndroidVersion?: string
+  taskTemplate?: string
+  customTasks?: string[]
 }
 
 const JOB_STATUS_FILTERS = ['DRAFT', 'ACTIVE', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const
@@ -99,6 +102,8 @@ export async function POST(request: Request) {
       planType: rawPlanType,
       appCategory,
       minAndroidVersion,
+      taskTemplate,
+      customTasks,
     } = body
 
     // Validation
@@ -152,6 +157,25 @@ export async function POST(request: Request) {
         status: 'DRAFT',
         planType: planType,
       }
+    })
+
+    // Seed daily tasks — use customTasks if provided, else pick from template, else generic
+    const durationDays = plan.duration // 14
+    let tasks: string[]
+    if (Array.isArray(customTasks) && customTasks.length >= durationDays) {
+      tasks = customTasks.slice(0, durationDays)
+    } else if (taskTemplate && taskTemplate in TASK_TEMPLATES) {
+      tasks = [...TASK_TEMPLATES[taskTemplate as TaskTemplateKey]].slice(0, durationDays)
+    } else {
+      tasks = [...TASK_TEMPLATES.generic].slice(0, durationDays)
+    }
+
+    await prisma.dailyTask.createMany({
+      data: tasks.map((taskText, index) => ({
+        jobId: job.id,
+        dayNumber: index + 1,
+        taskText,
+      })),
     })
 
     return NextResponse.json({

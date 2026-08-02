@@ -107,6 +107,7 @@ model User {
   feedbackReports   FeedbackReport[]
   usageLogs         AppUsageLog[] @relation("UsageLogs")
   checkIns          DailyCheckIn[] @relation("TesterCheckIns")
+  taskSubmissions   TaskSubmission[]
   
   // Ratings
   averageRating    Float?   @default(0)
@@ -212,6 +213,7 @@ model TestingJob {
   applications      Application[]
   payments          Payment[]
   questionnaire     ProductionQuestionnaire?
+  dailyTasks        DailyTask[]
   
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -497,4 +499,32 @@ model DailyCheckIn {
   @@index([applicationId])
   @@index([testerId])
   @@index([createdAt])
+}
+
+model DailyTask {
+  id          String      @id @default(cuid())
+  jobId       String
+  job         TestingJob  @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  dayNumber   Int
+  taskText    String      @db.Text
+  createdAt   DateTime    @default(now())
+  submissions TaskSubmission[]
+
+  @@unique([jobId, dayNumber])
+  @@index([jobId])
+}
+
+model TaskSubmission {
+  id            String    @id @default(cuid())
+  taskId        String
+  task          DailyTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  testerId      String
+  tester        User      @relation(fields: [testerId], references: [id], onDelete: Cascade)
+  content       String    @db.Text
+  screenshotUrl String?
+  completedAt   DateTime  @default(now())
+
+  @@unique([taskId, testerId])
+  @@index([taskId])
+  @@index([testerId])
 }
