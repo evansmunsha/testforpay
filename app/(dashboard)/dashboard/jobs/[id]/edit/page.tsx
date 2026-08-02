@@ -13,6 +13,8 @@ import { useToast } from '@/components/ui/toast-provider'
 import { ArrowLeft, AlertCircle, Save, Package } from 'lucide-react'
 import Link from 'next/link'
 import { formatEurFromCents } from '@/lib/currency'
+import { TaskTemplateSelector } from '@/components/jobs/task-template-selector'
+import { TASK_TEMPLATES } from '@/lib/constants'
 import type { Cents } from '@/types/money'
 
 interface Job {
@@ -62,6 +64,9 @@ export default function EditJobPage() {
     appCategory: '',
     minAndroidVersion: '',
   })
+  const [taskTemplate, setTaskTemplate] = useState<string | null>(null)
+  const [customTasks, setCustomTasks] = useState<string[]>([...TASK_TEMPLATES.generic])
+  const [tasksLocked, setTasksLocked] = useState(false)
 
   useEffect(() => {
     fetchJob()
@@ -69,22 +74,36 @@ export default function EditJobPage() {
 
   const fetchJob = async () => {
     try {
-      const response = await fetch(`/api/jobs/${params.id}`)
-      const data = await response.json()
+      const [jobRes, tasksRes] = await Promise.all([
+        fetch(`/api/jobs/${params.id}`),
+        fetch(`/api/jobs/${params.id}/tasks`),
+      ])
+      const jobData = await jobRes.json()
 
-      if (response.ok) {
-        setJob(data.job)
+      if (jobRes.ok) {
+        setJob(jobData.job)
         setFormData({
-          appName: data.job.appName || '',
-          appDescription: data.job.appDescription || '',
-          packageName: data.job.packageName || '',
-          googlePlayLink: data.job.googlePlayLink || '',
-          appCategory: data.job.appCategory || '',
-          minAndroidVersion: data.job.minAndroidVersion || '',
+          appName: jobData.job.appName || '',
+          appDescription: jobData.job.appDescription || '',
+          packageName: jobData.job.packageName || '',
+          googlePlayLink: jobData.job.googlePlayLink || '',
+          appCategory: jobData.job.appCategory || '',
+          minAndroidVersion: jobData.job.minAndroidVersion || '',
         })
       } else {
         toast({ title: 'Error', description: 'Job not found', variant: 'destructive' })
         router.push('/dashboard/jobs')
+      }
+
+      if (tasksRes.ok) {
+        const tasksData = await tasksRes.json()
+        if (Array.isArray(tasksData.tasks) && tasksData.tasks.length > 0) {
+          setCustomTasks(tasksData.tasks.map((t: { taskText: string }) => t.taskText))
+        }
+        // Lock editing if any tester is actively testing
+        const hasActiveTester = tasksData.testers?.length > 0 &&
+          tasksData.tasks?.some((t: { submissions: unknown[] }) => t.submissions.length > 0)
+        setTasksLocked(hasActiveTester)
       }
     } catch (err) {
       toast({ title: 'Error', description: 'Failed to load job', variant: 'destructive' })
@@ -98,20 +117,41 @@ export default function EditJobPage() {
     setSaving(true)
 
     try {
-      const response = await fetch(`/api/jobs/${params.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      })
+      // Save app details and tasks in parallel
+      const requests: Promise<Response>[] = [
+        fetch(`/api/jobs/${params.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(formData),
+        }),
+      ]
 
-      const data = await response.json()
-
-      if (response.ok) {
-        toast({ title: 'Saved', description: 'Job updated successfully', variant: 'success' })
-        router.push(`/dashboard/jobs/${params.id}`)
-      } else {
-        toast({ title: 'Error', description: data.error || 'Failed to update job', variant: 'destructive' })
+      if (!tasksLocked && customTasks.length > 0) {
+        requests.push(
+          fetch(`/api/jobs/${params.id}/tasks`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tasks: customTasks }),
+          })
+        )
       }
+
+      const [jobRes, tasksRes] = await Promise.all(requests)
+      const jobData = await jobRes.json()
+
+      if (!jobRes.ok) {
+        toast({ title: 'Error', description: jobData.error || 'Failed to update job', variant: 'destructive' })
+        return
+      }
+
+      if (tasksRes && !tasksRes.ok) {
+        const tasksData = await tasksRes.json()
+        toast({ title: 'Warning', description: tasksData.error || 'Job saved but missions failed to update', variant: 'warning' })
+        return
+      }
+
+      toast({ title: 'Saved', description: 'Job and missions updated successfully', variant: 'success' })
+      router.push(`/dashboard/jobs/${params.id}`)
     } catch (err) {
       toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
     } finally {
@@ -262,6 +302,39 @@ export default function EditJobPage() {
                     </SelectContent>
                   </Select>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Daily Missions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Daily Missions</CardTitle>
+                <CardDescription>
+                  {tasksLocked
+                    ? 'Missions are locked — testers have already submitted work.'
+                    : 'Edit the 14 daily tasks testers will complete. Changes are saved when you click Save Changes.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {tasksLocked ? (
+                  <div className="space-y-2">
+                    {customTasks.map((task, i) => (
+                      <div key={i} className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
+                        <span className="shrink-0 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5 mt-0.5">
+                          Day {i + 1}
+                        </span>
+                        <p className="text-sm text-gray-700">{task}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <TaskTemplateSelector
+                    selectedTemplate={taskTemplate}
+                    customTasks={customTasks}
+                    onTemplateSelect={setTaskTemplate}
+                    onCustomTasksChange={setCustomTasks}
+                  />
+                )}
               </CardContent>
             </Card>
           </div>
