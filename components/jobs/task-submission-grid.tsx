@@ -108,12 +108,32 @@ export function TaskSubmissionGrid({ jobId }: TaskSubmissionGridProps) {
       </CardHeader>
 
       <CardContent className="overflow-x-auto">
+        {/* Always show the task list so developers can verify missions were created */}
+        <div className="space-y-2 mb-4">
+          {tasks.map((task) => (
+            <div
+              key={task.id}
+              className="flex items-start gap-3 rounded-lg border border-gray-100 bg-gray-50 px-3 py-2"
+            >
+              <span className="shrink-0 text-xs font-semibold text-blue-600 bg-blue-50 border border-blue-200 rounded px-1.5 py-0.5 mt-0.5">
+                Day {task.dayNumber}
+              </span>
+              <p className="text-sm text-gray-700 leading-relaxed">{task.taskText}</p>
+              <span className="ml-auto shrink-0 text-xs text-gray-400">
+                {task.submissions.length} submission{task.submissions.length !== 1 ? 's' : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Tester completion grid — only shown once testers are assigned */}
         {testers.length === 0 ? (
-          <p className="text-sm text-gray-500 py-4 text-center">
-            No approved testers yet. Missions will appear here once testers are approved.
+          <p className="text-xs text-gray-400 text-center py-2 border-t pt-4">
+            No approved testers yet. The completion grid will appear here once testers are active.
           </p>
         ) : (
-          <div className="min-w-[600px]">
+          <div className="min-w-[600px] border-t pt-4">
+            <p className="text-xs font-medium text-gray-500 mb-2">Completion grid</p>
             {/* Header row */}
             <div
               className="grid gap-1 text-xs"
@@ -146,9 +166,7 @@ export function TaskSubmissionGrid({ jobId }: TaskSubmissionGridProps) {
                   {tester.name ?? tester.email}
                 </div>
                 {tasks.map((task) => {
-                  const sub = task.submissions.find(
-                    (s) => s.testerId === tester.id
-                  )
+                  const sub = task.submissions.find((s) => s.testerId === tester.id)
                   return (
                     <div
                       key={`${tester.id}-${task.id}`}
