@@ -30,7 +30,9 @@ import {
   Info,
   RefreshCw,
   MessageSquare,
-  Package
+  Package,
+  Copy,
+  Mail,
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatEurFromCents, formatUsdFromEurCents } from '@/lib/currency'
@@ -108,6 +110,73 @@ const PLAN_COLORS: Record<string, string> = {
   STARTER: 'bg-gray-100 text-gray-800',
   GROWTH: 'bg-blue-100 text-blue-800',
   PRO: 'bg-purple-100 text-purple-800',
+}
+
+// Standalone card so it can use useState without issues in the parent
+function TesterEmailsCard({ emails, emailText }: { emails: string[]; emailText: string }) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(emailText)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // Fallback for older browsers
+      const el = document.createElement('textarea')
+      el.value = emailText
+      document.body.appendChild(el)
+      el.select()
+      document.execCommand('copy')
+      document.body.removeChild(el)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }
+
+  return (
+    <Card className="border-blue-200">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Mail className="h-4 w-4 text-blue-600" />
+            Tester Emails
+          </CardTitle>
+          <Badge variant="secondary" className="text-xs">{emails.length}</Badge>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Copy and paste into your Google Play Console email list.
+        </p>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="bg-gray-50 border rounded-md p-3 max-h-48 overflow-y-auto">
+          {emails.map((email, i) => (
+            <p key={i} className="text-xs font-mono text-gray-700 leading-6 select-all">
+              {email}
+            </p>
+          ))}
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full"
+          onClick={handleCopy}
+        >
+          {copied ? (
+            <>
+              <CheckCircle className="h-3.5 w-3.5 mr-2 text-green-600" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <Copy className="h-3.5 w-3.5 mr-2" />
+              Copy all emails
+            </>
+          )}
+        </Button>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function JobDetailPage() {
@@ -853,6 +922,21 @@ You will receive a partial refund for unused budget.`
               </a>
             </CardContent>
           </Card>
+
+          {/* Tester Email List — for pasting into Google Play Console */}
+          {(() => {
+            const eligibleEmails = job.applications
+              .filter(app => ['APPROVED', 'OPTED_IN', 'VERIFIED', 'TESTING', 'COMPLETED'].includes(app.status))
+              .map(app => app.tester.email)
+
+            if (eligibleEmails.length === 0) return null
+
+            const emailText = eligibleEmails.join('\n')
+
+            return (
+              <TesterEmailsCard emails={eligibleEmails} emailText={emailText} />
+            )
+          })()}
 
           <Card>
             <CardHeader>
