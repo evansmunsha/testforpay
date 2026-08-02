@@ -122,7 +122,6 @@ function TesterEmailsCard({ emails, emailText }: { emails: string[]; emailText: 
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch {
-      // Fallback for older browsers
       const el = document.createElement('textarea')
       el.value = emailText
       document.body.appendChild(el)
@@ -149,31 +148,43 @@ function TesterEmailsCard({ emails, emailText }: { emails: string[]; emailText: 
         </p>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="bg-gray-50 border rounded-md p-3 max-h-48 overflow-y-auto">
-          {emails.map((email, i) => (
-            <p key={i} className="text-xs font-mono text-gray-700 leading-6 select-all">
-              {email}
+        {emails.length === 0 ? (
+          <div className="rounded-md bg-gray-50 border border-dashed border-gray-200 p-4 text-center">
+            <Mail className="h-6 w-6 text-gray-300 mx-auto mb-2" />
+            <p className="text-xs text-gray-500 font-medium">No approved testers yet</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Once testers apply and are approved, their emails will appear here ready to copy into your Google Play Console.
             </p>
-          ))}
-        </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full"
-          onClick={handleCopy}
-        >
-          {copied ? (
-            <>
-              <CheckCircle className="h-3.5 w-3.5 mr-2 text-green-600" />
-              Copied!
-            </>
-          ) : (
-            <>
-              <Copy className="h-3.5 w-3.5 mr-2" />
-              Copy all emails
-            </>
-          )}
-        </Button>
+          </div>
+        ) : (
+          <>
+            <div className="bg-gray-50 border rounded-md p-3 max-h-48 overflow-y-auto">
+              {emails.map((email, i) => (
+                <p key={i} className="text-xs font-mono text-gray-700 leading-6 select-all">
+                  {email}
+                </p>
+              ))}
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={handleCopy}
+            >
+              {copied ? (
+                <>
+                  <CheckCircle className="h-3.5 w-3.5 mr-2 text-green-600" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <Copy className="h-3.5 w-3.5 mr-2" />
+                  Copy all emails
+                </>
+              )}
+            </Button>
+          </>
+        )}
       </CardContent>
     </Card>
   )
@@ -928,8 +939,6 @@ You will receive a partial refund for unused budget.`
             const eligibleEmails = job.applications
               .filter(app => ['APPROVED', 'OPTED_IN', 'VERIFIED', 'TESTING', 'COMPLETED'].includes(app.status))
               .map(app => app.tester.email)
-
-            if (eligibleEmails.length === 0) return null
 
             const emailText = eligibleEmails.join('\n')
 
