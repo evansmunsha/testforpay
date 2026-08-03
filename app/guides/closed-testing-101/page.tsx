@@ -38,8 +38,9 @@ const STEPS = [
   {
     number: "03",
     title: "Add Tester Emails",
-    desc: "In the Testers tab, create an email list. Paste the 12 tester emails we provide you. Save the list.",
+    desc: "In the Testers tab, create an email list. Paste the 12 tester emails we provide you. Save the list. Need a step-by-step walkthrough? Read our Play Console setup guide →",
     icon: Mail,
+    link: "/guides/play-console-setup",
   },
   {
     number: "04",
@@ -253,6 +254,15 @@ export default function ClosedTestingGuidePage() {
                   <p className="text-sm text-gray-600 mt-1 leading-relaxed">
                     {step.desc}
                   </p>
+                  {'link' in step && step.link && (
+                    <Link
+                      href={step.link}
+                      className="inline-flex items-center gap-1 mt-2 text-xs text-blue-600 hover:underline font-medium"
+                    >
+                      Step-by-step Play Console setup guide
+                      <ArrowRight className="h-3 w-3" />
+                    </Link>
+                  )}
                 </div>
               </div>
             ))}
@@ -332,13 +342,13 @@ export default function ClosedTestingGuidePage() {
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </Link>
-            <Link href="/">
+            <Link href="/guides/play-console-setup">
               <Button
                 variant="outline"
                 size="lg"
                 className="border-gray-600 text-white hover:bg-gray-800 hover:text-white px-6 sm:px-8 h-11 sm:h-12 text-sm sm:text-base"
               >
-                View Pricing
+                Next: Add testers to Play Console →
               </Button>
             </Link>
           </div>

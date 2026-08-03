@@ -662,16 +662,12 @@ export default function LandingPage() {
             <details className="bg-white p-6 rounded-lg shadow-sm">
               <summary className="font-semibold cursor-pointer text-lg">How do I get your testers into my Play Console?</summary>
               <div className="mt-4 text-gray-700 space-y-3">
-                <p>It takes about 3 minutes:</p>
-                <ol className="list-decimal list-inside space-y-2 ml-2">
-                  <li>Go to <strong>Google Play Console → Testing → Closed testing</strong> and open your track.</li>
-                  <li>In the <strong>Testers</strong> tab, create an email list.</li>
-                  <li>In your <strong>TestForPay dashboard</strong>, click <strong>"View tester emails"</strong> for your job. You'll see the list of verified testers who applied. Copy those emails and paste them into your Play Console list, then save.</li>
-                  <li>Google will show you an <strong>opt-in link</strong> on the same page. Copy that link and paste it back into your TestForPay dashboard.</li>
-                  <li>Our testers use that link to join your closed test. That's it — you're done.</li>
-                </ol>
-                <p className="text-sm text-gray-500 mt-3">
-                  If the opt-in link doesn't show up or your console looks different, email us a screenshot and we'll walk you through it. Or read our <Link href="/guides/closed-testing-101" className="text-blue-600 hover:underline">step-by-step guide with screenshots →</Link>
+                <p>We have a step-by-step guide that covers exactly this:</p>
+                <a href="/guides/play-console-setup" className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 font-medium">
+                  Read: How to Add Testers to Google Play Console →
+                </a>
+                <p className="text-sm text-gray-500 mt-2">
+                  Short version: Copy tester emails from your TestForPay dashboard → paste into Play Console → copy the opt-in link back to TestForPay → testers join automatically. Takes about 3 minutes.
                 </p>
               </div>
             </details>
@@ -813,7 +809,7 @@ export default function LandingPage() {
                 <li><button onClick={() => scrollToSection('faq')} className="hover:text-white">FAQ</button></li>
               </ul>
             </div>
-            
+
 
             <div>
               <h4 className="font-semibold text-white mb-4">Company</h4>
