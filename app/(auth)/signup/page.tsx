@@ -54,7 +54,7 @@ export default function SignupPage() {
       bg: 'bg-blue-50 border-blue-200',
       heading: 'You\'ll find verified testers for your app',
       points: [
-        'Post your app and set a budget',
+        'Post your app and describe what you need',
         'Testers apply and opt in to your Google Play test',
         'Monitor progress with daily check-ins',
         'Meet Google\'s 14-day requirement and publish',
