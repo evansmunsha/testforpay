@@ -357,6 +357,13 @@ export default function ClosedTestingGuidePage() {
           </p>
         </div>
 
+        {/* Cross-link: Want to earn money testing apps? */}
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-6 mt-8">
+          <h3 className="font-semibold text-blue-900 mb-2">Want to earn money testing apps?</h3>
+          <p className="text-blue-800 text-sm mb-4">TestForPay pays real Android users €2.30–€2.75 to test apps for 14 days. No experience needed.</p>
+          <a href="/guides/tester-guide" className="inline-flex items-center text-blue-700 font-medium hover:text-blue-900">Learn how to become a paid tester →</a>
+        </div>
+
         {/* Footer */}
         <div className="mt-10 sm:mt-14 pt-6 border-t border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="text-sm text-gray-500">

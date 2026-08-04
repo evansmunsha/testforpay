@@ -673,6 +673,23 @@ export default function LandingPage() {
             </details>
 
             <details className="bg-white p-6 rounded-lg shadow-sm">
+              <summary className="font-semibold cursor-pointer text-lg">How do I become a paid tester on TestForPay?</summary>
+              <div className="mt-4 text-gray-700 space-y-3">
+                <p>It's free to sign up and takes about 5 minutes:</p>
+                <ol className="list-decimal list-inside space-y-2 ml-2">
+                  <li>Create a free account and select <strong>"Tester"</strong> as your role</li>
+                  <li>Browse available testing jobs on your dashboard</li>
+                  <li>Apply to jobs that interest you — each shows the payment amount upfront</li>
+                  <li>Once approved, install the app via Google Play and complete daily missions for 14 days</li>
+                  <li>Get paid after the test completes — typically €2.30–€2.75 per test</li>
+                </ol>
+                <p className="mt-3">
+                  <a href="/guides/tester-guide" className="text-blue-600 hover:underline font-medium">Read the complete tester guide →</a>
+                </p>
+              </div>
+            </details>
+
+            <details className="bg-white p-6 rounded-lg shadow-sm">
               <summary className="font-semibold cursor-pointer text-lg">Is this allowed by Google Play?</summary>
               <p className="mt-4 text-gray-700">Yes. Google Play requires 12 real users to join your closed test and stay opted in for 14 days. We connect you with real Android users who genuinely install your app and remain in the test. No bots, no fake accounts, no review manipulation. This is exactly what Google asks for.</p>
             </details>
@@ -807,6 +824,12 @@ export default function LandingPage() {
                 <li><button onClick={() => scrollToSection('how-it-works')} className="hover:text-white">Features</button></li>
                 <li><button onClick={() => scrollToSection('pricing')} className="hover:text-white">Pricing</button></li>
                 <li><button onClick={() => scrollToSection('faq')} className="hover:text-white">FAQ</button></li>
+                <li>
+                  <a href="/guides/tester-guide" className="hover:text-white">How to earn money testing apps</a>
+                </li>
+                <li>
+                  <a href="/signup?role=TESTER" className="hover:text-white">Sign up as a tester</a>
+                </li>
               </ul>
             </div>
 

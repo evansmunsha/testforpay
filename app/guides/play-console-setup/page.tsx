@@ -445,6 +445,13 @@ export default function PlayConsoleSetupPage() {
           </div>
         </section>
 
+        {/* Cross-link: Want to earn money testing apps? */}
+        <div className="bg-green-50 border border-green-200 rounded-xl p-6 mt-8">
+          <h3 className="font-semibold text-green-900 mb-2">Want to earn money testing apps?</h3>
+          <p className="text-green-800 text-sm mb-4">TestForPay pays real Android users to test apps for 14 days. Works on any Android phone.</p>
+          <a href="/guides/tester-guide" className="inline-flex items-center text-green-700 font-medium hover:text-green-900">Learn how to become a paid tester →</a>
+        </div>
+
         {/* FAQ */}
         <section className="mb-10 sm:mb-14">
           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-5 flex items-center gap-2">
