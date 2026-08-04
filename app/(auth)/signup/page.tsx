@@ -44,7 +44,7 @@ export default function SignupPage() {
         'Browse available testing jobs',
         'Install the app and use it for 14 days',
         'Send daily check-ins to the developer',
-        'Get paid €5–€15 straight to your bank',
+        'Get paid €2.30–€2.75 straight to your bank',
       ],
       note: 'You need an Android phone and a Google account. No experience required.',
     },
