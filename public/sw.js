@@ -1,4 +1,4 @@
-const CACHE_NAME = 'testforpay-v8';
+const CACHE_NAME = 'testforpay-v9';
 const OFFLINE_URL = '/offline';
 
 const PRECACHE_ASSETS = [
@@ -46,6 +46,16 @@ self.addEventListener('fetch', (event) => {
 
   // Skip API requests - always go to network
   if (url.pathname.startsWith('/api/')) return;
+
+  // Skip SEO/special files - always go to network
+  if (
+    url.pathname === '/sitemap.xml' ||
+    url.pathname === '/robots.txt' ||
+    url.pathname === '/manifest.json' ||
+    url.pathname.startsWith('/sitemap') ||
+    url.pathname.endsWith('.xml') ||
+    url.pathname.endsWith('.txt')
+  ) return;
 
   // Skip external requests
   if (url.origin !== location.origin) return;
