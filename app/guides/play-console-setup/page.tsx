@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,9 +48,15 @@ const STEPS = [
           <strong>Testers</strong> tab.
         </p>
         <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-4 text-center">
-          <Monitor className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-xs text-gray-400 font-medium">
-            [Screenshot: Closed testing track with Testers / Releases / Countries tabs]
+          <Image
+            src="/01-closed-testing-tabs.png"
+            alt="Closed testing track with Testers, Releases, and Countries tabs"
+            width={900}
+            height={480}
+            className="mx-auto rounded"
+          />
+          <p className="text-xs text-gray-400 font-medium mt-2">
+            Screenshot: Closed testing track with Testers / Releases / Countries tabs
           </p>
         </div>
       </div>
@@ -73,9 +80,15 @@ const STEPS = [
           doesn&apos;t use it for anything.
         </p>
         <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-4 text-center">
-          <List className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-xs text-gray-400 font-medium">
-            [Screenshot: &quot;Create email list&quot; button in the Testers tab]
+          <Image
+            src="/02-create-email-list.png"
+            alt="'Create email list' button in the Testers tab"
+            width={900}
+            height={480}
+            className="mx-auto rounded"
+          />
+          <p className="text-xs text-gray-400 font-medium mt-2">
+            Screenshot: "Create email list" button in the Testers tab
           </p>
         </div>
         <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 flex items-start gap-2">
@@ -112,9 +125,15 @@ const STEPS = [
           email as a newline-separated list — exactly the format Google expects.
         </p>
         <div className="rounded-lg border-2 border-dashed border-blue-100 bg-blue-50 p-4 text-center">
-          <Copy className="h-8 w-8 text-blue-200 mx-auto mb-2" />
-          <p className="text-xs text-blue-400 font-medium">
-            [TestForPay: Tester Emails card with &quot;Copy all emails&quot; button]
+          <Image
+            src="/03-copy-tester-emails.png"
+            alt="TestForPay: Tester Emails card with 'Copy all emails' button"
+            width={900}
+            height={480}
+            className="mx-auto rounded"
+          />
+          <p className="text-xs text-blue-400 font-medium mt-2">
+            TestForPay: Tester Emails card with "Copy all emails" button
           </p>
         </div>
         <p className="text-sm text-gray-600 leading-relaxed">
@@ -122,9 +141,15 @@ const STEPS = [
           goes on its own line. Click <strong>Save</strong>.
         </p>
         <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-4 text-center">
-          <Mail className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-xs text-gray-400 font-medium">
-            [Screenshot: Pasting emails into the Play Console email list field]
+          <Image
+            src="/04-paste-emails.png"
+            alt="Pasting emails into the Play Console email list field"
+            width={900}
+            height={480}
+            className="mx-auto rounded"
+          />
+          <p className="text-xs text-gray-400 font-medium mt-2">
+            Screenshot: Pasting emails into the Play Console email list field
           </p>
         </div>
       </div>
@@ -148,9 +173,15 @@ const STEPS = [
           join the closed test. Copy it — you&apos;ll need it in the next step.
         </p>
         <div className="rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 p-4 text-center">
-          <Link2 className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-          <p className="text-xs text-gray-400 font-medium">
-            [Screenshot: Opt-in URL shown at the top of the Testers tab after saving]
+          <Image
+            src="/05-opt-in-link.png"
+            alt="Opt-in URL shown at the top of the Testers tab after saving"
+            width={900}
+            height={160}
+            className="mx-auto rounded"
+          />
+          <p className="text-xs text-gray-400 font-medium mt-2">
+            Screenshot: Opt-in URL shown at the top of the Testers tab after saving
           </p>
         </div>
         <div className="rounded-lg bg-blue-50 border border-blue-200 p-3 flex items-start gap-2">
@@ -181,9 +212,15 @@ const STEPS = [
           You don&apos;t have to message anyone manually.
         </p>
         <div className="rounded-lg border-2 border-dashed border-blue-100 bg-blue-50 p-4 text-center">
-          <ExternalLink className="h-8 w-8 text-blue-200 mx-auto mb-2" />
-          <p className="text-xs text-blue-400 font-medium">
-            [TestForPay: Job sidebar showing the Google Play Link field]
+          <Image
+            src="/06-google-play-link.png"
+            alt="TestForPay: Job sidebar showing the Google Play Link field"
+            width={900}
+            height={480}
+            className="mx-auto rounded"
+          />
+          <p className="text-xs text-blue-400 font-medium mt-2">
+            TestForPay: Job sidebar showing the Google Play Link field
           </p>
         </div>
       </div>
