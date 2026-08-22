@@ -1,3 +1,7 @@
+//app/guides/closed-testing-101/page.tsx
+
+
+
 "use client";
 
 import Link from "next/link";
@@ -155,6 +159,21 @@ export default function ClosedTestingGuidePage() {
             </div>
           </CardContent>
         </Card>
+
+
+        {/* Cross-link to comparison page */}
+        <div className="bg-violet-50 border border-violet-200 rounded-xl p-5 mb-10">
+          <p className="text-sm text-violet-900 leading-relaxed">
+            <strong>Looking for testers instead of the explanation?</strong>{" "}
+            See our practical comparison of every option (friends, Reddit, cheap marketplaces vs verified paid testers).
+          </p>
+          <Link
+            href="/guides/google-play-closed-testing"
+            className="inline-flex items-center gap-1 mt-2 text-sm font-medium text-violet-700 hover:underline"
+          >
+            Where to find Google Play closed testers →
+          </Link>
+        </div>
 
         {/* What is the rule */}
         <section className="mb-10 sm:mb-14">

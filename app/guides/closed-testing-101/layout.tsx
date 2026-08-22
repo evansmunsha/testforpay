@@ -12,8 +12,8 @@ export const metadata: Metadata = {
     "google play publish requirements 2026",
   ],
   openGraph: {
-    title: "Google Play 12-Tester Rule Explained — Complete Guide 2026",
-    description: "Google Play requires 12 testers opted in for 14 days before you can publish. Step-by-step guide to meeting the requirement.",
+    title: "Google Play 12-Tester Rule Explained — Closed Testing 101 (2026)",
+    description: "Everything you need to know about Google's 12 testers for 14 days requirement, common mistakes, and how the rule actually works.",
   },
 }
 
