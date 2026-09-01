@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Testimonials } from '@/components/feedback/testimonials'
+import { LiveStats } from '@/components/shared/live-stats'
 
 export const metadata = {
   title: "Hire App Testers for Google Play — 12 Testers, 14 Days",
@@ -54,6 +55,8 @@ export default function HireTestersPage() {
       </section>
 
       {/* Problem vs Solution */}
+      <LiveStats />
+
       <section className="py-12 px-6">
         <div className="max-w-4xl mx-auto grid md:grid-cols-2 rounded-xl overflow-hidden">
           <div className="bg-red-50 border-r border-red-200 p-8">

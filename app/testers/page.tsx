@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { CheckCircle, ArrowRight, Clock, Globe, DollarSign, Smartphone } from 'lucide-react'
 import { Testimonials } from '@/components/feedback/testimonials'
+import { LiveStats } from '@/components/shared/live-stats'
 
 export const metadata = {
   title: 'Get Paid to Test Apps — Earn €2.75 Per Test | TestForPay',
@@ -125,8 +126,9 @@ export default function TestersPage() {
         </div>
       </section>*/}
 
-      <section className="py-16 px-4 bg-gray-50">
-        <div className="max-w-5xl mx-auto">
+      <LiveStats className="my-0" />
+
+      <section className="py-16 px-4 bg-gray-50">        <div className="max-w-5xl mx-auto">
           <Testimonials
             limit={6}
             title="What Testers Say"

@@ -509,6 +509,23 @@ You will receive a partial refund for unused budget.`
   const isCancelled = job.status === 'CANCELLED'
   const isCompleted = job.status === 'COMPLETED'
   const isActive = ['ACTIVE', 'IN_PROGRESS'].includes(job.status)
+
+  // Count testers who are approved or beyond (ready to be added to Play Console)
+  const readyTesters = job.applications.filter(app =>
+    ['APPROVED', 'OPTED_IN', 'VERIFIED', 'TESTING', 'COMPLETED'].includes(app.status)
+  )
+  // Testers who have uploaded opt-in screenshots — waiting for dev to verify
+  const awaitingVerification = job.applications.filter(app => app.status === 'OPTED_IN')
+  // Testers currently in testing
+  const currentlyTesting = job.applications.filter(app => app.status === 'TESTING')
+  // "Ready to send emails" — enough approved testers, none have started testing yet
+  const isReadyToSendEmails = isActive &&
+    readyTesters.length >= job.testersNeeded &&
+    currentlyTesting.length === 0
+  // "Ready to verify" — enough testers have uploaded screenshots, verify all same day
+  const isReadyToVerifyAll = isActive &&
+    awaitingVerification.length >= job.testersNeeded &&
+    currentlyTesting.length === 0
   const totalChargeEurCents = job.totalBudget + job.platformFee
   const paymentReceived = !isDraft && !!job.stripePaymentIntent
   const paymentSummary = isDraft
@@ -668,12 +685,49 @@ You will receive a partial refund for unused budget.`
         </Card>
       </div>
 
+      {/* Step banners — guide dev through the correct sequence */}
+      {isReadyToVerifyAll && (
+        <div className="rounded-xl border-2 border-blue-400 bg-blue-50 p-5 flex flex-col sm:flex-row sm:items-start gap-4">
+          <CheckCircle className="h-6 w-6 text-blue-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-bold text-blue-900 text-base">
+              📸 All {awaitingVerification.length} testers have uploaded their opt-in screenshots
+            </p>
+            <p className="text-sm text-blue-800 mt-1">
+              Review each screenshot to confirm they joined your Play Console closed test. Once you verify all of them on the same day, their 14-day countdowns will all start together — keeping them in sync.
+            </p>
+            <p className="text-xs text-blue-700 mt-2 font-medium">
+              ⚠️ Verify all testers on the same day so their 14-day periods end at the same time.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!isReadyToVerifyAll && isReadyToSendEmails && (
+        <div className="rounded-xl border-2 border-green-400 bg-green-50 p-5 flex flex-col sm:flex-row sm:items-start gap-4">
+          <CheckCircle className="h-6 w-6 text-green-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="font-bold text-green-900 text-base">
+              🎉 You have {readyTesters.length} approved testers — time to add them to Play Console
+            </p>
+            <p className="text-sm text-green-800 mt-1">
+              Copy all tester emails from the sidebar and paste them into your Google Play Console email list. Share the opt-in link back here — testers will click it, upload a screenshot as proof, and then you verify all of them together to start the 14-day clock.
+            </p>
+            <a
+              href="/guides/play-console-setup"
+              className="inline-flex items-center gap-1 text-xs text-green-700 hover:underline font-medium mt-2"
+            >
+              Step-by-step: How to add testers to Play Console →
+            </a>
+          </div>
+        </div>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle>Payment Status</CardTitle>
           <CardDescription>Clear view of escrow and payouts</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        </CardHeader>        <CardContent className="space-y-4">
           <div className="text-sm">{paymentSummary}</div>
           <div className="space-y-3 text-sm">
             <div className="flex items-start gap-2">
@@ -710,7 +764,7 @@ You will receive a partial refund for unused budget.`
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <Tabs defaultValue="applications" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-7">
+            <TabsList className="grid w-full grid-cols-8">
               <TabsTrigger value="applications">
                 All ({job.applications.length})
               </TabsTrigger>
@@ -722,6 +776,9 @@ You will receive a partial refund for unused budget.`
               </TabsTrigger>
               <TabsTrigger value="completed">
                 Done ({completedApplications.length})
+              </TabsTrigger>
+              <TabsTrigger value="rejected">
+                Rejected ({rejectedApplications.length})
               </TabsTrigger>
               <TabsTrigger value="checkins">
                 Check-ins
@@ -820,6 +877,26 @@ You will receive a partial refund for unused budget.`
                 </Card>
               ) : (
                 completedApplications.map((application) => (
+                  <ApplicationCard
+                    key={application.id}
+                    application={application}
+                  />
+                ))
+              )}
+            </TabsContent>
+
+            <TabsContent value="rejected" className="space-y-4">
+              {rejectedApplications.length === 0 ? (
+                <Card>
+                  <CardContent className="pt-6">
+                    <div className="text-center py-8 text-gray-500">
+                      <XCircle className="h-10 w-10 mx-auto mb-3 text-gray-400" />
+                      <p className="font-medium">No rejected applications</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                rejectedApplications.map((application) => (
                   <ApplicationCard
                     key={application.id}
                     application={application}

@@ -6,6 +6,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowRight, Briefcase, CheckCircle2, ShieldCheck, Sparkles, Users, Menu } from 'lucide-react'
 import { Testimonials } from '@/components/feedback/testimonials'
+import { LiveStats } from '@/components/shared/live-stats'
 
 const features = [
   {
@@ -236,6 +237,9 @@ export default function HomePage() {
         <span className="hidden md:inline"> Regular price resumes after slots are filled.</span>
         <button onClick={() => scrollToSection('pricing')} className="underline ml-1 hover:text-blue-800">See prices →</button>
       </div>
+
+      {/* Live social proof — full section replacing the thin bar */}
+      <LiveStats />
 
       {/* Tester redirect banner */}
       <div className="bg-emerald-50 border-b border-emerald-200 py-3 px-4 text-center">
