@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Star } from 'lucide-react'
 
 interface Feedback {
@@ -22,29 +22,28 @@ interface Feedback {
 
 interface TestimonialsProps {
   limit?: number
-  type?: 'developer' | 'tester'
+  type?: 'developer' | 'tester' // For backwards compatibility - restricts to single type if provided
   onStateChange?: (state: { loading: boolean; hasContent: boolean }) => void
 }
 
 export function Testimonials({
-  limit = 12,
-  type,
+  limit = 100, // Increased default to fetch enough for all three sections
+  type, // If provided, restricts to single type (backwards compatibility)
   onStateChange,
 }: TestimonialsProps) {
   const [testimonials, setTestimonials] = useState<Feedback[]>([])
   const [loading, setLoading] = useState(true)
-  const hasFetchedRef = useRef(false)
 
   useEffect(() => {
-    if (hasFetchedRef.current) return
-    hasFetchedRef.current = true
-
     onStateChange?.({ loading: true, hasContent: true })
 
     const fetchTestimonials = async () => {
       try {
         const params = new URLSearchParams()
         if (limit) params.append('limit', limit.toString())
+
+        // CORRECTION: Only filter by type if explicitly provided
+        // This preserves backwards compatibility while allowing dynamic sections
         if (type) params.append('type', type)
 
         const response = await fetch(`/api/feedback?${params}`)
@@ -66,29 +65,46 @@ export function Testimonials({
     }
 
     fetchTestimonials()
-  }, [limit, type])
+  }, [limit, type, onStateChange]) // CORRECTION: Dependencies include limit and type for proper refetching
 
   if (loading) {
     return null
   }
 
-  // Categorize feedback dynamically
+  // If type prop is provided, show single-type testimonials (backwards compatibility)
+  if (type) {
+    const filteredTestimonials = testimonials.filter(t => t.type === type)
+
+    if (filteredTestimonials.length === 0) {
+      return null
+    }
+
+    return (
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTestimonials.map(testimonial => (
+            <TestimonialCard key={testimonial.id} testimonial={testimonial} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // DYNAMIC SECTIONS: When no type prop provided, organize into three sections
   const developerFeedback = testimonials.filter(
-    item => item.type === 'developer'
+    t => t.type === 'developer'
   )
 
   const verifiedTestingFeedback = testimonials.filter(
-    item =>
-      item.category === 'JOB_COMPLETION' &&
-      item.isVerified === true &&
-      item.type === 'tester'
+    t => t.category === 'JOB_COMPLETION' &&
+        t.isVerified === true &&
+        t.type === 'tester'
   )
 
   const earlyUserFeedback = testimonials.filter(
-    item =>
-      item.category === 'PLATFORM' &&
-      item.type === 'tester' &&
-      !item.isVerified
+    t => t.category === 'PLATFORM' &&
+        t.type === 'tester' &&
+        !t.isVerified
   )
 
   // Don't render if no feedback at all
@@ -98,7 +114,7 @@ export function Testimonials({
 
   return (
     <div className="space-y-16">
-      {/* Developer Testimonials Section */}
+      {/* Section 1: What Developers Say */}
       {developerFeedback.length > 0 && (
         <div className="space-y-8">
           <div className="text-center mb-10">
@@ -116,7 +132,7 @@ export function Testimonials({
         </div>
       )}
 
-      {/* Verified Testing Feedback Section */}
+      {/* Section 2: What Testers Say (Verified) */}
       {verifiedTestingFeedback.length > 0 && (
         <div className="space-y-8">
           <div className="text-center mb-10">
@@ -134,7 +150,7 @@ export function Testimonials({
         </div>
       )}
 
-      {/* Early User Feedback Section */}
+      {/* Section 3: What Early Users Say */}
       {earlyUserFeedback.length > 0 && (
         <div className="space-y-8">
           <div className="text-center mb-10">
@@ -191,7 +207,7 @@ function TestimonialCard({ testimonial }: { testimonial: Feedback }) {
           {testimonial.type === 'developer' ? '👨‍💻 Developer' : '📱 Tester'}
         </p>
 
-        {/* Verification Badge - Only when server confirms it */}
+        {/* Verification Badge - Server-provided isVerified only */}
         {testimonial.isVerified && (
           <p className="text-xs text-green-600 mt-2 font-medium flex items-center gap-1">
             <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
