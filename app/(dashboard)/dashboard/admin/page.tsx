@@ -48,8 +48,27 @@ interface User {
 }
 
 interface Job {
-  id: string; appName: string; status: string; testersNeeded: number
-  paymentPerTester: Cents; createdAt: string
+  id: string
+  appName: string
+  status: string
+  testersNeeded: number
+  paymentPerTester: Cents
+  totalBudget: Cents
+  platformFee: Cents
+  createdAt: string
+  publishedAt?: string | null
+  startedAt?: string | null
+  completedAt?: string | null
+  packageName?: string | null
+  appDescription?: string | null
+  googlePlayLink?: string | null
+  appCategory?: string | null
+  minAndroidVersion?: string | null
+  stripeSessionId?: string | null
+  stripePaymentIntent?: string | null
+  planType?: string | null
+  testimonialEmailSent?: boolean
+  testDuration?: number | null
   developer: { id: string; email: string; name: string | null }
   _count: { applications: number }
 }
@@ -166,6 +185,226 @@ function TableSkeleton({ cols = 4 }: { cols?: number }) {
   )
 }
 
+function JobDetailCard({ job, formatEurFromCents, getStatusBadge }: {
+  job: Job
+  formatEurFromCents: (value: number | bigint) => string
+  getStatusBadge: (status: string) => React.ReactNode
+}) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className={`border rounded-lg ${job._count.applications === 0 && job.status === 'ACTIVE' ? 'bg-amber-50 border-amber-300' : 'bg-white'}`}>
+      <div onClick={() => setExpanded(!expanded)} className="p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-2 flex-wrap">
+              <h3 className="font-semibold text-lg">{job.appName}</h3>
+              {getStatusBadge(job.status)}
+              {job.planType && (
+                <Badge variant="outline" className="text-xs">
+                  {job.planType}
+                </Badge>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <div className="text-gray-500">Developer</div>
+                <div className="font-medium">{job.developer.name || job.developer.email}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Testers</div>
+                <div className="font-medium">
+                  <span className={job._count.applications === 0 && job.status === 'ACTIVE' ? 'text-amber-600' : ''}>{job._count.applications}</span>
+                  <span className="text-gray-400">/{job.testersNeeded}</span>
+                </div>
+              </div>
+              <div>
+                <div className="text-gray-500">Payment/Tester</div>
+                <div className="font-medium">{formatEurFromCents(job.paymentPerTester)}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Total Budget</div>
+                <div className="font-medium">{formatEurFromCents(job.totalBudget)}</div>
+              </div>
+            </div>
+
+            {job._count.applications === 0 && job.status === 'ACTIVE' && (
+              <div className="mt-2 text-sm text-amber-700 font-medium">⚠ No applicants yet</div>
+            )}
+          </div>
+
+          <button type="button" className="text-gray-400 hover:text-gray-600" aria-label={expanded ? 'Collapse job details' : 'Expand job details'}>
+            {expanded ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="border-t bg-gray-50 p-6 space-y-6">
+          <div>
+            <h4 className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">App Details</h4>
+            <div className="bg-white rounded-lg p-4 space-y-3">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Package Name</div>
+                  <div className="text-sm font-mono">{job.packageName || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Category</div>
+                  <div className="text-sm">{job.appCategory || '—'}</div>
+                </div>
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Google Play Link</div>
+                {job.googlePlayLink ? (
+                  <a href={job.googlePlayLink} target="_blank" rel="noreferrer noopener" className="text-sm text-blue-600 hover:underline break-all">
+                    {job.googlePlayLink}
+                  </a>
+                ) : (
+                  <div className="text-sm text-gray-500">—</div>
+                )}
+              </div>
+
+              <div>
+                <div className="text-xs text-gray-500 mb-1">Description</div>
+                <div className="text-sm text-gray-700 whitespace-pre-wrap">{job.appDescription || '—'}</div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Requirements</h4>
+            <div className="bg-white rounded-lg p-4">
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Testers Needed</div>
+                  <div className="text-sm font-medium">{job.testersNeeded}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Test Duration</div>
+                  <div className="text-sm font-medium">{job.testDuration ? `${job.testDuration} days` : '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Min Android Version</div>
+                  <div className="text-sm font-medium">{job.minAndroidVersion || '—'}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Payment Details</h4>
+            <div className="bg-white rounded-lg p-4">
+              <div className="grid md:grid-cols-3 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Payment per Tester</div>
+                  <div className="text-sm font-medium">{formatEurFromCents(job.paymentPerTester)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Total Budget</div>
+                  <div className="text-sm font-medium">{formatEurFromCents(job.totalBudget)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Platform Fee</div>
+                  <div className="text-sm font-medium">{formatEurFromCents(job.platformFee)}</div>
+                </div>
+              </div>
+
+              {job.stripeSessionId && (
+                <div className="mt-4 pt-4 border-t">
+                  <div className="text-xs text-gray-500 mb-1">Stripe Session ID</div>
+                  <div className="text-xs font-mono text-gray-700">{job.stripeSessionId}</div>
+                </div>
+              )}
+
+              {job.stripePaymentIntent && (
+                <div className="mt-2">
+                  <div className="text-xs text-gray-500 mb-1">Stripe Payment Intent</div>
+                  <div className="text-xs font-mono text-gray-700">{job.stripePaymentIntent}</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Timeline</h4>
+            <div className="bg-white rounded-lg p-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Created</div>
+                  <div className="text-sm">{new Date(job.createdAt).toLocaleString()}</div>
+                </div>
+                {job.publishedAt && (
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Published</div>
+                    <div className="text-sm">{new Date(job.publishedAt).toLocaleString()}</div>
+                  </div>
+                )}
+                {job.startedAt && (
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Started</div>
+                    <div className="text-sm">{new Date(job.startedAt).toLocaleString()}</div>
+                  </div>
+                )}
+                {job.completedAt && (
+                  <div>
+                    <div className="text-xs text-gray-500 mb-1">Completed</div>
+                    <div className="text-sm">{new Date(job.completedAt).toLocaleString()}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Developer Information</h4>
+            <div className="bg-white rounded-lg p-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Name</div>
+                  <div className="text-sm font-medium">{job.developer.name || '—'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Email</div>
+                  <div className="text-sm">{job.developer.email}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Developer ID</div>
+                  <div className="text-xs font-mono text-gray-700">{job.developer.id}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-500 mb-1">Testimonial Email Sent</div>
+                  <div className="text-sm">
+                    {job.testimonialEmailSent ? <span className="text-green-600">✓ Yes</span> : <span className="text-gray-400">✗ No</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Internal Details</h4>
+            <div className="bg-white rounded-lg p-4">
+              <div className="text-xs text-gray-500 mb-1">Job ID</div>
+              <div className="text-xs font-mono text-gray-700">{job.id}</div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AdminDashboard() {
   const { user, loading } = useAuth()
   const router = useRouter()
@@ -183,6 +422,11 @@ export default function AdminDashboard() {
   const [userEmailFilter, setUserEmailFilter] = useState('')
   const [userPagination, setUserPagination] = useState<{ page: number; limit: number; total: number; totalPages: number } | null>(null)
   const [jobs, setJobs] = useState<Job[]>([])
+  const [jobSearch, setJobSearch] = useState('')
+  const [jobStatusFilter, setJobStatusFilter] = useState('')
+  const [jobLimit, setJobLimit] = useState(10)
+  const [jobPage, setJobPage] = useState(1)
+  const [jobPagination, setJobPagination] = useState<{ page: number; limit: number; total: number; totalPages: number } | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([])
@@ -315,7 +559,7 @@ export default function AdminDashboard() {
   }
 }
 
-  const fetchJobs = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/jobs'); const data = await res.json(); if (res.ok) setJobs(data.jobs || []) } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
+  const fetchJobs = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/jobs'); const data = await res.json(); if (res.ok) { setJobs(data.jobs || []); setJobPage(1) } } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
   const fetchApplications = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/applications'); const data = await res.json(); if (res.ok) setApplications(data.applications || []) } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
   const fetchPayments = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/payments'); const data = await res.json(); if (res.ok) setPayments(data.payments || []) } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
   const fetchContactMessages = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/contact'); const data = await res.json(); if (res.ok) setContactMessages(data.messages || []) } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
@@ -392,6 +636,29 @@ export default function AdminDashboard() {
     } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) } finally { setActionLoading(null) }
   }
 
+  const filteredJobs = jobs.filter(job => {
+    const matchesSearch = !jobSearch || job.appName.toLowerCase().includes(jobSearch.toLowerCase()) || (job.packageName || '').toLowerCase().includes(jobSearch.toLowerCase())
+    const matchesStatus = !jobStatusFilter || job.status === jobStatusFilter
+    return matchesSearch && matchesStatus
+  })
+
+  const jobTotals = {
+    total: filteredJobs.length,
+    totalPages: Math.max(1, Math.ceil(filteredJobs.length / jobLimit)),
+    page: Math.min(jobPage, Math.max(1, Math.ceil(filteredJobs.length / jobLimit))),
+    limit: jobLimit,
+  }
+
+  const paginatedJobs = filteredJobs.slice((jobTotals.page - 1) * jobTotals.limit, jobTotals.page * jobTotals.limit)
+
+  useEffect(() => {
+    if (jobPage > jobTotals.totalPages) setJobPage(jobTotals.totalPages)
+  }, [jobPage, jobTotals.totalPages])
+
+  useEffect(() => {
+    setJobPagination({ page: jobTotals.page, limit: jobTotals.limit, total: jobTotals.total, totalPages: jobTotals.totalPages })
+  }, [jobTotals.page, jobTotals.limit, jobTotals.total, jobTotals.totalPages])
+
   const getStatusBadge = (status: string) => {
     const cfg: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: React.ElementType }> = {
       ACTIVE: { variant: 'default', icon: CheckCircle }, COMPLETED: { variant: 'secondary', icon: CheckCircle },
@@ -399,6 +666,8 @@ export default function AdminDashboard() {
       APPROVED: { variant: 'default', icon: CheckCircle }, REJECTED: { variant: 'destructive', icon: XCircle },
       TESTING: { variant: 'default', icon: Clock }, FAILED: { variant: 'destructive', icon: XCircle },
       ESCROWED: { variant: 'outline', icon: Clock }, PROCESSING: { variant: 'default', icon: Clock },
+      CANCELLED: { variant: 'destructive', icon: XCircle }, IN_PROGRESS: { variant: 'default', icon: Clock },
+      VERIFIED: { variant: 'default', icon: CheckCircle }, OPTED_IN: { variant: 'outline', icon: Clock },
     }
     const c = cfg[status] || { variant: 'outline' as const, icon: Clock }
     const Icon = c.icon
@@ -850,38 +1119,143 @@ export default function AdminDashboard() {
         {/* ── Jobs tab ──────────────────────────────────────────────────────── */}
         <TabsContent value="jobs">
           <Card>
-            <CardHeader><CardTitle>Job Management</CardTitle><CardDescription>All testing jobs</CardDescription></CardHeader>
+            <CardHeader>
+              <CardTitle>Job Management</CardTitle>
+              <CardDescription>
+                {jobPagination ? `${jobPagination.total} total jobs` : 'All testing jobs'}
+              </CardDescription>
+            </CardHeader>
             <CardContent>
-              {loadingTab ? <TableSkeleton cols={5} /> : jobs.length === 0 ? (
+              <div className="mb-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2">
+                    <input
+                      type="text"
+                      placeholder="Search by app name or package name..."
+                      value={jobSearch}
+                      onChange={(e) => { setJobSearch(e.target.value); setJobPage(1) }}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <select
+                    value={jobStatusFilter}
+                    onChange={(e) => { setJobStatusFilter(e.target.value); setJobPage(1) }}
+                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Status</option>
+                    <option value="DRAFT">Draft</option>
+                    <option value="ACTIVE">Active</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="COMPLETED">Completed</option>
+                    <option value="CANCELLED">Cancelled</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  <select
+                    value={jobLimit}
+                    onChange={(e) => { setJobLimit(parseInt(e.target.value)); setJobPage(1) }}
+                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="10">10 per page</option>
+                    <option value="20">20 per page</option>
+                    <option value="50">50 per page</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => { setJobStatusFilter('ACTIVE'); setJobPage(1) }}
+                    className={`px-4 py-2 text-sm rounded-lg border ${jobStatusFilter === 'ACTIVE' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    Active Jobs
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setJobStatusFilter('DRAFT'); setJobPage(1) }}
+                    className={`px-4 py-2 text-sm rounded-lg border ${jobStatusFilter === 'DRAFT' ? 'bg-blue-50 border-blue-500 text-blue-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    Drafts
+                  </button>
+
+                  {(jobSearch || jobStatusFilter) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setJobSearch('')
+                        setJobStatusFilter('')
+                        setJobPage(1)
+                      }}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 underline"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {loadingTab ? <TableSkeleton cols={6} /> : paginatedJobs.length === 0 ? (
                 <div className="text-center py-12 text-gray-400"><Briefcase className="h-10 w-10 mx-auto mb-3" /><p>No jobs found</p></div>
               ) : (
-                <ScrollTable>
-                  <table className="w-full text-sm">
-                    <thead><tr className="border-b text-left text-gray-500">
-                      <th className="py-3 px-2 font-medium">App</th>
-                      <th className="py-3 px-2 font-medium">Developer</th>
-                      <th className="py-3 px-2 font-medium">Status</th>
-                      <th className="py-3 px-2 font-medium">Testers</th>
-                      <th className="py-3 px-2 font-medium">Pay/tester</th>
-                      <th className="py-3 px-2 font-medium">Created</th>
-                    </tr></thead>
-                    <tbody>
-                      {jobs.map(j => (
-                        <tr key={j.id} className={`border-b hover:bg-gray-50 transition-colors ${j._count.applications === 0 && j.status === 'ACTIVE' ? 'bg-amber-50' : ''}`}>
-                          <td className="py-3 px-2">
-                            <div className="font-medium">{j.appName}</div>
-                            {j._count.applications === 0 && j.status === 'ACTIVE' && <div className="text-xs text-amber-600 font-medium">⚠ No applicants yet</div>}
-                          </td>
-                          <td className="py-3 px-2 text-gray-500">{j.developer.name || j.developer.email}</td>
-                          <td className="py-3 px-2">{getStatusBadge(j.status)}</td>
-                          <td className="py-3 px-2"><span className="font-medium">{j._count.applications}</span><span className="text-gray-400">/{j.testersNeeded}</span></td>
-                          <td className="py-3 px-2">{formatEurFromCents(j.paymentPerTester)}</td>
-                          <td className="py-3 px-2 text-gray-400">{new Date(j.createdAt).toLocaleDateString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </ScrollTable>
+                <>
+                  <div className="space-y-4">
+                    {paginatedJobs.map(j => (
+                      <JobDetailCard key={j.id} job={j} formatEurFromCents={formatEurFromCents} getStatusBadge={getStatusBadge} />
+                    ))}
+                  </div>
+
+                  {jobPagination && jobPagination.totalPages > 1 && (
+                    <div className="mt-6 flex items-center justify-between border-t pt-4">
+                      <div className="text-sm text-gray-600">
+                        Showing {((jobPagination.page - 1) * jobPagination.limit) + 1} to{' '}
+                        {Math.min(jobPagination.page * jobPagination.limit, jobPagination.total)} of{' '}
+                        {jobPagination.total} jobs
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setJobPage(p => Math.max(1, p - 1))}
+                          disabled={jobPagination.page === 1}
+                        >
+                          Previous
+                        </Button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, jobPagination.totalPages) }, (_, i) => {
+                            let pageNum
+                            if (jobPagination.totalPages <= 5) {
+                              pageNum = i + 1
+                            } else if (jobPagination.page <= 3) {
+                              pageNum = i + 1
+                            } else if (jobPagination.page >= jobPagination.totalPages - 2) {
+                              pageNum = jobPagination.totalPages - 4 + i
+                            } else {
+                              pageNum = jobPagination.page - 2 + i
+                            }
+                            return (
+                              <Button
+                                key={pageNum}
+                                size="sm"
+                                variant={jobPagination.page === pageNum ? 'default' : 'outline'}
+                                onClick={() => setJobPage(pageNum)}
+                              >
+                                {pageNum}
+                              </Button>
+                            )
+                          })}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setJobPage(p => Math.min(jobPagination.totalPages, p + 1))}
+                          disabled={jobPagination.page === jobPagination.totalPages}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>

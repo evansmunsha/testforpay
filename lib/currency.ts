@@ -21,10 +21,10 @@ export const formatEur = (amount: number) => `€${amount.toFixed(2)}`
 
 // Money helpers for integer cents (storage) <-> euros (display)
 export const toCents = (amountEur: number) => Math.round(amountEur * 100)
-export const fromCents = (amountCents: number) => amountCents / 100
-export const formatEurFromCents = (amountCents: number) =>
+export const fromCents = (amountCents: number | bigint) => Number(amountCents) / 100
+export const formatEurFromCents = (amountCents: number | bigint) =>
   formatEur(fromCents(amountCents))
-export const formatUsdFromCents = (amountCents: number) =>
+export const formatUsdFromCents = (amountCents: number | bigint) =>
   formatUsd(fromCents(amountCents))
 
 export const getEurToUsdRate = () => {
