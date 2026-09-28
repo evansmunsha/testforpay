@@ -28,16 +28,17 @@ async function testFeedbackBugConditions() {
   console.log('Testing feedback submission vulnerabilities on UNFIXED code')
   console.log('These tests should FAIL, confirming the bug exists\n')
 
-  let testerAId: string
-  let testerBId: string
-  let testerId_noApplications: string
-  let developerId: string
-  let jobId: string
-  let completedApplicationId: string
-  let testingApplicationId: string
-  let testerAToken: string
-  let testerBToken: string
-  let testerNoAppsToken: string
+  let testerAId: string = ''
+  let testerBId: string = ''
+  let testerId_noApplications: string = ''
+  let developerId: string = ''
+  let jobId: string = ''
+  let completedApplicationId: string = ''
+  let testingApplicationId: string = ''
+  let testerAToken: string = ''
+  let testerBToken: string = ''
+  let testerNoAppsToken: string = ''
+
 
   try {
     // Setup test data
