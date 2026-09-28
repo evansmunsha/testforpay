@@ -522,7 +522,7 @@ export default function HomePage() {
             <section id="faq" className="bg-gray-50 py-20">
               <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
                 <h2 className="text-4xl font-bold text-center mb-4">Questions & Answers</h2>
-                <p className="text-center text-gray-600 mb-6">Can't find your question? <a href="mailto:hello@testforpay.com" className="text-blue-600 hover:underline font-medium">Email us</a> and a real person will reply fast.</p>
+                <p className="text-center text-gray-600 mb-6">Can't find your question? <a href="mailto:testforpays@gmail.com" className="text-blue-600 hover:underline font-medium">Email us</a> and a real person will reply fast.</p>
 
                 <div className="space-y-4">
                   <details className="bg-white p-6 rounded-lg shadow-sm">

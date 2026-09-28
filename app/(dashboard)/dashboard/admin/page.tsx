@@ -174,6 +174,14 @@ export default function AdminDashboard() {
   const [loadingStats, setLoadingStats] = useState(true)
   const [processingPayouts, setProcessingPayouts] = useState(false)
   const [users, setUsers] = useState<User[]>([])
+  // User management pagination and filters
+  const [userPage, setUserPage] = useState(1)
+  const [userLimit, setUserLimit] = useState(20)
+  const [userSearch, setUserSearch] = useState('')
+  const [userRoleFilter, setUserRoleFilter] = useState('')
+  const [userStatusFilter, setUserStatusFilter] = useState('')
+  const [userEmailFilter, setUserEmailFilter] = useState('')
+  const [userPagination, setUserPagination] = useState<{ page: number; limit: number; total: number; totalPages: number } | null>(null)
   const [jobs, setJobs] = useState<Job[]>([])
   const [applications, setApplications] = useState<Application[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
@@ -275,7 +283,38 @@ export default function AdminDashboard() {
     catch (e) { console.error('Failed to fetch stats:', e) }
     finally { setLoadingStats(false) }
   }
-  const fetchUsers = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/users'); const data = await res.json(); if (res.ok) setUsers(data.users || []) } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
+
+  useEffect(() => {
+  if (activeTab === 'users' && user?.role === 'ADMIN') {
+    fetchUsers()
+  }
+}, [userPage, userLimit, userSearch, userRoleFilter, userStatusFilter, userEmailFilter, activeTab])
+
+
+  const fetchUsers = async () => {
+  setLoadingTab(true)
+  try {
+    const params = new URLSearchParams()
+    params.set('page', userPage.toString())
+    params.set('limit', userLimit.toString())
+    if (userSearch) params.set('search', userSearch)
+    if (userRoleFilter) params.set('role', userRoleFilter)
+    if (userStatusFilter) params.set('status', userStatusFilter)
+    if (userEmailFilter) params.set('emailVerified', userEmailFilter)
+
+    const res = await fetch(`/api/admin/users?${params}`)
+    const data = await res.json()
+    if (res.ok) {
+      setUsers(data.users || [])
+      setUserPagination(data.pagination)
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    setLoadingTab(false)
+  }
+}
+
   const fetchJobs = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/jobs'); const data = await res.json(); if (res.ok) setJobs(data.jobs || []) } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
   const fetchApplications = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/applications'); const data = await res.json(); if (res.ok) setApplications(data.applications || []) } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
   const fetchPayments = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/payments'); const data = await res.json(); if (res.ok) setPayments(data.payments || []) } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
@@ -550,68 +589,263 @@ export default function AdminDashboard() {
         {/* ── Users tab ─────────────────────────────────────────────────────── */}
         <TabsContent value="users">
           <Card>
-            <CardHeader><CardTitle>User Management</CardTitle><CardDescription>All registered users</CardDescription></CardHeader>
+            <CardHeader>
+              <CardTitle>User Management</CardTitle>
+              <CardDescription>
+                {userPagination ? `${userPagination.total} total users` : 'All registered users'}
+              </CardDescription>
+            </CardHeader>
             <CardContent>
-              {loadingTab ? <TableSkeleton cols={6} /> : users.length === 0 ? (
-                <div className="text-center py-12 text-gray-400"><Users className="h-10 w-10 mx-auto mb-3" /><p>No users found</p></div>
+              {/* Filters and Search */}
+              <div className="mb-6 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Search */}
+                  <div className="lg:col-span-2">
+                    <input
+                      type="text"
+                      placeholder="Search by name or email..."
+                      value={userSearch}
+                      onChange={(e) => { setUserSearch(e.target.value); setUserPage(1) }}
+                      className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  {/* Role Filter */}
+                  <select
+                    value={userRoleFilter}
+                    onChange={(e) => { setUserRoleFilter(e.target.value); setUserPage(1) }}
+                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Roles</option>
+                    <option value="DEVELOPER">Developers</option>
+                    <option value="TESTER">Testers</option>
+                    <option value="ADMIN">Admins</option>
+                  </select>
+
+                  {/* Status Filter */}
+                  <select
+                    value={userStatusFilter}
+                    onChange={(e) => { setUserStatusFilter(e.target.value); setUserPage(1) }}
+                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Status</option>
+                    <option value="active">Active</option>
+                    <option value="suspended">Suspended</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* Email Verification Filter */}
+                  <select
+                    value={userEmailFilter}
+                    onChange={(e) => { setUserEmailFilter(e.target.value); setUserPage(1) }}
+                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">All Verification Status</option>
+                    <option value="true">Email Verified</option>
+                    <option value="false">Email Unverified</option>
+                  </select>
+
+                  {/* Results per page */}
+                  <select
+                    value={userLimit}
+                    onChange={(e) => { setUserLimit(parseInt(e.target.value)); setUserPage(1) }}
+                    className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="10">10 per page</option>
+                    <option value="20">20 per page</option>
+                    <option value="50">50 per page</option>
+                  </select>
+
+                  {/* Clear Filters */}
+                  {(userSearch || userRoleFilter || userStatusFilter || userEmailFilter) && (
+                    <button
+                      onClick={() => {
+                        setUserSearch('')
+                        setUserRoleFilter('')
+                        setUserStatusFilter('')
+                        setUserEmailFilter('')
+                        setUserPage(1)
+                      }}
+                      className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900 underline"
+                    >
+                      Clear filters
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Users Table */}
+              {loadingTab ? (
+                <TableSkeleton cols={6} />
+              ) : users.length === 0 ? (
+                <div className="text-center py-12 text-gray-400">
+                  <Users className="h-10 w-10 mx-auto mb-3" />
+                  <p>No users found</p>
+                </div>
               ) : (
-                <ScrollTable>
-                  <table className="w-full text-sm">
-                    <thead><tr className="border-b text-left text-gray-500">
-                      <th className="py-3 px-2 font-medium">User</th>
-                      <th className="py-3 px-2 font-medium">Role</th>
-                      <th className="py-3 px-2 font-medium">Status</th>
-                      <th className="py-3 px-2 font-medium">Activity</th>
-                      <th className="py-3 px-2 font-medium">Stripe</th>
-                      <th className="py-3 px-2 font-medium">Actions</th>
-                    </tr></thead>
-                    <tbody>
-                      {users.map(u => (
-                        <tr key={u.id} className={`border-b hover:bg-gray-50 transition-colors ${u.suspended ? 'bg-red-50' : ''}`}>
-                          <td className="py-3 px-2">
-                            <div className="font-medium">{u.name || '—'}</div>
-                            <div className="text-xs text-gray-400">{u.email}</div>
-                            <div className="text-xs text-gray-400">{new Date(u.createdAt).toLocaleDateString()}</div>
-                          </td>
-                          <td className="py-3 px-2">
-                            <Badge variant={u.role === 'ADMIN' ? 'destructive' : u.role === 'DEVELOPER' ? 'default' : 'secondary'}>{u.role}</Badge>
-                            <div className="text-xs text-gray-400 mt-1">{u.role === 'DEVELOPER' ? `${u._count.developedJobs} jobs` : `${u._count.applications} apps`}</div>
-                          </td>
-                          <td className="py-3 px-2">
-                            {u.suspended
-                              ? <Badge variant="destructive" className="flex items-center gap-1 w-fit"><XCircle className="h-3 w-3" />Suspended</Badge>
-                              : <Badge variant="outline" className="flex items-center gap-1 w-fit text-green-600 border-green-300"><CheckCircle className="h-3 w-3" />Active</Badge>}
-                            {u.suspendReason && <div className="text-xs text-red-400 mt-1 max-w-[120px] truncate">{u.suspendReason}</div>}
-                          </td>
-                          <td className="py-3 px-2 text-xs text-gray-400">
-                            {u.lastLoginAt
-                              ? <div>
+                <>
+                  <ScrollTable>
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left text-gray-500">
+                          <th className="py-3 px-2 font-medium">User</th>
+                          <th className="py-3 px-2 font-medium">Role</th>
+                          <th className="py-3 px-2 font-medium">Status</th>
+                          <th className="py-3 px-2 font-medium">Activity</th>
+                          <th className="py-3 px-2 font-medium">Stripe</th>
+                          <th className="py-3 px-2 font-medium">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {users.map(u => (
+                          <tr key={u.id} className={`border-b hover:bg-gray-50 transition-colors ${u.suspended ? 'bg-red-50' : ''}`}>
+                            <td className="py-3 px-2">
+                              <div className="font-medium">{u.name || '—'}</div>
+                              <div className="text-xs text-gray-400">{u.email}</div>
+                              <div className="text-xs text-gray-400">{new Date(u.createdAt).toLocaleDateString()}</div>
+                            </td>
+                            <td className="py-3 px-2">
+                              <Badge variant={u.role === 'ADMIN' ? 'destructive' : u.role === 'DEVELOPER' ? 'default' : 'secondary'}>
+                                {u.role}
+                              </Badge>
+                              <div className="text-xs text-gray-400 mt-1">
+                                {u.role === 'DEVELOPER' ? `${u._count.developedJobs} jobs` : `${u._count.applications} apps`}
+                              </div>
+                            </td>
+                            <td className="py-3 px-2">
+                              {u.suspended ? (
+                                <Badge variant="destructive" className="flex items-center gap-1 w-fit">
+                                  <XCircle className="h-3 w-3" />
+                                  Suspended
+                                </Badge>
+                              ) : (
+                                <Badge variant="outline" className="flex items-center gap-1 w-fit text-green-600 border-green-300">
+                                  <CheckCircle className="h-3 w-3" />
+                                  Active
+                                </Badge>
+                              )}
+                              {u.suspendReason && (
+                                <div className="text-xs text-red-400 mt-1 max-w-[120px] truncate">{u.suspendReason}</div>
+                              )}
+                            </td>
+                            <td className="py-3 px-2 text-xs text-gray-400">
+                              {u.lastLoginAt ? (
+                                <div>
                                   <div className="font-medium text-gray-600">{new Date(u.lastLoginAt).toLocaleDateString()}</div>
                                   <div>{u.loginCount} login{u.loginCount !== 1 ? 's' : ''}</div>
                                   {!u.emailVerified && <div className="text-amber-500 font-medium">Email unverified</div>}
                                 </div>
-                              : <span className="text-gray-300">Never logged in</span>}
-                          </td>
-                          <td className="py-3 px-2">{u.stripeAccountId ? <CheckCircle className="h-4 w-4 text-green-500" /> : <span className="text-gray-300">—</span>}</td>
-                          <td className="py-3 px-2">
-                            {u.role !== 'ADMIN' && (
-                              <div className="flex flex-col sm:flex-row gap-1">
-                                {u.suspended
-                                  ? <Button size="sm" variant="outline" onClick={() => handleSuspendUser(u.id, 'unsuspend')} disabled={actionLoading === u.id} className="text-green-600 border-green-300">Unsuspend</Button>
-                                  : <Button size="sm" variant="outline" onClick={() => handleSuspendUser(u.id, 'suspend')} disabled={actionLoading === u.id} className="text-orange-600 border-orange-300">Suspend</Button>}
-                                <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(u.id)} disabled={actionLoading === u.id}>Delete</Button>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </ScrollTable>
+                              ) : (
+                                <span className="text-gray-300">Never logged in</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-2">
+                              {u.stripeAccountId ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <span className="text-gray-300">—</span>
+                              )}
+                            </td>
+                            <td className="py-3 px-2">
+                              {u.role !== 'ADMIN' && (
+                                <div className="flex flex-col sm:flex-row gap-1">
+                                  {u.suspended ? (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleSuspendUser(u.id, 'unsuspend')}
+                                      disabled={actionLoading === u.id}
+                                      className="text-green-600 border-green-300"
+                                    >
+                                      Unsuspend
+                                    </Button>
+                                  ) : (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleSuspendUser(u.id, 'suspend')}
+                                      disabled={actionLoading === u.id}
+                                      className="text-orange-600 border-orange-300"
+                                    >
+                                      Suspend
+                                    </Button>
+                                  )}
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => handleDeleteUser(u.id)}
+                                    disabled={actionLoading === u.id}
+                                  >
+                                    Delete
+                                  </Button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </ScrollTable>
+
+                  {/* Pagination */}
+                  {userPagination && userPagination.totalPages > 1 && (
+                    <div className="mt-6 flex items-center justify-between border-t pt-4">
+                      <div className="text-sm text-gray-600">
+                        Showing {((userPagination.page - 1) * userPagination.limit) + 1} to{' '}
+                        {Math.min(userPagination.page * userPagination.limit, userPagination.total)} of{' '}
+                        {userPagination.total} users
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setUserPage(p => Math.max(1, p - 1))}
+                          disabled={userPagination.page === 1}
+                        >
+                          Previous
+                        </Button>
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, userPagination.totalPages) }, (_, i) => {
+                            let pageNum
+                            if (userPagination.totalPages <= 5) {
+                              pageNum = i + 1
+                            } else if (userPagination.page <= 3) {
+                              pageNum = i + 1
+                            } else if (userPagination.page >= userPagination.totalPages - 2) {
+                              pageNum = userPagination.totalPages - 4 + i
+                            } else {
+                              pageNum = userPagination.page - 2 + i
+                            }
+                            return (
+                              <Button
+                                key={pageNum}
+                                size="sm"
+                                variant={userPagination.page === pageNum ? 'default' : 'outline'}
+                                onClick={() => setUserPage(pageNum)}
+                              >
+                                {pageNum}
+                              </Button>
+                            )
+                          })}
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setUserPage(p => Math.min(userPagination.totalPages, p + 1))}
+                          disabled={userPagination.page === userPagination.totalPages}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
             </CardContent>
           </Card>
         </TabsContent>
+
 
         {/* ── Jobs tab ──────────────────────────────────────────────────────── */}
         <TabsContent value="jobs">
