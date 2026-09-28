@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Star } from 'lucide-react'
 
 interface Feedback {
@@ -22,28 +22,39 @@ interface Feedback {
 
 interface TestimonialsProps {
   limit?: number
-  type?: 'developer' | 'tester' // For backwards compatibility - restricts to single type if provided
+  type?: 'developer' | 'tester'
+  title?: string
+  intro?: string
   onStateChange?: (state: { loading: boolean; hasContent: boolean }) => void
 }
 
 export function Testimonials({
-  limit = 100, // Increased default to fetch enough for all three sections
-  type, // If provided, restricts to single type (backwards compatibility)
+  limit = 100, // High default for dynamic sections
+  type,
+  title,
+  intro,
   onStateChange,
 }: TestimonialsProps) {
   const [testimonials, setTestimonials] = useState<Feedback[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Stable ref for onStateChange to avoid refetch loops
+  const onStateChangeRef = useRef(onStateChange)
+
   useEffect(() => {
-    onStateChange?.({ loading: true, hasContent: true })
+    onStateChangeRef.current = onStateChange
+  }, [onStateChange])
+
+  useEffect(() => {
+    const stateCallback = onStateChangeRef.current
+    stateCallback?.({ loading: true, hasContent: true })
 
     const fetchTestimonials = async () => {
       try {
         const params = new URLSearchParams()
         if (limit) params.append('limit', limit.toString())
 
-        // CORRECTION: Only filter by type if explicitly provided
-        // This preserves backwards compatibility while allowing dynamic sections
+        // Only filter by type if explicitly provided (backwards compatibility)
         if (type) params.append('type', type)
 
         const response = await fetch(`/api/feedback?${params}`)
@@ -52,26 +63,26 @@ export function Testimonials({
         if (data.success) {
           const nextTestimonials = data.feedback || []
           setTestimonials(nextTestimonials)
-          onStateChange?.({ loading: false, hasContent: nextTestimonials.length > 0 })
+          stateCallback?.({ loading: false, hasContent: nextTestimonials.length > 0 })
         } else {
-          onStateChange?.({ loading: false, hasContent: false })
+          stateCallback?.({ loading: false, hasContent: false })
         }
       } catch (error) {
         console.error('Failed to fetch testimonials:', error)
-        onStateChange?.({ loading: false, hasContent: false })
+        stateCallback?.({ loading: false, hasContent: false })
       } finally {
         setLoading(false)
       }
     }
 
     fetchTestimonials()
-  }, [limit, type, onStateChange]) // CORRECTION: Dependencies include limit and type for proper refetching
+  }, [limit, type]) // Only depend on actual fetch parameters
 
   if (loading) {
     return null
   }
 
-  // If type prop is provided, show single-type testimonials (backwards compatibility)
+  // SINGLE-TYPE MODE: When type prop is provided (backwards compatibility)
   if (type) {
     const filteredTestimonials = testimonials.filter(t => t.type === type)
 
@@ -81,6 +92,14 @@ export function Testimonials({
 
     return (
       <div className="space-y-8">
+        {/* Use provided title/intro or defaults */}
+        {(title || intro) && (
+          <div className="text-center mb-10">
+            {title && <h2 className="text-4xl font-bold">{title}</h2>}
+            {intro && <p className="mt-4 text-center text-gray-600 text-lg">{intro}</p>}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTestimonials.map(testimonial => (
             <TestimonialCard key={testimonial.id} testimonial={testimonial} />
@@ -90,7 +109,7 @@ export function Testimonials({
     )
   }
 
-  // DYNAMIC SECTIONS: When no type prop provided, organize into three sections
+  // DYNAMIC THREE-SECTION MODE: When no type prop provided
   const developerFeedback = testimonials.filter(
     t => t.type === 'developer'
   )
@@ -112,6 +131,25 @@ export function Testimonials({
     return null
   }
 
+  // If title/intro provided in dynamic mode, show single title section with all feedback
+  if (title || intro) {
+    return (
+      <div className="space-y-8">
+        <div className="text-center mb-10">
+          {title && <h2 className="text-4xl font-bold">{title}</h2>}
+          {intro && <p className="mt-4 text-center text-gray-600 text-lg">{intro}</p>}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {testimonials.map(testimonial => (
+            <TestimonialCard key={testimonial.id} testimonial={testimonial} />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  // Dynamic three-section layout (when no title/intro/type provided)
   return (
     <div className="space-y-16">
       {/* Section 1: What Developers Say */}

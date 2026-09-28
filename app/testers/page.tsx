@@ -129,11 +129,7 @@ export default function TestersPage() {
       <LiveStats className="my-0" />
 
       <section className="py-16 px-4 bg-gray-50">        <div className="max-w-5xl mx-auto">
-          <Testimonials
-            limit={6}
-            title="What Testers Say"
-            intro="Real feedback from testers earning extra income with TestForPay"
-          />
+          <Testimonials limit={100} />
         </div>
       </section>
 

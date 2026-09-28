@@ -493,14 +493,10 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Testimonials — dynamic three-section mode */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Testimonials
-            limit={6}
-            title="What Developers Say"
-            intro="Real feedback from indie developers and small teams who passed Google Play closed testing with TestForPay"
-          />
+          <Testimonials limit={100} />
         </div>
       </section>
 

@@ -111,7 +111,7 @@ export default function HireTestersPage() {
         <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-6">
           <div className="bg-gray-50 rounded-xl p-6">
             
-            <Testimonials limit={2} title="Trusted by developers" intro="What customers say after using TestForPay to ship on time." />
+            <Testimonials limit={100} />
           </div>
           <div className="grid gap-6">
             <div className="rounded-xl border border-gray-200 p-6 bg-white">
