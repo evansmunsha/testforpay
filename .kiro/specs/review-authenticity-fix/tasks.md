@@ -1,0 +1,559 @@
+# Implementation Plan
+
+## Overview
+
+This task list implements the fix for the review authenticity bug using the bug condition methodology. The workflow follows three phases:
+1. **Exploration** - Write bug condition tests BEFORE fix to understand the vulnerability
+2. **Preservation** - Write tests for non-buggy behavior to prevent regressions
+3. **Implementation** - Apply the fix with verification
+
+## Tasks
+
+- [-] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Unverified Feedback Acceptance
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the vulnerability exists in current code
+  - **Scoped PBT Approach**: Test concrete scenarios that demonstrate the bug
+  - Write property-based test covering these scenarios:
+    1. Tester with zero completed Applications submits feedback without applicationId → SHOULD accept as PLATFORM
+    2. Tester with zero completed Applications attempts to submit feedback with applicationId → SHOULD reject (currently accepts - BUG)
+    3. Tester A attempts to submit feedback with Tester B's applicationId → SHOULD reject ownership violation (currently no check - BUG)
+    4. Tester attempts to submit feedback with TESTING status Application → SHOULD reject status violation (currently no check - BUG)
+    5. Client sends {"category": "JOB_COMPLETION"} in request body → SHOULD be ignored, category derived server-side (currently trusted - BUG)
+  - Test implementation details from Bug Condition in design (isBugCondition pseudocode)
+  - The test assertions should match the Expected Behavior Properties from design (requirements 2.2-2.7)
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found:
+    * Which scenarios currently pass that should fail?
+    * What error messages are missing?
+    * What verification checks are absent?
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.7, 1.8, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
+
+- [~] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Non-Job-Completion Feedback Behavior
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs (cases where applicationId is NOT provided)
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements:
+    1. Developer submits PLATFORM feedback → Accepted without job completion requirement
+    2. Tester with zero completed Applications submits PLATFORM feedback (no applicationId) → Accepted
+    3. Any authenticated user submits PLATFORM feedback → Accepted
+    4. Admin approval workflow via PATCH /api/admin/feedback/[id] → Updates approved status correctly
+    5. GET /api/feedback with type/limit filters → Returns approved feedback correctly
+    6. Rate limiting enforcement → Blocks excessive submissions with 429 status
+    7. Zod validation errors → Returns 400 with "Invalid feedback data"
+    8. Unauthenticated submission → Returns 401 "Not authenticated"
+    9. Testimonials component display → Shows rating, title, message, displayName unchanged
+    10. Existing feedback text preservation → Original message text never modified
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12, 3.13_
+
+- [ ] 3. Implement Review Authenticity Fix
+
+  - [~] 3.1 Update Prisma schema with feedback category and application relationship
+    - Add FeedbackCategory enum to schema.prisma:
+      ```prisma
+      enum FeedbackCategory {
+        PLATFORM
+        JOB_COMPLETION
+      }
+      ```
+    - Add fields to Feedback model:
+      * applicationId (String?, optional foreign key to Application)
+      * category (FeedbackCategory, default PLATFORM)
+    - Add inverse relation to Application model:
+      * feedbacks (Feedback[])
+    - Add indexes for performance:
+      * @@index([applicationId])
+      * @@index([category])
+    - Verify foreign key constraint includes ON DELETE SET NULL (Feedback survives Application deletion; applicationId becomes null)
+    - _Bug_Condition: isBugCondition(input) where input.applicationId provided but no verification exists_
+    - _Expected_Behavior: Schema supports category derivation and Application linking from design_
+    - _Preservation: Existing Feedback records remain valid with nullable applicationId_
+    - _Requirements: 2.8, 2.9, 2.10, 2.11_
+
+  - [~] 3.2 Create and run database migration
+    - Generate migration: `npx prisma migrate dev --name add_feedback_category`
+    - Verify migration file includes:
+      * CREATE TYPE "FeedbackCategory" AS ENUM ('PLATFORM', 'JOB_COMPLETION')
+      * ALTER TABLE "Feedback" ADD COLUMN "applicationId" TEXT
+      * ALTER TABLE "Feedback" ADD COLUMN "category" "FeedbackCategory" NOT NULL DEFAULT 'PLATFORM'
+      * ALTER TABLE "Feedback" ADD CONSTRAINT foreign key with ON DELETE SET NULL (preserves Feedback when Application deleted)
+      * CREATE INDEX on applicationId and category
+      * UPDATE "Feedback" SET "category" = 'PLATFORM' (data migration for existing records)
+    - Run migration on development database
+    - Verify all existing Feedback records have category = PLATFORM
+    - Verify no fabricated applicationId values were created
+    - Regenerate Prisma client: `npx prisma generate`
+    - _Bug_Condition: Migration must not create false verification relationships_
+    - _Expected_Behavior: All existing feedback classified as PLATFORM from design migration requirements_
+    - _Preservation: Existing feedback text and data preserved exactly_
+    - _Requirements: 2.18, 2.19, 2.20, 3.12, 3.13_
+
+  - [~] 3.3 Update POST /api/feedback endpoint with verification logic
+    - Update Zod schema in route.ts to include optional applicationId:
+      ```typescript
+      applicationId: z.string().optional()
+      ```
+    - Implement server-side category derivation and verification:
+      ```typescript
+      let category = 'PLATFORM'
+      
+      if (validated.applicationId) {
+        // Fetch Application with ownership and status
+        const application = await prisma.application.findUnique({
+          where: { id: validated.applicationId },
+          select: { id: true, testerId: true, status: true }
+        })
+        
+        // Verify exists
+        if (!application) {
+          return NextResponse.json(
+            { error: 'Application not found' },
+            { status: 404 }
+          )
+        }
+        
+        // Verify ownership
+        if (application.testerId !== currentUser.userId) {
+          return NextResponse.json(
+            { error: 'You can only submit feedback for your own completed applications' },
+            { status: 403 }
+          )
+        }
+        
+        // Verify completion status
+        if (application.status !== 'COMPLETED') {
+          return NextResponse.json(
+            { error: 'You can only submit feedback for completed testing jobs' },
+            { status: 403 }
+          )
+        }
+        
+        // All checks passed - verified JOB_COMPLETION
+        category = 'JOB_COMPLETION'
+      }
+      ```
+    - Update feedback creation to include applicationId and category:
+      ```typescript
+      const feedback = await prisma.feedback.create({
+        data: {
+          userId: currentUser.userId,
+          type: validated.type,
+          rating: validated.rating,
+          title: validated.title,
+          message: validated.message,
+          displayName: validated.displayName,
+          companyName: validated.companyName,
+          applicationId: validated.applicationId || null,
+          category: category,
+        },
+      })
+      ```
+    - Verify server derives category, ignoring any client-provided category field
+    - _Bug_Condition: isBugCondition triggers verification from design expectedBehavior pseudocode_
+    - _Expected_Behavior: Server-side ownership and status verification from requirements 2.3, 2.4_
+    - _Preservation: PLATFORM feedback submission unchanged (3.1, 3.2, 3.3)_
+    - _Requirements: 2.1, 2.2, 2.3, 2.4, 2.5, 2.6, 2.7, 3.1, 3.2, 3.3_
+
+  - [~] 3.4 Update GET /api/feedback endpoint to include category and application
+    - Add category and application to select statement:
+      ```typescript
+      select: {
+        id: true,
+        rating: true,
+        title: true,
+        message: true,
+        displayName: true,
+        companyName: true,
+        type: true,
+        category: true,
+        createdAt: true,
+        user: {
+          select: {
+            name: true,
+            role: true,
+          },
+        },
+        application: {
+          select: {
+            id: true,
+            status: true,
+            job: {
+              select: {
+                appName: true,
+              }
+            }
+          }
+        }
+      }
+      ```
+    - Verify response includes category and application details for client display
+    - _Bug_Condition: GET endpoint must return verification data for display_
+    - _Expected_Behavior: Public API includes category and application from requirements 2.15, 2.16_
+    - _Preservation: Existing query filtering by type and limit unchanged (3.6)_
+    - _Requirements: 2.15, 2.16, 3.6_
+
+  - [~] 3.5 Update GET /api/admin/feedback endpoint with application details
+    - Modify admin endpoint to include application relation:
+      ```typescript
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+          },
+        },
+        application: {
+          include: {
+            job: {
+              select: {
+                id: true,
+                appName: true,
+              }
+            }
+          }
+        }
+      }
+      ```
+    - Verify admin can see full Application verification details
+    - _Bug_Condition: Admin must see verification proof to validate testimonials_
+    - _Expected_Behavior: Admin interface shows Application details from requirements 2.12, 2.13_
+    - _Preservation: Approval workflow unchanged (3.4)_
+    - _Requirements: 2.12, 2.13, 2.14, 3.4_
+
+  - [~] 3.6 Update Testimonials component with verification badges
+    - **CORRECTION**: Use server-provided isVerified field; do NOT calculate verification client-side
+    - Update Feedback interface in testimonials.tsx:
+      ```typescript
+      interface Feedback {
+        id: string
+        rating: number
+        title: string
+        message: string
+        displayName: string | null
+        companyName: string | null
+        type: string
+        category: string
+        createdAt: string
+        user: {
+          name: string | null
+          role: string
+        }
+        application?: {
+          id: string
+          status: string
+          job: {
+            appName: string
+          }
+        } | null
+      }
+      ```
+    - Add verification badge display in author section:
+      ```tsx
+      {/* Verification Badge */}
+      {testimonial.category === 'JOB_COMPLETION' && 
+       testimonial.application?.status === 'COMPLETED' && (
+        <p className="text-xs text-green-600 mt-2 font-medium flex items-center gap-1">
+          <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          </svg>
+          ✓ Verified test completion
+        </p>
+      )}
+      
+      {testimonial.category === 'PLATFORM' && testimonial.type === 'tester' && (
+        <p className="text-xs text-gray-500 mt-2">
+          Early TestForPay feedback
+        </p>
+      )}
+      ```
+    - Verify badge only shows when Application.status === COMPLETED (database-proven)
+    - Verify existing display fields (rating, title, message, displayName) unchanged
+    - _Bug_Condition: Public display must distinguish verified from unverified feedback_
+    - _Expected_Behavior: Verification badge from requirements 2.15, 2.16_
+    - _Preservation: Existing testimonial display unchanged (3.7, 3.8)_
+    - _Requirements: 2.15, 2.16, 2.17, 3.7, 3.8_
+
+  - [~] 3.7 Update Admin Dashboard testimonials display
+    - **CORRECTION**: Admin shows full verification details; public UI uses only isVerified boolean
+    - Locate admin dashboard testimonials tab (likely in app/(dashboard)/dashboard/admin/page.tsx)
+    - Update TestimonialFeedback interface:
+      ```typescript
+      interface TestimonialFeedback {
+        id: string
+        type: string
+        rating: number
+        title: string
+        message: string
+        approved: boolean
+        category: string
+        createdAt: string
+        displayName: string | null
+        companyName: string | null
+        application?: {
+          id: string
+          status: string
+          job: {
+            id: string
+            appName: string
+          }
+        } | null
+        user: {
+          name: string | null
+          email: string
+        }
+      }
+      ```
+    - Add category badge and application details display:
+      ```tsx
+      <div className="flex items-center gap-2 mb-2">
+        <Badge variant={t.category === 'JOB_COMPLETION' ? 'default' : 'secondary'}>
+          {t.category === 'JOB_COMPLETION' ? '✓ Job Completion' : 'Platform Feedback'}
+        </Badge>
+      </div>
+      
+      {t.application && (
+        <div className="text-xs text-gray-600 mt-2 p-2 bg-gray-50 rounded">
+          <p><strong>Verified:</strong> Application #{t.application.id.slice(0, 8)}</p>
+          <p><strong>Status:</strong> {t.application.status}</p>
+          <p><strong>Job:</strong> {t.application.job.appName}</p>
+        </div>
+      )}
+      ```
+    - Verify admin can see category and verification proof
+    - _Bug_Condition: Admin needs verification context for approval decisions_
+    - _Expected_Behavior: Admin sees Application details from requirements 2.12, 2.13_
+    - _Preservation: Approval workflow functionality unchanged (3.4, 3.5)_
+    - _Requirements: 2.12, 2.13, 2.14, 3.4, 3.5_
+
+  - [~] 3.8 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Server-Side Verification Enforced
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior (verification requirements)
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1 on FIXED code
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify all scenarios now behave correctly:
+      1. Tester with zero completed Applications submits feedback without applicationId → Accepted as PLATFORM ✓
+      2. Tester with zero completed Applications attempts applicationId → Rejected with proper error ✓
+      3. Tester A attempts Tester B's applicationId → Rejected with ownership error ✓
+      4. Tester attempts TESTING status Application → Rejected with status error ✓
+      5. Client-provided category ignored → Server derives from applicationId validation ✓
+    - Document that all counterexamples are now resolved
+    - _Requirements: 2.2, 2.3, 2.4, 2.5, 2.6, 2.7_
+
+  - [~] 3.9 Verify preservation tests still pass
+    - **Property 2: Preservation** - Non-Job-Completion Behavior Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2 on FIXED code
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Verify all preserved behaviors still work:
+      1. Developer PLATFORM feedback → Still accepted ✓
+      2. Tester PLATFORM feedback (no applicationId) → Still accepted ✓
+      3. Any authenticated user PLATFORM feedback → Still accepted ✓
+      4. Admin approval workflow → Still updates status correctly ✓
+      5. GET /api/feedback filtering → Still returns approved feedback ✓
+      6. Rate limiting → Still enforces limits ✓
+      7. Zod validation errors → Still returns 400 ✓
+      8. Unauthenticated submissions → Still returns 401 ✓
+      9. Testimonials display → Still shows all fields correctly ✓
+      10. Existing feedback text → Still preserved exactly ✓
+    - Confirm all tests pass, indicating no regressions introduced
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8, 3.9, 3.10, 3.11, 3.12, 3.13_
+
+- [~] 4. Checkpoint - Ensure all tests pass
+  - Run all exploration tests (should now pass after fix)
+  - Run all preservation tests (should still pass)
+  - Run any additional unit tests created
+  - Verify no TypeScript compilation errors
+  - Verify Prisma schema validates successfully
+  - Test in development environment with actual database
+  - Ask user if questions arise or manual testing needed
+
+## Testing Notes
+
+### Bug Condition Property Test (Property 1)
+
+This test validates the fix by checking server-side verification:
+
+```typescript
+// For all feedback submissions WITH applicationId
+FOR ALL submission WITH submission.applicationId != null DO
+  IF NOT Application.exists(submission.applicationId) THEN
+    ASSERT response.status === 404
+    ASSERT response.error === 'Application not found'
+  ELSE IF Application.testerId !== currentUser.userId THEN
+    ASSERT response.status === 403
+    ASSERT response.error === 'You can only submit feedback for your own completed applications'
+  ELSE IF Application.status !== 'COMPLETED' THEN
+    ASSERT response.status === 403
+    ASSERT response.error === 'You can only submit feedback for completed testing jobs'
+  ELSE
+    ASSERT response.status === 200
+    ASSERT response.feedback.category === 'JOB_COMPLETION'
+    ASSERT response.feedback.applicationId === submission.applicationId
+  END IF
+END FOR
+```
+
+### Preservation Property Test (Property 2)
+
+This test validates no regressions for non-buggy inputs:
+
+```typescript
+// For all feedback submissions WITHOUT applicationId OR from developers
+FOR ALL submission WHERE submission.applicationId == null OR submission.type == 'developer' DO
+  ASSERT response.status === 200
+  ASSERT response.feedback.category === 'PLATFORM'
+  ASSERT response.feedback.applicationId === null
+END FOR
+
+// For all existing feedback records after migration
+FOR ALL existingFeedback IN database DO
+  ASSERT existingFeedback.category === 'PLATFORM'
+  ASSERT existingFeedback.applicationId === null
+  ASSERT existingFeedback.message === original_message (no modification)
+END FOR
+```
+
+## Task Dependency Graph
+
+```json
+{
+  "waves": [
+    {
+      "wave": 1,
+      "tasks": ["1", "2"],
+      "description": "Exploration and preservation tests (run in parallel)"
+    },
+    {
+      "wave": 2,
+      "tasks": ["3.1"],
+      "description": "Update Prisma schema"
+    },
+    {
+      "wave": 3,
+      "tasks": ["3.2"],
+      "description": "Create and run database migration"
+    },
+    {
+      "wave": 4,
+      "tasks": ["3.3", "3.4", "3.5"],
+      "description": "Update API endpoints (run in parallel)"
+    },
+    {
+      "wave": 5,
+      "tasks": ["3.6", "3.7"],
+      "description": "Update UI components (run in parallel)"
+    },
+    {
+      "wave": 6,
+      "tasks": ["3.8", "3.9"],
+      "description": "Verification tests (run in parallel)"
+    },
+    {
+      "wave": 7,
+      "tasks": ["4"],
+      "description": "Final checkpoint"
+    }
+  ]
+}
+```
+
+**Dependency Details:**
+
+```
+1 (exploration test)
+  └─> 3.1
+
+2 (preservation test)
+  └─> 3.1
+
+3.1 (schema)
+  └─> 3.2
+
+3.2 (migration)
+  ├─> 3.3
+  ├─> 3.4
+  └─> 3.5
+
+3.3 (POST endpoint)
+  ├─> 3.8
+  └─> 3.9
+
+3.4 (GET endpoint)
+  ├─> 3.6
+  ├─> 3.8
+  └─> 3.9
+
+3.5 (admin endpoint)
+  ├─> 3.7
+  └─> 3.9
+
+3.6 (testimonials component)
+  ├─> 3.8
+  └─> 3.9
+
+3.7 (admin dashboard)
+  └─> 3.9
+
+3.8 (verify bug test)
+  └─> 4
+
+3.9 (verify preservation)
+  └─> 4
+
+4 (checkpoint)
+```
+
+## Implementation Sequence
+
+1. **Phase 1: Exploration** (Tasks 1)
+   - Write tests that FAIL on unfixed code
+   - Document counterexamples proving bug exists
+   
+2. **Phase 2: Preservation** (Task 2)
+   - Observe baseline behavior on unfixed code
+   - Write tests that PASS on unfixed code
+   - Establish regression prevention baseline
+
+3. **Phase 3: Implementation** (Tasks 3.1-3.7)
+   - Apply schema changes
+   - Run migration
+   - Update API endpoints
+   - Update UI components
+
+4. **Phase 4: Validation** (Tasks 3.8-3.9, 4)
+   - Re-run exploration tests (should now pass)
+   - Re-run preservation tests (should still pass)
+   - Verify complete fix with no regressions
+
+## Notes
+
+### Testing Methodology
+
+This bugfix follows the bug condition methodology with property-based testing:
+
+- **Exploration tests (Property 1)** validate that the bug exists before the fix by testing concrete failing scenarios
+- **Preservation tests (Property 2)** capture baseline behavior that must remain unchanged after the fix
+- Property-based testing provides stronger guarantees by generating many test cases automatically
+
+### Database Migration Safety
+
+The migration includes a data migration step that sets `category = 'PLATFORM'` for all existing feedback records. This is safe because:
+- Existing feedback was submitted before the verification system existed
+- All existing feedback should be classified as general platform feedback
+- No fabricated `applicationId` values are created
+
+### Admin Verification Display
+
+The admin dashboard will show verification proof (Application ID, status, job name) to help admins validate testimonial authenticity before approval. This visibility ensures only legitimate job completion feedback is displayed publicly with verification badges.

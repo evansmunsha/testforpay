@@ -88,10 +88,32 @@ interface FeedbackReport {
 }
 
 interface TestimonialFeedback {
-  id: string; type: string; rating: number; title: string; message: string; approved: boolean
-  createdAt: string; displayName: string | null; companyName: string | null
+  id: string
+  type: string
+  rating: number
+  title: string
+  message: string
+  approved: boolean
+  category: string
+  createdAt: string
+  displayName: string | null
+  companyName: string | null
+  application?: {
+    id: string
+    status: string
+    job: {
+      id: string
+      appName: string
+    }
+    tester: {
+      id: string
+      email: string
+      name: string | null
+    }
+  } | null
   user: { id: string; email: string; name: string | null; role: string }
 }
+
 
 // ── Reusable stat card ─────────────────────────────────────────────────────────
 function StatCard({ title, value, sub, icon: Icon, color = 'blue', loading }: {
@@ -826,10 +848,28 @@ export default function AdminDashboard() {
                   {testimonials.map(t => (
                     <div key={t.id} className="rounded-lg border p-4 space-y-2">
                       <div className="flex flex-wrap items-start justify-between gap-2">
-                        <div>
+                        <div className="flex-1">
+                          {/* Category Badge */}
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant={t.category === 'JOB_COMPLETION' ? 'default' : 'secondary'}>
+                              {t.category === 'JOB_COMPLETION' ? '✓ Job Completion' : 'Platform Feedback'}
+                            </Badge>
+                          </div>
+
                           <p className="font-medium text-sm">{t.title}</p>
                           <p className="text-xs text-gray-400">{t.displayName || t.user.name || t.user.email} · {t.type} · {'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}</p>
+
+                          {/* Verification Details for Admin */}
+                          {t.application && (
+                            <div className="text-xs text-gray-600 mt-2 p-2 bg-gray-50 rounded">
+                              <p><strong>Verified:</strong> Application #{t.application.id.slice(0, 8)}</p>
+                              <p><strong>Status:</strong> {t.application.status}</p>
+                              <p><strong>Job:</strong> {t.application.job.appName}</p>
+                              <p><strong>Tester:</strong> {t.application.tester.name || t.application.tester.email}</p>
+                            </div>
+                          )}
                         </div>
+
                         <div className="flex items-center gap-2">
                           <Badge variant={t.approved ? 'default' : 'outline'}>{t.approved ? 'Approved' : 'Pending'}</Badge>
                           <Button size="sm" variant="outline" disabled={actionLoading === t.id} onClick={() => handleToggleFeedbackApproval(t.id, !t.approved)}>
@@ -841,6 +881,7 @@ export default function AdminDashboard() {
                       <p className="text-sm text-gray-600 line-clamp-3">{t.message}</p>
                     </div>
                   ))}
+
                 </div>
               )}
             </CardContent>

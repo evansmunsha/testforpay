@@ -5,13 +5,12 @@ import { z } from 'zod'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 const submitFeedbackSchema = z.object({
-  type: z.enum(['developer', 'tester']).optional(), // OPTIONAL: Will be derived from user role
+  type: z.enum(['developer', 'tester']),
   rating: z.number().min(1).max(5),
   title: z.string().min(5).max(100),
   message: z.string().min(10).max(1000),
   displayName: z.string().optional(),
   companyName: z.string().optional(),
-  applicationId: z.string().optional(), // NEW: Optional link to completed Application
 })
 
 export async function POST(request: Request) {
@@ -40,64 +39,16 @@ export async function POST(request: Request) {
     const body = await request.json()
     const validated = submitFeedbackSchema.parse(body)
 
-    // SERVER-SIDE TYPE DERIVATION: Automatically derive from user role
-    const type = validated.type || (currentUser.role === 'DEVELOPER' ? 'developer' : 'tester')
-
-    // SERVER-SIDE CATEGORY DERIVATION AND VERIFICATION
-    let category: 'PLATFORM' | 'JOB_COMPLETION' = 'PLATFORM'
-    let finalApplicationId: string | null = null
-
-    if (validated.applicationId) {
-      // Verify the application exists, is owned by user, and is completed
-      const application = await prisma.application.findUnique({
-        where: { id: validated.applicationId },
-        select: {
-          id: true,
-          testerId: true,
-          status: true
-        }
-      })
-
-      if (!application) {
-        return NextResponse.json(
-          { error: 'Application not found' },
-          { status: 404 }
-        )
-      }
-
-      // SECURITY: Verify ownership - prevent spoofing another tester's application
-      if (application.testerId !== currentUser.userId) {
-        return NextResponse.json(
-          { error: 'You can only submit feedback for your own completed applications' },
-          { status: 403 }
-        )
-      }
-
-      // SECURITY: Verify completion status
-      if (application.status !== 'COMPLETED') {
-        return NextResponse.json(
-          { error: 'You can only submit feedback for completed testing jobs' },
-          { status: 403 }
-        )
-      }
-
-      // All checks passed - this is verified JOB_COMPLETION feedback
-      category = 'JOB_COMPLETION'
-      finalApplicationId = application.id
-    }
-
-    // Create feedback with server-derived type and category
+    // Create feedback
     const feedback = await prisma.feedback.create({
       data: {
         userId: currentUser.userId,
-        type: type, // Server-derived from user role
+        type: validated.type,
         rating: validated.rating,
         title: validated.title,
         message: validated.message,
         displayName: validated.displayName,
         companyName: validated.companyName,
-        applicationId: finalApplicationId,
-        category: category, // Server-derived, never trust client input
       },
     })
 
@@ -120,6 +71,7 @@ export async function POST(request: Request) {
     )
   }
 }
+
 
 // Get approved feedback for landing page
 export async function GET(request: Request) {
@@ -145,8 +97,6 @@ export async function GET(request: Request) {
           displayName: true,
           companyName: true,
           type: true,
-          category: true,
-          userId: true,
           createdAt: true,
           user: {
             select: {
@@ -154,14 +104,6 @@ export async function GET(request: Request) {
               role: true,
             },
           },
-          // Include application for server-side verification calculation
-          application: {
-            select: {
-              id: true,
-              testerId: true,
-              status: true,
-            }
-          }
         },
       }),
       new Promise<never>((_, reject) =>
@@ -169,30 +111,10 @@ export async function GET(request: Request) {
       ),
     ])
 
-    // SERVER-SIDE VERIFICATION: Calculate isVerified for each feedback
-    const feedbackWithVerification = feedback.map(f => ({
-      id: f.id,
-      rating: f.rating,
-      title: f.title,
-      message: f.message,
-      displayName: f.displayName,
-      companyName: f.companyName,
-      type: f.type,
-      category: f.category,
-      createdAt: f.createdAt,
-      user: f.user,
-      // Server calculates verification - client cannot spoof this
-      isVerified: f.category === 'JOB_COMPLETION' &&
-                  f.application != null &&
-                  f.application.testerId === f.userId && // Verify ownership still holds
-                  f.application.status === 'COMPLETED',
-      // Do NOT expose internal Application details to public API
-    }))
-
     return NextResponse.json({
       success: true,
-      feedback: feedbackWithVerification,
-      count: feedbackWithVerification.length,
+      feedback,
+      count: feedback.length,
     })
   } catch (error) {
     console.error('Get feedback error:', error)
@@ -206,3 +128,4 @@ export async function GET(request: Request) {
     })
   }
 }
+

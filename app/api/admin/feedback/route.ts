@@ -41,6 +41,24 @@ export async function GET(request: Request) {
             role: true,
           },
         },
+        // ADMIN: Include full Application details for verification audit
+        application: {
+          include: {
+            job: {
+              select: {
+                id: true,
+                appName: true,
+              }
+            },
+            tester: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              }
+            }
+          }
+        }
       },
     })
 

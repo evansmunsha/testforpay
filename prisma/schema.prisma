@@ -53,6 +53,10 @@ enum UsageEventType {
   FEEDBACK_SUBMITTED
   SESSION_END
 }
+enum FeedbackCategory {
+  PLATFORM
+  JOB_COMPLETION
+}
 
 model User {
   id            String    @id @default(cuid())
@@ -262,6 +266,7 @@ model Application {
   // Payment
   payment           Payment?
   feedbackReports   FeedbackReport[]
+  feedbacks Feedback[]
   
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -271,6 +276,7 @@ model Application {
   @@index([testerId])
   @@index([status])
   @@index([ipAddress])
+  
 }
 
 model FeedbackReport {
@@ -377,6 +383,12 @@ model Feedback {
   userId          String
   user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   
+  // Link to completed Application (nullable, survives Application deletion)
+  applicationId   String?
+  application     Application? @relation(fields: [applicationId], references: [id], onDelete: SetNull)
+  
+  // Category classification
+  category        FeedbackCategory @default(PLATFORM)  
   // Feedback details
   type            String    // 'developer' or 'tester'
   rating          Int       // 1-5 stars
@@ -399,7 +411,9 @@ model Feedback {
   @@index([approved])
   @@index([type])
   @@index([rating])
-}
+  @@index([applicationId])
+  @@index([category])
+  }
 
 model AppUsageLog {
   id              String    @id @default(cuid())
