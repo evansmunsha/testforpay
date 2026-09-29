@@ -194,7 +194,19 @@ function JobDetailCard({ job, formatEurFromCents, getStatusBadge }: {
 
   return (
     <div className={`border rounded-lg ${job._count.applications === 0 && job.status === 'ACTIVE' ? 'bg-amber-50 border-amber-300' : 'bg-white'}`}>
-      <div onClick={() => setExpanded(!expanded)} className="p-4 cursor-pointer hover:bg-gray-50 transition-colors">
+      <div
+        role="button"
+        tabIndex={0}
+        aria-expanded={expanded}
+        onClick={() => setExpanded(value => !value)}
+        onKeyDown={event => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault()
+            setExpanded(value => !value)
+          }
+        }}
+        className="p-4 cursor-pointer hover:bg-gray-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2 flex-wrap">
@@ -234,7 +246,8 @@ function JobDetailCard({ job, formatEurFromCents, getStatusBadge }: {
             )}
           </div>
 
-          <button type="button" className="text-gray-400 hover:text-gray-600" aria-label={expanded ? 'Collapse job details' : 'Expand job details'}>
+          <span className="shrink-0 flex items-center gap-2 text-sm text-gray-500" aria-hidden="true">
+            <span>{expanded ? 'Hide details' : 'View details'}</span>
             {expanded ? (
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
@@ -244,7 +257,7 @@ function JobDetailCard({ job, formatEurFromCents, getStatusBadge }: {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             )}
-          </button>
+          </span>
         </div>
       </div>
 
