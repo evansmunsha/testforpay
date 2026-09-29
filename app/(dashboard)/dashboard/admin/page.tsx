@@ -69,6 +69,7 @@ interface Job {
   planType?: string | null
   testimonialEmailSent?: boolean
   testDuration?: number | null
+  dailyTasks: Array<{ id: string; dayNumber: number; taskText: string }>
   developer: { id: string; email: string; name: string | null }
   _count: { applications: number }
 }
@@ -312,6 +313,24 @@ function JobDetailCard({ job, formatEurFromCents, getStatusBadge }: {
                   <div className="text-sm font-medium">{job.minAndroidVersion || '—'}</div>
                 </div>
               </div>
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">Daily Missions</h4>
+            <div className="bg-white rounded-lg p-4">
+              {job.dailyTasks.length > 0 ? (
+                <ol className="divide-y">
+                  {job.dailyTasks.map(task => (
+                    <li key={task.id} className="flex gap-4 py-3 first:pt-0 last:pb-0">
+                      <span className="shrink-0 text-sm font-semibold text-gray-700">Day {task.dayNumber}</span>
+                      <p className="min-w-0 whitespace-pre-wrap text-sm text-gray-700">{task.taskText}</p>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <p className="text-sm text-gray-500">No daily missions have been configured for this job.</p>
+              )}
             </div>
           </div>
 

@@ -27,6 +27,14 @@ export async function GET() {
             applications: true,
           },
         },
+        dailyTasks: {
+          orderBy: { dayNumber: 'asc' },
+          select: {
+            id: true,
+            dayNumber: true,
+            taskText: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: 100,
