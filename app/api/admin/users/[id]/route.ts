@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { recordAdminAction } from '@/lib/admin-audit'
 
 // PATCH - Update user (suspend/unsuspend)
 export async function PATCH(
@@ -20,6 +21,10 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
     const { action, reason } = body
+    const auditReason = typeof reason === 'string' ? reason.trim() : ''
+    if (!auditReason || auditReason.length < 10) {
+      return NextResponse.json({ error: 'Provide a reason of at least 10 characters' }, { status: 400 })
+    }
 
     // Get user
     const user = await prisma.user.findUnique({
@@ -65,6 +70,7 @@ export async function PATCH(
           suspendReason: reason || 'Violation of Terms of Service',
         },
       })
+      await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'suspend_user', targetType: 'user', targetId: id, reason: auditReason })
 
       return NextResponse.json({
         success: true,
@@ -94,6 +100,7 @@ export async function PATCH(
           suspendReason: null,
         },
       })
+      await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'unsuspend_user', targetType: 'user', targetId: id, reason: auditReason })
 
       return NextResponse.json({
         success: true,
@@ -135,6 +142,16 @@ export async function DELETE(
     }
 
     const { id } = await params
+    let body: { reason?: unknown }
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'A reason is required to delete a user' }, { status: 400 })
+    }
+    const auditReason = typeof body.reason === 'string' ? body.reason.trim() : ''
+    if (auditReason.length < 10) {
+      return NextResponse.json({ error: 'Provide a reason of at least 10 characters' }, { status: 400 })
+    }
 
     // Get user
     const user = await prisma.user.findUnique({
@@ -196,6 +213,7 @@ export async function DELETE(
     await prisma.user.delete({
       where: { id },
     })
+    await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'delete_user', targetType: 'user', targetId: id, reason: auditReason })
 
     return NextResponse.json({
       success: true,

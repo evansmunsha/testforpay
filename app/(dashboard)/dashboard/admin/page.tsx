@@ -35,7 +35,30 @@ interface Stats {
   failedPayments: number
   revenue: { allTime: Cents; thisMonth: Cents; lastMonth: Cents; growthPercent: number }
   performance: { jobCompletionRate: number; appCompletionRate: number; jobsWithZeroApplications: number; newJobsLast7d: number }
-  attention: { jobsWithZeroApplications: number; testersStuckInVerification: number; activeTesters: number; failedPayments: number }
+  attention: {
+    jobsWithZeroApplications: number
+    testersStuckInVerification: number
+    activeTesters: number
+    failedPayments: number
+    samples: {
+      jobsNeedingApplicants: Array<{ id: string; appName: string; createdAt: string }>
+      applicationsStuckInVerification: Array<{
+        id: string
+        updatedAt: string
+        tester: { name: string | null; email: string }
+        job: { id: string; appName: string }
+      }>
+      failedPaymentDetails: Array<{
+        id: string
+        updatedAt: string
+        application: {
+          tester: { name: string | null; email: string }
+          job: { id: string; appName: string }
+        }
+      }>
+    }
+  }
+  applicationPipeline: Partial<Record<'PENDING' | 'APPROVED' | 'OPTED_IN' | 'VERIFIED' | 'TESTING' | 'COMPLETED' | 'REJECTED', number>>
   activity: { activeUsersLast24h: number; activeUsersLast7d: number; activeUsersLast30d: number; newUsersLast7d: number; newUsersLast30d: number }
   health: { verifiedEmailCount: number; unverifiedEmailCount: number; testersWithStripe: number; testersWithoutStripe: number }
 }
@@ -74,6 +97,10 @@ interface Job {
     id: string
     status: string
     createdAt: string
+    testingStartDate: string | null
+    testingEndDate: string | null
+    completedMissionDays: number
+    payment: { status: string } | null
     tester: { id: string; name: string | null; email: string }
   }>
   developer: { id: string; email: string; name: string | null }
@@ -89,6 +116,44 @@ interface Application {
 interface Payment {
   id: string; amount: Cents; status: string; createdAt: string; failureReason?: string | null
   application: { job: { id: string; appName: string }; tester: { id: string; email: string; name: string | null } }
+}
+
+interface AdminActivityEvent {
+  id: string
+  title: string
+  detail: string
+  createdAt: string
+  tab: 'jobs' | 'applications' | 'payments' | 'users' | 'fraud'
+}
+
+interface AdminSystemHealth {
+  checkedAt: string
+  services: {
+    database: 'healthy' | 'unavailable'
+    stripeConfigured: boolean
+    stripeWebhookConfigured: boolean
+    emailConfigured: boolean
+    cronAuthConfigured: boolean
+  }
+  cronRuns: Array<{
+    jobName: string
+    status: string
+    startedAt: string
+    completedAt: string | null
+    durationMs: number | null
+    errorMessage: string | null
+  }>
+}
+
+interface AdminAuditEntry {
+  id: string
+  actorId: string
+  actorEmail: string
+  action: string
+  targetType: string
+  targetId: string
+  reason: string
+  createdAt: string
 }
 
 interface ContactMessage {
@@ -352,6 +417,9 @@ function JobDetailCard({ job, formatEurFromCents, getStatusBadge }: {
                       <th className="px-4 py-3 font-medium">Tester</th>
                       <th className="px-4 py-3 font-medium">Email</th>
                       <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Missions</th>
+                      <th className="px-4 py-3 font-medium">Testing window</th>
+                      <th className="px-4 py-3 font-medium">Payout</th>
                       <th className="px-4 py-3 font-medium">Applied</th>
                     </tr>
                   </thead>
@@ -365,6 +433,15 @@ function JobDetailCard({ job, formatEurFromCents, getStatusBadge }: {
                           </a>
                         </td>
                         <td className="px-4 py-3">{application.status.replaceAll('_', ' ')}</td>
+                        <td className="whitespace-nowrap px-4 py-3">
+                          {application.completedMissionDays}/{job.dailyTasks.length}
+                        </td>
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600">
+                          {application.testingStartDate
+                            ? `${new Date(application.testingStartDate).toLocaleDateString()} – ${application.testingEndDate ? new Date(application.testingEndDate).toLocaleDateString() : 'Ongoing'}`
+                            : 'Not started'}
+                        </td>
+                        <td className="px-4 py-3">{application.payment?.status ?? '—'}</td>
                         <td className="whitespace-nowrap px-4 py-3 text-gray-600">{new Date(application.createdAt).toLocaleDateString()}</td>
                       </tr>
                     ))}
@@ -503,6 +580,11 @@ export default function AdminDashboard() {
   const [jobPagination, setJobPagination] = useState<{ page: number; limit: number; total: number; totalPages: number } | null>(null)
   const [applications, setApplications] = useState<Application[]>([])
   const [payments, setPayments] = useState<Payment[]>([])
+  const [recentActivity, setRecentActivity] = useState<AdminActivityEvent[]>([])
+  const [systemHealth, setSystemHealth] = useState<AdminSystemHealth | null>(null)
+  const [auditEntries, setAuditEntries] = useState<AdminAuditEntry[]>([])
+  const [auditLogError, setAuditLogError] = useState('')
+  const [pendingAdminReason, setPendingAdminReason] = useState('')
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([])
   const [selectedContact, setSelectedContact] = useState<ContactMessage | null>(null)
   const [fraudStats, setFraudStats] = useState<FraudStats | null>(null)
@@ -513,8 +595,8 @@ export default function AdminDashboard() {
   const [loadingTab, setLoadingTab] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
-  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; description: string; confirmLabel: string; onConfirm: (() => Promise<void> | void) | null }>
-    ({ open: false, title: '', description: '', confirmLabel: 'Confirm', onConfirm: null })
+  const [confirmDialog, setConfirmDialog] = useState<{ open: boolean; title: string; description: string; confirmLabel: string; reasonRequired: boolean; onConfirm: ((reason?: string) => Promise<void> | void) | null }>
+    ({ open: false, title: '', description: '', confirmLabel: 'Confirm', reasonRequired: false, onConfirm: null })
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false)
   const [suspendTargetId, setSuspendTargetId] = useState<string | null>(null)
   const [suspendReason, setSuspendReason] = useState('Violation of Terms of Service')
@@ -524,11 +606,12 @@ export default function AdminDashboard() {
     + (stats?.attention.testersStuckInVerification ?? 0)
     + (stats?.attention.failedPayments ?? 0)
 
-  const openConfirm = (opts: { title: string; description: string; confirmLabel?: string; onConfirm: () => Promise<void> | void }) => {
-    setConfirmDialog({ open: true, title: opts.title, description: opts.description, confirmLabel: opts.confirmLabel || 'Confirm', onConfirm: opts.onConfirm })
+  const openConfirm = (opts: { title: string; description: string; confirmLabel?: string; reasonRequired?: boolean; onConfirm: (reason?: string) => Promise<void> | void }) => {
+    setPendingAdminReason('')
+    setConfirmDialog({ open: true, title: opts.title, description: opts.description, confirmLabel: opts.confirmLabel || 'Confirm', reasonRequired: opts.reasonRequired ?? false, onConfirm: opts.onConfirm })
   }
-  const closeConfirm = () => setConfirmDialog(p => ({ ...p, open: false }))
-  const handleConfirm = async () => { const a = confirmDialog.onConfirm; closeConfirm(); if (a) await a() }
+  const closeConfirm = () => { setPendingAdminReason(''); setConfirmDialog(p => ({ ...p, open: false })) }
+  const handleConfirm = async () => { const a = confirmDialog.onConfirm; const reason = pendingAdminReason.trim(); closeConfirm(); if (a) await a(reason) }
 
   const openSuspendDialog = (id: string) => { setSuspendTargetId(id); setSuspendReason('Violation of Terms of Service'); setSuspendDialogOpen(true) }
 
@@ -537,7 +620,7 @@ export default function AdminDashboard() {
     try {
       const res = await fetch(`/api/admin/users/${userId}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, reason }) })
       const data = await res.json()
-      if (res.ok) { toast({ title: 'Success', description: data.message, variant: 'success' }); fetchUsers() }
+      if (res.ok) { toast({ title: 'Success', description: data.message, variant: 'success' }); fetchUsers(); fetchAuditEntries() }
       else toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' })
     } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) }
     finally { setActionLoading(null) }
@@ -545,23 +628,29 @@ export default function AdminDashboard() {
 
   const handleSuspendUser = async (userId: string, action: 'suspend' | 'unsuspend') => {
     if (action === 'suspend') { openSuspendDialog(userId); return }
-    await performSuspendUser(userId, 'unsuspend', null)
+    openConfirm({
+      title: 'Unsuspend user?',
+      description: 'Restore this user’s access to the platform.',
+      confirmLabel: 'Unsuspend',
+      reasonRequired: true,
+      onConfirm: reason => performSuspendUser(userId, 'unsuspend', reason),
+    })
   }
 
   const handleConfirmSuspend = async () => {
     if (!suspendTargetId) return
     const id = suspendTargetId; setSuspendTargetId(null); setSuspendDialogOpen(false)
-    await performSuspendUser(id, 'suspend', suspendReason || null)
+    await performSuspendUser(id, 'suspend', suspendReason)
   }
 
   const handleDeleteUser = async (userId: string) => {
-    openConfirm({ title: 'Delete user?', description: 'Permanently delete this user? This cannot be undone.', confirmLabel: 'Delete',
-      onConfirm: async () => {
+    openConfirm({ title: 'Delete user?', description: 'Permanently delete this user? This cannot be undone.', confirmLabel: 'Delete', reasonRequired: true,
+      onConfirm: async (reason) => {
         setActionLoading(userId)
         try {
-          const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
+          const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) })
           const data = await res.json()
-          if (res.ok) { toast({ title: 'Deleted', description: data.message, variant: 'success' }); fetchUsers(); fetchStats() }
+          if (res.ok) { toast({ title: 'Deleted', description: data.message, variant: 'success' }); fetchUsers(); fetchStats(); fetchAuditEntries() }
           else toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' })
         } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) }
         finally { setActionLoading(null) }
@@ -570,18 +659,26 @@ export default function AdminDashboard() {
   }
 
   const handleProcessPayouts = async () => {
-    setProcessingPayouts(true)
-    try {
-      const res = await fetch('/api/admin/payouts/process', { method: 'POST' })
-      const data = await res.json()
-      if (res.ok) { toast({ title: 'Payouts Processed', description: `${data.processed} payouts processed`, variant: 'success' }); fetchStats() }
-      else toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' })
-    } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) }
-    finally { setProcessingPayouts(false) }
+    openConfirm({
+      title: 'Process due payouts?',
+      description: 'This will attempt payouts currently eligible for processing.',
+      confirmLabel: 'Process payouts',
+      reasonRequired: true,
+      onConfirm: async reason => {
+        setProcessingPayouts(true)
+        try {
+          const res = await fetch('/api/admin/payouts/process', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) })
+          const data = await res.json()
+          if (res.ok) { toast({ title: 'Payouts Processed', description: `${data.processed} payouts processed`, variant: 'success' }); fetchStats(); fetchAuditEntries() }
+          else toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' })
+        } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) }
+        finally { setProcessingPayouts(false) }
+      },
+    })
   }
 
   useEffect(() => { if (!loading && user?.role !== 'ADMIN') router.push('/dashboard') }, [user, loading, router])
-  useEffect(() => { if (!loading && user?.role === 'ADMIN') { fetchStats(); fetchUsers() } }, [loading, user])
+  useEffect(() => { if (!loading && user?.role === 'ADMIN') { fetchStats(); fetchUsers(); fetchRecentActivity(); fetchSystemHealth(); fetchAuditEntries() } }, [loading, user])
   useEffect(() => {
     if (!loading && user?.role === 'ADMIN') {
       if (activeTab === 'users') fetchUsers()
@@ -600,6 +697,42 @@ export default function AdminDashboard() {
     try { const res = await fetch('/api/admin/stats'); const data = await res.json(); if (res.ok) setStats(data.stats) }
     catch (e) { console.error('Failed to fetch stats:', e) }
     finally { setLoadingStats(false) }
+  }
+
+  const fetchRecentActivity = async () => {
+    try {
+      const res = await fetch('/api/admin/activity')
+      const data = await res.json()
+      if (res.ok) setRecentActivity(data.events || [])
+    } catch (error) {
+      console.error('Failed to fetch admin activity:', error)
+    }
+  }
+
+  const fetchSystemHealth = async () => {
+    try {
+      const res = await fetch('/api/admin/health')
+      const data = await res.json()
+      if (res.ok) setSystemHealth(data)
+    } catch (error) {
+      console.error('Failed to fetch system health:', error)
+    }
+  }
+
+  const fetchAuditEntries = async () => {
+    try {
+      const res = await fetch('/api/admin/audit-log')
+      const data = await res.json()
+      if (res.ok) {
+        setAuditEntries(data.entries || [])
+        setAuditLogError('')
+      } else {
+        setAuditLogError(data.error || 'Audit history unavailable')
+      }
+    } catch (error) {
+      console.error('Failed to fetch admin audit history:', error)
+      setAuditLogError('Audit history could not be reached.')
+    }
   }
 
   useEffect(() => {
@@ -690,24 +823,36 @@ export default function AdminDashboard() {
   }
 
   const handleResolveFraudLog = async (id: string) => {
-    setActionLoading(id)
-    try { const res = await fetch('/api/admin/fraud', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'resolve-log', logId: id }) }); if (res.ok) { toast({ title: 'Resolved', description: 'Fraud log resolved', variant: 'success' }); fetchFraudData() } }
-    catch { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) } finally { setActionLoading(null) }
+    openConfirm({ title: 'Resolve fraud log?', description: 'Record why this fraud alert is considered resolved.', confirmLabel: 'Resolve', reasonRequired: true, onConfirm: async reason => {
+      setActionLoading(id)
+      try { const res = await fetch('/api/admin/fraud', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'resolve-log', logId: id, reason }) }); if (res.ok) { toast({ title: 'Resolved', description: 'Fraud log resolved', variant: 'success' }); fetchFraudData(); fetchAuditEntries() } else { const data = await res.json(); toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' }) } }
+      catch { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) } finally { setActionLoading(null) }
+    } })
   }
 
   const handleClearUserFlags = async (userId: string) => {
-    setActionLoading(userId)
-    try { const res = await fetch('/api/admin/fraud', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'clear-flags', userId }) }); if (res.ok) { toast({ title: 'Cleared', description: 'Flags cleared', variant: 'success' }); fetchFraudData() } }
-    catch { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) } finally { setActionLoading(null) }
+    openConfirm({ title: 'Clear fraud flags?', description: 'Record why the user’s fraud flags should be cleared.', confirmLabel: 'Clear flags', reasonRequired: true, onConfirm: async reason => {
+      setActionLoading(userId)
+      try { const res = await fetch('/api/admin/fraud', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'clear-flags', userId, reason }) }); if (res.ok) { toast({ title: 'Cleared', description: 'Flags cleared', variant: 'success' }); fetchFraudData(); fetchAuditEntries() } else { const data = await res.json(); toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' }) } }
+      catch { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) } finally { setActionLoading(null) }
+    } })
   }
 
   const handleRetryPayout = async (paymentId: string) => {
-    setActionLoading(paymentId)
-    try {
-      const res = await fetch(`/api/admin/payments/retry/${paymentId}`, { method: 'POST' })
-      if (res.ok) { await fetchPayments(); toast({ title: 'Retry Success', description: 'Payout retry triggered', variant: 'success' }) }
-      else { const data = await res.json(); toast({ title: 'Retry Failed', description: data.error || 'Failed', variant: 'destructive' }) }
-    } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) } finally { setActionLoading(null) }
+    openConfirm({
+      title: 'Retry payout?',
+      description: 'This will retry the transfer to the tester.',
+      confirmLabel: 'Retry payout',
+      reasonRequired: true,
+      onConfirm: async reason => {
+        setActionLoading(paymentId)
+        try {
+          const res = await fetch(`/api/admin/payments/retry/${paymentId}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) })
+          if (res.ok) { await fetchPayments(); fetchAuditEntries(); toast({ title: 'Retry Success', description: 'Payout retry triggered', variant: 'success' }) }
+          else { const data = await res.json(); toast({ title: 'Retry Failed', description: data.error || 'Failed', variant: 'destructive' }) }
+        } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) } finally { setActionLoading(null) }
+      },
+    })
   }
 
   const filteredJobs = jobs.filter(job => {
@@ -758,7 +903,22 @@ export default function AdminDashboard() {
       <Dialog open={confirmDialog.open} onOpenChange={o => !o && closeConfirm()}>
         <DialogContent>
           <DialogHeader><DialogTitle>{confirmDialog.title}</DialogTitle><DialogDescription className="whitespace-pre-line">{confirmDialog.description}</DialogDescription></DialogHeader>
-          <DialogFooter><Button variant="outline" onClick={closeConfirm}>Cancel</Button><Button variant="destructive" onClick={handleConfirm} disabled={!!actionLoading}>{confirmDialog.confirmLabel}</Button></DialogFooter>
+          {confirmDialog.reasonRequired && (
+            <div className="space-y-2">
+              <Label htmlFor="admin-action-reason">Reason</Label>
+              <textarea
+                id="admin-action-reason"
+                value={pendingAdminReason}
+                onChange={event => setPendingAdminReason(event.target.value)}
+                minLength={10}
+                maxLength={1000}
+                required
+                placeholder="Explain why this action is necessary (at least 10 characters)."
+                className="min-h-24 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              />
+            </div>
+          )}
+          <DialogFooter><Button variant="outline" onClick={closeConfirm}>Cancel</Button><Button variant="destructive" onClick={handleConfirm} disabled={!!actionLoading || (confirmDialog.reasonRequired && pendingAdminReason.trim().length < 10)}>{confirmDialog.confirmLabel}</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -766,8 +926,8 @@ export default function AdminDashboard() {
       <Dialog open={suspendDialogOpen} onOpenChange={o => !o && setSuspendDialogOpen(false)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Suspend user?</DialogTitle><DialogDescription>Provide an optional reason.</DialogDescription></DialogHeader>
-          <div className="space-y-2"><Label htmlFor="sr">Reason</Label><Input id="sr" value={suspendReason} onChange={e => setSuspendReason(e.target.value)} placeholder="Violation of Terms of Service" /></div>
-          <DialogFooter><Button variant="outline" onClick={() => setSuspendDialogOpen(false)}>Cancel</Button><Button variant="destructive" onClick={handleConfirmSuspend} disabled={!!actionLoading}>Suspend</Button></DialogFooter>
+          <div className="space-y-2"><Label htmlFor="sr">Reason</Label><textarea id="sr" value={suspendReason} onChange={e => setSuspendReason(e.target.value)} minLength={10} maxLength={1000} required placeholder="Explain why this user is being suspended." className="min-h-24 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" /></div>
+          <DialogFooter><Button variant="outline" onClick={() => setSuspendDialogOpen(false)}>Cancel</Button><Button variant="destructive" onClick={handleConfirmSuspend} disabled={!!actionLoading || suspendReason.trim().length < 10}>Suspend</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -790,9 +950,40 @@ export default function AdminDashboard() {
               <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
               <div className="space-y-1 text-sm text-amber-900">
                 <p className="font-semibold">{attentionCount} item{attentionCount !== 1 ? 's' : ''} need your attention</p>
-                {(stats?.attention.jobsWithZeroApplications ?? 0) > 0 && <p>• {stats!.attention.jobsWithZeroApplications} active job{stats!.attention.jobsWithZeroApplications !== 1 ? 's' : ''} with zero applications</p>}
-                {(stats?.attention.testersStuckInVerification ?? 0) > 0 && <p>• {stats!.attention.testersStuckInVerification} tester{stats!.attention.testersStuckInVerification !== 1 ? 's' : ''} stuck in verification for 48h+</p>}
-                {(stats?.attention.failedPayments ?? 0) > 0 && <p>• {stats!.attention.failedPayments} failed payout{stats!.attention.failedPayments !== 1 ? 's' : ''} to retry</p>}
+                {(stats?.attention.jobsWithZeroApplications ?? 0) > 0 && (
+                  <div>
+                    <button className="font-medium underline" onClick={() => setActiveTab('jobs')}>
+                      {stats!.attention.jobsWithZeroApplications} active job{stats!.attention.jobsWithZeroApplications !== 1 ? 's' : ''} with zero applications
+                    </button>
+                    <ul className="ml-5 list-disc text-amber-800">
+                      {stats!.attention.samples.jobsNeedingApplicants.map(job => <li key={job.id}>{job.appName}</li>)}
+                    </ul>
+                  </div>
+                )}
+                {(stats?.attention.testersStuckInVerification ?? 0) > 0 && (
+                  <div>
+                    <button className="font-medium underline" onClick={() => setActiveTab('applications')}>
+                      {stats!.attention.testersStuckInVerification} tester{stats!.attention.testersStuckInVerification !== 1 ? 's' : ''} stuck in verification for 48h+
+                    </button>
+                    <ul className="ml-5 list-disc text-amber-800">
+                      {stats!.attention.samples.applicationsStuckInVerification.map(application => (
+                        <li key={application.id}>{application.tester.name || application.tester.email} · {application.job.appName}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {(stats?.attention.failedPayments ?? 0) > 0 && (
+                  <div>
+                    <button className="font-medium underline" onClick={() => setActiveTab('payments')}>
+                      {stats!.attention.failedPayments} failed payout{stats!.attention.failedPayments !== 1 ? 's' : ''} to retry
+                    </button>
+                    <ul className="ml-5 list-disc text-amber-800">
+                      {stats!.attention.samples.failedPaymentDetails.map(payment => (
+                        <li key={payment.id}>{payment.application.tester.name || payment.application.tester.email} · {payment.application.job.appName}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
@@ -818,8 +1009,38 @@ export default function AdminDashboard() {
         <StatCard title="Active Testers" value={stats?.attention.activeTesters ?? 0} sub="Currently in TESTING" icon={Activity} color="blue" loading={loadingStats} />
       </div>
 
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold">Tester Pipeline</CardTitle>
+          <CardDescription>Applications by current stage</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+          {[
+            ['Applied', 'PENDING'],
+            ['Approved', 'APPROVED'],
+            ['Opt-in submitted', 'OPTED_IN'],
+            ['Verified', 'VERIFIED'],
+            ['Testing', 'TESTING'],
+            ['Completed', 'COMPLETED'],
+            ['Rejected', 'REJECTED'],
+          ].map(([label, status]) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() => setActiveTab('applications')}
+              className="rounded-md border p-3 text-left transition-colors hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+            >
+              <span className="block text-xs text-gray-500">{label}</span>
+              <span className="mt-1 block text-2xl font-semibold text-gray-900">
+                {loadingStats ? '—' : stats?.applicationPipeline[status as keyof Stats['applicationPipeline']] ?? 0}
+              </span>
+            </button>
+          ))}
+        </CardContent>
+      </Card>
+
       {/* ── Activity + Health row ───────────────────────────────────────────── */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold flex items-center gap-2"><Activity className="h-4 w-4 text-blue-500" />User Activity</CardTitle></CardHeader>
           <CardContent className="space-y-2">
@@ -873,6 +1094,53 @@ export default function AdminDashboard() {
             ))}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-semibold flex items-center justify-between gap-2">
+              <span className="flex items-center gap-2"><Activity className="h-4 w-4 text-emerald-600" />System Checks</span>
+              <Button size="sm" variant="ghost" onClick={fetchSystemHealth}>Refresh</Button>
+            </CardTitle>
+            <CardDescription>
+              {systemHealth ? `Checked ${new Date(systemHealth.checkedAt).toLocaleTimeString()}` : 'Checking services...'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[
+              ['Database connection', systemHealth?.services.database === 'healthy', systemHealth?.services.database === 'unavailable' ? 'Unavailable' : 'Connected'],
+              ['Stripe credentials', systemHealth?.services.stripeConfigured, systemHealth?.services.stripeConfigured ? 'Configured' : 'Missing'],
+              ['Stripe webhook secret', systemHealth?.services.stripeWebhookConfigured, systemHealth?.services.stripeWebhookConfigured ? 'Configured' : 'Missing'],
+              ['Email credentials', systemHealth?.services.emailConfigured, systemHealth?.services.emailConfigured ? 'Configured' : 'Missing'],
+              ['Cron authentication', systemHealth?.services.cronAuthConfigured, systemHealth?.services.cronAuthConfigured ? 'Configured' : 'Missing'],
+            ].map(([label, healthy, status]) => (
+              <div key={label as string} className="flex items-center justify-between gap-2 text-xs">
+                <span className="text-gray-600">{label}</span>
+                <span className={`font-medium ${healthy === undefined ? 'text-gray-400' : healthy ? 'text-green-700' : 'text-red-600'}`}>
+                  {healthy === undefined ? 'Unknown' : status}
+                </span>
+              </div>
+            ))}
+            <div className="space-y-2 border-t pt-2">
+              <p className="text-xs font-semibold text-gray-700">Scheduled jobs</p>
+              {['auto-complete-tests', 'process-payouts', 'nudge-developers'].map(jobName => {
+                const run = systemHealth?.cronRuns.find(item => item.jobName === jobName)
+                return (
+                  <div key={jobName} className="text-xs">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-gray-600">{jobName.replaceAll('-', ' ')}</span>
+                      <span className={`font-medium ${run?.status === 'SUCCEEDED' ? 'text-green-700' : run?.status === 'FAILED' ? 'text-red-600' : 'text-gray-400'}`}>
+                        {run ? run.status : 'No run recorded'}
+                      </span>
+                    </div>
+                    {run && <p className="mt-0.5 text-right text-[11px] text-gray-400">{new Date(run.startedAt).toLocaleString()}{run.durationMs !== null ? ` · ${run.durationMs} ms` : ' · In progress'}</p>}
+                    {run?.errorMessage && <p className="mt-0.5 text-right text-[11px] text-red-600">{run.errorMessage}</p>}
+                  </div>
+                )
+              })}
+            </div>
+            <p className="border-t pt-2 text-[11px] text-gray-400">Credentials are checked for presence only; external delivery is not verified.</p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* ── Tabs ────────────────────────────────────────────────────────────── */}
@@ -924,6 +1192,67 @@ export default function AdminDashboard() {
                     <span className="font-bold">{loadingStats ? '—' : val}</span>
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+            <Card className="sm:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-base">Recent Activity</CardTitle>
+                  <CardDescription>Latest platform changes and tester activity</CardDescription>
+                </div>
+                <Button size="sm" variant="outline" onClick={fetchRecentActivity}>Refresh</Button>
+              </CardHeader>
+              <CardContent>
+                {recentActivity.length === 0 ? (
+                  <p className="py-5 text-center text-sm text-gray-500">No recent activity yet.</p>
+                ) : (
+                  <div className="divide-y">
+                    {recentActivity.map(event => (
+                      <button
+                        key={event.id}
+                        type="button"
+                        onClick={() => setActiveTab(event.tab)}
+                        className="flex w-full flex-col gap-1 py-3 text-left transition-colors hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
+                      >
+                        <span className="min-w-0">
+                          <span className="block text-sm font-medium text-gray-900">{event.title}</span>
+                          <span className="block truncate text-xs text-gray-500">{event.detail}</span>
+                        </span>
+                        <time className="shrink-0 text-xs text-gray-400" dateTime={event.createdAt}>
+                          {new Date(event.createdAt).toLocaleString()}
+                        </time>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            <Card className="sm:col-span-2">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <div>
+                  <CardTitle className="text-base">Admin Action History</CardTitle>
+                  <CardDescription>Reasoned records of sensitive changes</CardDescription>
+                </div>
+                <Button size="sm" variant="outline" onClick={fetchAuditEntries}>Refresh</Button>
+              </CardHeader>
+              <CardContent>
+                {auditLogError ? (
+                  <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{auditLogError}</p>
+                ) : auditEntries.length === 0 ? (
+                  <p className="py-5 text-center text-sm text-gray-500">No sensitive admin actions recorded yet.</p>
+                ) : (
+                  <div className="divide-y">
+                    {auditEntries.map(entry => (
+                      <div key={entry.id} className="space-y-1 py-3 text-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+                          <p className="font-medium text-gray-900">{entry.action.replaceAll('_', ' ')} · {entry.targetType} {entry.targetId}</p>
+                          <time className="text-xs text-gray-400" dateTime={entry.createdAt}>{new Date(entry.createdAt).toLocaleString()}</time>
+                        </div>
+                        <p className="text-xs text-gray-500">By {entry.actorEmail} · {entry.reason}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

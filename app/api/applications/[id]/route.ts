@@ -8,6 +8,7 @@ import {
   sendTestingStartedEmail 
 } from '@/lib/email'
 import { formatEurFromCents } from '@/lib/currency'
+import { recordAdminAction } from '@/lib/admin-audit'
 
 // GET - Get single application
 export async function GET(
@@ -168,6 +169,14 @@ export async function PATCH(
 
     const { id } = await params
     const body = await request.json()
+    const auditedAdminActions = ['approve', 'reject', 'verify', 'complete']
+    let auditReason = ''
+    if (currentUser.role === 'ADMIN' && auditedAdminActions.includes(body.action)) {
+      auditReason = typeof body.reason === 'string' ? body.reason.trim() : ''
+      if (auditReason.length < 10) {
+        return NextResponse.json({ error: 'Provide an admin reason of at least 10 characters' }, { status: 400 })
+      }
+    }
 
     // Get the application with job details
     const application = await prisma.application.findUnique({
@@ -240,6 +249,9 @@ export async function PATCH(
         console.log('Payment record created:', payment.id, 'for application:', id)
         return updated
       })
+      if (currentUser.role === 'ADMIN') {
+        await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'approve_application', targetType: 'application', targetId: id, reason: auditReason })
+      }
       // Send approval email
       try {
         const testerPaymentCents = application.job.paymentPerTester
@@ -301,6 +313,9 @@ export async function PATCH(
           payment: true,
         },
       })
+      if (currentUser.role === 'ADMIN') {
+        await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'reject_application', targetType: 'application', targetId: id, reason: auditReason })
+      }
 
       // Delete payment record if it exists (refund the escrow by not marking it as PROCESSING)
       if (updatedApplication.payment) {
@@ -367,6 +382,9 @@ export async function PATCH(
           payment: true,
         },
       })
+      if (currentUser.role === 'ADMIN') {
+        await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'verify_application', targetType: 'application', targetId: id, reason: auditReason })
+      }
 
       // Send testing started email
       try {
@@ -442,6 +460,9 @@ export async function PATCH(
           payment: true,
         },
       })
+      if (currentUser.role === 'ADMIN') {
+        await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'complete_application', targetType: 'application', targetId: id, reason: auditReason })
+      }
 
       // Move escrowed payment into PROCESSING (ready for payout)
       if (!updatedApplication.payment) {

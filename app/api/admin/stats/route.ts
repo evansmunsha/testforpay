@@ -44,6 +44,10 @@ export async function GET() {
       testersWithStripe,
       jobsWithZeroApplications,
       newJobsLast7d,
+      jobsNeedingApplicants,
+      applicationsStuckInVerification,
+      failedPaymentDetails,
+      applicationStatusCounts,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.user.count({ where: { role: 'DEVELOPER' } }),
@@ -96,6 +100,45 @@ export async function GET() {
         },
       }),
       prisma.testingJob.count({ where: { createdAt: { gte: last7d } } }),
+      prisma.testingJob.findMany({
+        where: { status: 'ACTIVE', applications: { none: {} } },
+        select: { id: true, appName: true, createdAt: true },
+        orderBy: { createdAt: 'asc' },
+        take: 5,
+      }),
+      prisma.application.findMany({
+        where: {
+          status: 'APPROVED',
+          updatedAt: { lte: new Date(now.getTime() - 48 * 60 * 60 * 1000) },
+        },
+        select: {
+          id: true,
+          updatedAt: true,
+          tester: { select: { name: true, email: true } },
+          job: { select: { id: true, appName: true } },
+        },
+        orderBy: { updatedAt: 'asc' },
+        take: 5,
+      }),
+      prisma.payment.findMany({
+        where: { status: 'FAILED' },
+        select: {
+          id: true,
+          updatedAt: true,
+          application: {
+            select: {
+              tester: { select: { name: true, email: true } },
+              job: { select: { id: true, appName: true } },
+            },
+          },
+        },
+        orderBy: { updatedAt: 'asc' },
+        take: 5,
+      }),
+      prisma.application.groupBy({
+        by: ['status'],
+        _count: { _all: true },
+      }),
     ])
 
     const totalRevenue = completedPayments.reduce((sum, p) => sum + p.platformFee, 0)
@@ -155,7 +198,16 @@ export async function GET() {
           testersStuckInVerification: stuckInVerification,
           activeTesters: droppedOutApplications,
           failedPayments,
+          samples: {
+            jobsNeedingApplicants,
+            applicationsStuckInVerification,
+            failedPaymentDetails,
+          },
         },
+
+        applicationPipeline: Object.fromEntries(
+          applicationStatusCounts.map(({ status, _count }) => [status, _count._all])
+        ),
 
         // Activity
         activity: {

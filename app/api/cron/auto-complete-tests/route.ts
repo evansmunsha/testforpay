@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { processPaymentById } from '@/lib/payouts'
 import { sendJobCompletedEmail, sendTestimonialRequestEmail } from '@/lib/email'
+import { finishCronExecution, startCronExecution } from '@/lib/cron-monitor'
 
 // This endpoint should be called by a cron service (e.g., Vercel Cron)
 // Runs daily to auto-complete testing applications after testing period expires
@@ -19,6 +20,7 @@ interface AutoCompleteResult {
 }
 
 export async function GET(request: Request) {
+  let cronExecution: Awaited<ReturnType<typeof startCronExecution>> | null = null
   try {
     // Verify the request is from a valid cron service
     const authHeader = request.headers.get('authorization')
@@ -40,6 +42,8 @@ export async function GET(request: Request) {
       console.log('❌ Cron auth failed - invalid or missing token')
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    cronExecution = await startCronExecution('auto-complete-tests')
 
     console.log('⏰ Starting auto-completion of expired tests...')
 
@@ -283,6 +287,12 @@ export async function GET(request: Request) {
     const successCount = results.filter((r) => r.status === 'success').length
     const failCount = results.filter((r) => r.status === 'failed').length
 
+    await finishCronExecution(
+      cronExecution,
+      failCount > 0 ? 'FAILED' : 'SUCCEEDED',
+      failCount > 0 ? `${failCount} application(s) failed during auto-completion` : undefined,
+    )
+
     console.log(`✅ Auto-completion done: ${successCount} success, ${failCount} failed`)
 
     return NextResponse.json({
@@ -295,6 +305,9 @@ export async function GET(request: Request) {
     })
   } catch (error: any) {
     console.error('❌ Cron auto-completion error:', error)
+    if (cronExecution) {
+      await finishCronExecution(cronExecution, 'FAILED', error.message || 'Unknown error')
+    }
     return NextResponse.json(
       {
         error: 'Failed to auto-complete tests',

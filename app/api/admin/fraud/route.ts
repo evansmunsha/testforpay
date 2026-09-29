@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getCurrentUser } from '@/lib/auth';
+import { recordAdminAction } from '@/lib/admin-audit'
 import { getFraudStats, getFraudLogs, resolveFraudLog, clearUserFraudFlags } from '@/lib/fraud-detection';
 
 // GET - Get fraud detection data
@@ -77,14 +78,20 @@ export async function PATCH(request: NextRequest) {
 
     const body = await request.json();
     const { action, logId, userId } = body;
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+    if (reason.length < 10) {
+      return NextResponse.json({ error: 'Provide a reason of at least 10 characters' }, { status: 400 })
+    }
 
     if (action === 'resolve-log' && logId) {
       const resolved = await resolveFraudLog(logId, user.userId);
+      await recordAdminAction({ actorId: user.userId, actorEmail: user.email, action: 'resolve_fraud_log', targetType: 'fraud_log', targetId: logId, reason })
       return NextResponse.json({ success: true, log: resolved });
     }
 
     if (action === 'clear-flags' && userId) {
       const updated = await clearUserFraudFlags(userId);
+      await recordAdminAction({ actorId: user.userId, actorEmail: user.email, action: 'clear_fraud_flags', targetType: 'user', targetId: userId, reason })
       return NextResponse.json({ success: true, user: updated });
     }
 

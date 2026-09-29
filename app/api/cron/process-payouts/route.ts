@@ -1,11 +1,13 @@
 import { NextResponse } from 'next/server'
 import { processCompletedTests, reconcileProcessingTransfers } from '@/lib/payouts'
+import { finishCronExecution, startCronExecution } from '@/lib/cron-monitor'
 
 // This endpoint should be called by a cron service (e.g., Vercel Cron)
 // Vercel Cron: Add to vercel.json crons configuration
 // Or use external service like cron-job.org
 
 export async function GET(request: Request) {
+  let cronExecution: Awaited<ReturnType<typeof startCronExecution>> | null = null
   try {
     // Verify the request is from a valid cron service
     const authHeader = request.headers.get('authorization')
@@ -28,6 +30,8 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
+    cronExecution = await startCronExecution('process-payouts')
+
     console.log('Starting automated payout processing...')
     
     const results = await processCompletedTests()
@@ -35,6 +39,12 @@ export async function GET(request: Request) {
     
     const successCount = results.filter(r => r.status === 'success').length
     const failCount = results.filter(r => r.status === 'failed').length
+
+    await finishCronExecution(
+      cronExecution,
+      failCount > 0 ? 'FAILED' : 'SUCCEEDED',
+      failCount > 0 ? `${failCount} payout(s) failed` : undefined,
+    )
 
     console.log(`Payout processing complete: ${successCount} success, ${failCount} failed`)
 
@@ -48,6 +58,9 @@ export async function GET(request: Request) {
     })
   } catch (error: any) {
     console.error('Cron payout processing error:', error)
+    if (cronExecution) {
+      await finishCronExecution(cronExecution, 'FAILED', error.message || 'Unknown error')
+    }
     return NextResponse.json(
       { error: 'Failed to process payouts', message: error.message },
       { status: 500 }
