@@ -70,6 +70,12 @@ interface Job {
   testimonialEmailSent?: boolean
   testDuration?: number | null
   dailyTasks: Array<{ id: string; dayNumber: number; taskText: string }>
+  applications: Array<{
+    id: string
+    status: string
+    createdAt: string
+    tester: { id: string; name: string | null; email: string }
+  }>
   developer: { id: string; email: string; name: string | null }
   _count: { applications: number }
 }
@@ -330,6 +336,42 @@ function JobDetailCard({ job, formatEurFromCents, getStatusBadge }: {
                 </ol>
               ) : (
                 <p className="text-sm text-gray-500">No daily missions have been configured for this job.</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h4 className="font-semibold text-sm text-gray-700 mb-3 uppercase tracking-wide">
+              Applicants <span className="font-normal normal-case">({job.applications.length})</span>
+            </h4>
+            <div className="overflow-x-auto rounded-lg bg-white">
+              {job.applications.length > 0 ? (
+                <table className="w-full text-left text-sm">
+                  <thead className="border-b bg-gray-50 text-xs uppercase text-gray-500">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Tester</th>
+                      <th className="px-4 py-3 font-medium">Email</th>
+                      <th className="px-4 py-3 font-medium">Status</th>
+                      <th className="px-4 py-3 font-medium">Applied</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {job.applications.map(application => (
+                      <tr key={application.id}>
+                        <td className="px-4 py-3 font-medium text-gray-900">{application.tester.name || '—'}</td>
+                        <td className="px-4 py-3">
+                          <a className="break-all text-blue-700 hover:underline" href={`mailto:${application.tester.email}`}>
+                            {application.tester.email}
+                          </a>
+                        </td>
+                        <td className="px-4 py-3">{application.status.replaceAll('_', ' ')}</td>
+                        <td className="whitespace-nowrap px-4 py-3 text-gray-600">{new Date(application.createdAt).toLocaleDateString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="p-4 text-sm text-gray-500">No testers have applied to this job yet.</p>
               )}
             </div>
           </div>

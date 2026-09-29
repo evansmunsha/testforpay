@@ -35,6 +35,21 @@ export async function GET() {
             taskText: true,
           },
         },
+        applications: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            status: true,
+            createdAt: true,
+            tester: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: 100,
