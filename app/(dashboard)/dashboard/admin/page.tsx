@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/use-auth'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -559,6 +559,7 @@ function JobDetailCard({ job, formatEurFromCents, getStatusBadge }: {
 export default function AdminDashboard() {
   const { user, loading } = useAuth()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const { toast } = useToast()
   const [stats, setStats] = useState<Stats | null>(null)
   const [loadingStats, setLoadingStats] = useState(true)
@@ -600,6 +601,11 @@ export default function AdminDashboard() {
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false)
   const [suspendTargetId, setSuspendTargetId] = useState<string | null>(null)
   const [suspendReason, setSuspendReason] = useState('Violation of Terms of Service')
+
+  useEffect(() => {
+    const requestedTab = searchParams.get('tab')
+    if (requestedTab === 'contacts') setActiveTab('contacts')
+  }, [searchParams])
   const failedPaymentsCount = payments.filter(p => p.status === 'FAILED').length
   const unresolvedReportsCount = feedbackReports.filter(r => !r.resolvedAt).length
   const attentionCount = (stats?.attention.jobsWithZeroApplications ?? 0)

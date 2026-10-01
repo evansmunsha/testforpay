@@ -126,7 +126,7 @@ export async function POST(request: Request) {
               userId: a.id,
               title: `New contact message from ${name}`,
               body: `${subject}`,
-              url: '/admin/contact',
+              url: '/dashboard/admin?tab=contacts',
               type: 'contact_message',
             },
           })

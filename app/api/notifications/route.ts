@@ -32,6 +32,14 @@ export async function GET(request: Request) {
       take: limit,
     })
 
+    // Migrate legacy contact links at read time so existing notifications do not 404.
+    const normalizedNotifications = notifications.map(notification => ({
+      ...notification,
+      url: notification.url === '/admin/contact'
+        ? '/dashboard/admin?tab=contacts'
+        : notification.url,
+    }))
+
     const unreadCount = await prisma.notification.count({
       where: {
         userId: currentUser.userId,
@@ -41,7 +49,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ 
       success: true,
-      notifications, 
+      notifications: normalizedNotifications,
       unreadCount,
     })
   } catch (error) {
