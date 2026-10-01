@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { NotificationBell } from '@/components/shared/notification-bell'
+import { ThemeToggle } from '@/components/shared/theme-toggle'
 import { useAuth } from '@/hooks/use-auth'
 import { useRouter } from 'next/navigation'
 
@@ -42,6 +43,8 @@ export function DashboardNav() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-4">
+          <ThemeToggle />
+
           {/* Notifications */}
           <NotificationBell />
 
