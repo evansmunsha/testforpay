@@ -607,6 +607,8 @@ export default function AdminDashboard() {
   const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'pending' | 'approved'>('pending')
   const [acquisitionTargets, setAcquisitionTargets] = useState<AcquisitionTarget[]>([])
   const [showAcquisitionForm, setShowAcquisitionForm] = useState(false)
+  const [developerSearch, setDeveloperSearch] = useState('')
+  const [selectedDeveloperId, setSelectedDeveloperId] = useState('')
   const [newAcquisitionTarget, setNewAcquisitionTarget] = useState({
     name: '',
     appName: '',
@@ -618,6 +620,11 @@ export default function AdminDashboard() {
     notes: '',
   })
   const acquisitionStatuses: AcquisitionTarget['status'][] = ['Not contacted', 'Contacted', 'Reply received', 'Booked demo', 'Quoted', 'Paid']
+  const availableDevelopers = users.filter(user => user.role === 'DEVELOPER').filter(user => {
+    const query = developerSearch.trim().toLowerCase()
+    if (!query) return true
+    return `${user.name || ''} ${user.email}`.toLowerCase().includes(query)
+  })
   const [loadingTab, setLoadingTab] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -925,13 +932,14 @@ export default function AdminDashboard() {
   }
 
   const handleAddAcquisitionTarget = async () => {
-    const name = newAcquisitionTarget.name.trim()
-    const appName = newAcquisitionTarget.appName.trim()
-    const email = newAcquisitionTarget.email.trim()
+    const selectedDeveloper = users.find(user => user.id === selectedDeveloperId)
+    const name = (selectedDeveloper?.name || newAcquisitionTarget.name).trim()
+    const email = (selectedDeveloper?.email || newAcquisitionTarget.email).trim()
+    const appName = (selectedDeveloper ? `${selectedDeveloper.name || 'Existing developer'} app` : newAcquisitionTarget.appName).trim()
     const source = newAcquisitionTarget.source.trim()
 
-    if (!name || !appName || !email) {
-      toast({ title: 'Missing fields', description: 'Name, app name, and email are required.', variant: 'destructive' })
+    if (!name || !email) {
+      toast({ title: 'Missing fields', description: 'Select a developer from the app or fill in the contact details.', variant: 'destructive' })
       return
     }
 
@@ -941,9 +949,9 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name,
-          appName,
+          appName: appName || 'Existing app developer',
           email,
-          source: source || 'Manual entry',
+          source: source || (selectedDeveloper ? 'Existing app user' : 'Manual entry'),
           status: newAcquisitionTarget.status,
           priority: newAcquisitionTarget.priority,
           nextAction: newAcquisitionTarget.nextAction.trim() || 'Send the intro email and ask for the app link.',
@@ -1345,49 +1353,99 @@ export default function AdminDashboard() {
             <CardContent className="space-y-6">
               {showAcquisitionForm && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950/70">
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor="acq-name" className="dark:text-slate-200">Contact name</Label>
-                      <Input id="acq-name" value={newAcquisitionTarget.name} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, name: e.target.value }))} placeholder="Jane Developer" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                      <Label htmlFor="acq-dev-search" className="dark:text-slate-200">Search existing developers in the app</Label>
+                      <Input id="acq-dev-search" value={developerSearch} onChange={e => setDeveloperSearch(e.target.value)} placeholder="Type a name or email..." className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="acq-app" className="dark:text-slate-200">App name</Label>
-                      <Input id="acq-app" value={newAcquisitionTarget.appName} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, appName: e.target.value }))} placeholder="Night Grid" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      <div className="space-y-2 md:col-span-2 xl:col-span-3">
+                        <Label className="dark:text-slate-200">Select a developer</Label>
+                        <div className="max-h-52 space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-950">
+                          {availableDevelopers.length > 0 ? availableDevelopers.map(user => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedDeveloperId(user.id)
+                                setNewAcquisitionTarget(prev => ({
+                                  ...prev,
+                                  name: user.name || '',
+                                  email: user.email,
+                                  appName: `${user.name || 'Existing developer'} app`,
+                                  source: 'Existing app user',
+                                }))
+                                setDeveloperSearch(`${user.name || user.email}`)
+                              }}
+                              className={`w-full rounded-md border p-2 text-left transition-colors ${selectedDeveloperId === user.id ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/40' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}`}
+                            >
+                              <div className="font-medium text-gray-900 dark:text-slate-100">{user.name || 'Unnamed developer'}</div>
+                              <div className="text-sm text-gray-600 dark:text-slate-300">{user.email}</div>
+                            </button>
+                          )) : (
+                            <p className="text-sm text-slate-500 dark:text-slate-400">No developers match this search.</p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="acq-name" className="dark:text-slate-200">Contact name</Label>
+                        <Input id="acq-name" value={newAcquisitionTarget.name} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, name: e.target.value }))} placeholder="Jane Developer" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="acq-app" className="dark:text-slate-200">App name</Label>
+                        <Input id="acq-app" value={newAcquisitionTarget.appName} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, appName: e.target.value }))} placeholder="Night Grid" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="acq-email" className="dark:text-slate-200">Email</Label>
+                        <Input id="acq-email" type="email" value={newAcquisitionTarget.email} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, email: e.target.value }))} placeholder="jane@company.com" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="acq-source" className="dark:text-slate-200">Source</Label>
+                        <Input id="acq-source" value={newAcquisitionTarget.source} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, source: e.target.value }))} placeholder="Google Play search" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="acq-priority" className="dark:text-slate-200">Priority</Label>
+                        <select id="acq-priority" value={newAcquisitionTarget.priority} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, priority: e.target.value as AcquisitionTarget['priority'] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+                          <option value="High">High</option>
+                          <option value="Medium">Medium</option>
+                          <option value="Low">Low</option>
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="acq-status" className="dark:text-slate-200">Status</Label>
+                        <select id="acq-status" value={newAcquisitionTarget.status} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, status: e.target.value as AcquisitionTarget['status'] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+                          {acquisitionStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-2 md:col-span-2 xl:col-span-2">
+                        <Label htmlFor="acq-action" className="dark:text-slate-200">Next action</Label>
+                        <Input id="acq-action" value={newAcquisitionTarget.nextAction} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, nextAction: e.target.value }))} placeholder="Send the intro email and ask for the app link" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                      </div>
+                      <div className="space-y-2 md:col-span-2 xl:col-span-3">
+                        <Label htmlFor="acq-notes" className="dark:text-slate-200">Notes</Label>
+                        <Input id="acq-notes" value={newAcquisitionTarget.notes} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, notes: e.target.value }))} placeholder="Need 12 testers for the next closed test." className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="acq-email" className="dark:text-slate-200">Email</Label>
-                      <Input id="acq-email" type="email" value={newAcquisitionTarget.email} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, email: e.target.value }))} placeholder="jane@company.com" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                    <div className="mt-4 flex justify-end gap-2">
+                      <Button variant="outline" onClick={() => {
+                        setShowAcquisitionForm(false)
+                        setSelectedDeveloperId('')
+                        setDeveloperSearch('')
+                        setNewAcquisitionTarget({
+                          name: '',
+                          appName: '',
+                          source: '',
+                          status: 'Not contacted',
+                          priority: 'Medium',
+                          email: '',
+                          nextAction: '',
+                          notes: '',
+                        })
+                      }} className="dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">Cancel</Button>
+                      <Button onClick={handleAddAcquisitionTarget}>Save lead</Button>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="acq-source" className="dark:text-slate-200">Source</Label>
-                      <Input id="acq-source" value={newAcquisitionTarget.source} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, source: e.target.value }))} placeholder="Google Play search" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="acq-priority" className="dark:text-slate-200">Priority</Label>
-                      <select id="acq-priority" value={newAcquisitionTarget.priority} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, priority: e.target.value as AcquisitionTarget['priority'] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
-                        <option value="High">High</option>
-                        <option value="Medium">Medium</option>
-                        <option value="Low">Low</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="acq-status" className="dark:text-slate-200">Status</Label>
-                      <select id="acq-status" value={newAcquisitionTarget.status} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, status: e.target.value as AcquisitionTarget['status'] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
-                        {acquisitionStatuses.map(status => <option key={status} value={status}>{status}</option>)}
-                      </select>
-                    </div>
-                    <div className="space-y-2 md:col-span-2 xl:col-span-2">
-                      <Label htmlFor="acq-action" className="dark:text-slate-200">Next action</Label>
-                      <Input id="acq-action" value={newAcquisitionTarget.nextAction} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, nextAction: e.target.value }))} placeholder="Send the intro email and ask for the app link" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
-                    </div>
-                    <div className="space-y-2 md:col-span-2 xl:col-span-3">
-                      <Label htmlFor="acq-notes" className="dark:text-slate-200">Notes</Label>
-                      <Input id="acq-notes" value={newAcquisitionTarget.notes} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, notes: e.target.value }))} placeholder="Need 12 testers for the next closed test." className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
-                    </div>
-                  </div>
-                  <div className="mt-4 flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setShowAcquisitionForm(false)} className="dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">Cancel</Button>
-                    <Button onClick={handleAddAcquisitionTarget}>Save lead</Button>
                   </div>
                 </div>
               )}
