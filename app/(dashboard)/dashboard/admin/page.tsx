@@ -607,7 +607,6 @@ export default function AdminDashboard() {
   const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'pending' | 'approved'>('pending')
   const [acquisitionTargets, setAcquisitionTargets] = useState<AcquisitionTarget[]>([])
   const [showAcquisitionForm, setShowAcquisitionForm] = useState(false)
-  const [developerSearch, setDeveloperSearch] = useState('')
   const [selectedDeveloperId, setSelectedDeveloperId] = useState('')
   const [newAcquisitionTarget, setNewAcquisitionTarget] = useState({
     name: '',
@@ -620,11 +619,7 @@ export default function AdminDashboard() {
     notes: '',
   })
   const acquisitionStatuses: AcquisitionTarget['status'][] = ['Not contacted', 'Contacted', 'Reply received', 'Booked demo', 'Quoted', 'Paid']
-  const availableDevelopers = users.filter(user => user.role === 'DEVELOPER').filter(user => {
-    const query = developerSearch.trim().toLowerCase()
-    if (!query) return true
-    return `${user.name || ''} ${user.email}`.toLowerCase().includes(query)
-  })
+  const availableDevelopers = users.filter(user => user.role === 'DEVELOPER')
   const [loadingTab, setLoadingTab] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -1354,41 +1349,37 @@ export default function AdminDashboard() {
               {showAcquisitionForm && (
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950/70">
                   <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="acq-dev-search" className="dark:text-slate-200">Search existing developers in the app</Label>
-                      <Input id="acq-dev-search" value={developerSearch} onChange={e => setDeveloperSearch(e.target.value)} placeholder="Type a name or email..." className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
+                    <div className="space-y-2 md:col-span-2 xl:col-span-3">
+                      <Label htmlFor="acq-developer-select" className="dark:text-slate-200">Select existing developer</Label>
+                      <select
+                        id="acq-developer-select"
+                        value={selectedDeveloperId}
+                        onChange={e => {
+                          const value = e.target.value
+                          setSelectedDeveloperId(value)
+                          const user = users.find(item => item.id === value)
+                          if (user) {
+                            setNewAcquisitionTarget(prev => ({
+                              ...prev,
+                              name: user.name || '',
+                              email: user.email,
+                              appName: `${user.name || 'Existing developer'} app`,
+                              source: 'Existing app user',
+                            }))
+                          }
+                        }}
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                      >
+                        <option value="">Choose an existing developer...</option>
+                        {availableDevelopers.map(user => (
+                          <option key={user.id} value={user.id}>
+                            {user.name || 'Unnamed developer'} — {user.email}
+                          </option>
+                        ))}
+                      </select>
                     </div>
 
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                      <div className="space-y-2 md:col-span-2 xl:col-span-3">
-                        <Label className="dark:text-slate-200">Select a developer</Label>
-                        <div className="max-h-52 space-y-2 overflow-y-auto rounded-md border border-slate-200 bg-white p-2 dark:border-slate-700 dark:bg-slate-950">
-                          {availableDevelopers.length > 0 ? availableDevelopers.map(user => (
-                            <button
-                              key={user.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedDeveloperId(user.id)
-                                setNewAcquisitionTarget(prev => ({
-                                  ...prev,
-                                  name: user.name || '',
-                                  email: user.email,
-                                  appName: `${user.name || 'Existing developer'} app`,
-                                  source: 'Existing app user',
-                                }))
-                                setDeveloperSearch(`${user.name || user.email}`)
-                              }}
-                              className={`w-full rounded-md border p-2 text-left transition-colors ${selectedDeveloperId === user.id ? 'border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/40' : 'border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800'}`}
-                            >
-                              <div className="font-medium text-gray-900 dark:text-slate-100">{user.name || 'Unnamed developer'}</div>
-                              <div className="text-sm text-gray-600 dark:text-slate-300">{user.email}</div>
-                            </button>
-                          )) : (
-                            <p className="text-sm text-slate-500 dark:text-slate-400">No developers match this search.</p>
-                          )}
-                        </div>
-                      </div>
-
                       <div className="space-y-2">
                         <Label htmlFor="acq-name" className="dark:text-slate-200">Contact name</Label>
                         <Input id="acq-name" value={newAcquisitionTarget.name} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, name: e.target.value }))} placeholder="Jane Developer" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
@@ -1432,7 +1423,6 @@ export default function AdminDashboard() {
                       <Button variant="outline" onClick={() => {
                         setShowAcquisitionForm(false)
                         setSelectedDeveloperId('')
-                        setDeveloperSearch('')
                         setNewAcquisitionTarget({
                           name: '',
                           appName: '',
