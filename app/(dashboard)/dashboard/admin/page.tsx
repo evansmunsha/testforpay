@@ -1305,95 +1305,96 @@ export default function AdminDashboard() {
 
         <TabsContent value="acquisition">
           <div className="grid gap-4 md:grid-cols-4">
-            <Card>
+            <Card className="dark:bg-slate-900 dark:text-slate-100">
               <CardContent className="p-4">
-                <div className="text-sm text-gray-500">Total targets</div>
-                <div className="mt-2 text-3xl font-bold text-gray-900">{acquisitionSummary.total}</div>
+                <div className="text-sm text-gray-500 dark:text-slate-300">Total targets</div>
+                <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-slate-100">{acquisitionSummary.total}</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="dark:bg-slate-900 dark:text-slate-100">
               <CardContent className="p-4">
-                <div className="text-sm text-gray-500">Not contacted</div>
-                <div className="mt-2 text-3xl font-bold text-gray-900">{acquisitionSummary.notContacted}</div>
+                <div className="text-sm text-gray-500 dark:text-slate-300">Not contacted</div>
+                <div className="mt-2 text-3xl font-bold text-gray-900 dark:text-slate-100">{acquisitionSummary.notContacted}</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="dark:bg-slate-900 dark:text-slate-100">
               <CardContent className="p-4">
-                <div className="text-sm text-gray-500">Reply/interest</div>
-                <div className="mt-2 text-3xl font-bold text-emerald-600">{acquisitionSummary.replies}</div>
+                <div className="text-sm text-gray-500 dark:text-slate-300">Reply/interest</div>
+                <div className="mt-2 text-3xl font-bold text-emerald-600 dark:text-emerald-400">{acquisitionSummary.replies}</div>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="dark:bg-slate-900 dark:text-slate-100">
               <CardContent className="p-4">
-                <div className="text-sm text-gray-500">Paid jobs</div>
-                <div className="mt-2 text-3xl font-bold text-violet-600">{acquisitionSummary.paid}</div>
+                <div className="text-sm text-gray-500 dark:text-slate-300">Paid jobs</div>
+                <div className="mt-2 text-3xl font-bold text-violet-600 dark:text-violet-400">{acquisitionSummary.paid}</div>
               </CardContent>
             </Card>
           </div>
 
-          <Card className="mt-4">
+          <Card className="mt-4 dark:bg-slate-900 dark:text-slate-100">
             <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <CardTitle>Developer outreach tracker</CardTitle>
-                <CardDescription>Track founder outreach for the 14-day developer acquisition sprint.</CardDescription>
+                <CardTitle className="dark:text-slate-100">Developer outreach tracker</CardTitle>
+                <CardDescription className="dark:text-slate-300">Track founder outreach for the 14-day developer acquisition sprint.</CardDescription>
+                <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Replies come to your email inbox. When someone answers, come back here and update their status manually.</p>
               </div>
-              <Button onClick={() => setShowAcquisitionForm(v => !v)} variant="outline" className="w-full sm:w-auto">
+              <Button onClick={() => setShowAcquisitionForm(v => !v)} variant="outline" className="w-full sm:w-auto dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">
                 {showAcquisitionForm ? 'Hide form' : 'Add target'}
               </Button>
             </CardHeader>
             <CardContent className="space-y-6">
               {showAcquisitionForm && (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-950/70">
                   <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                     <div className="space-y-2">
-                      <Label htmlFor="acq-name">Contact name</Label>
-                      <Input id="acq-name" value={newAcquisitionTarget.name} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, name: e.target.value }))} placeholder="Jane Developer" />
+                      <Label htmlFor="acq-name" className="dark:text-slate-200">Contact name</Label>
+                      <Input id="acq-name" value={newAcquisitionTarget.name} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, name: e.target.value }))} placeholder="Jane Developer" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="acq-app">App name</Label>
-                      <Input id="acq-app" value={newAcquisitionTarget.appName} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, appName: e.target.value }))} placeholder="Night Grid" />
+                      <Label htmlFor="acq-app" className="dark:text-slate-200">App name</Label>
+                      <Input id="acq-app" value={newAcquisitionTarget.appName} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, appName: e.target.value }))} placeholder="Night Grid" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="acq-email">Email</Label>
-                      <Input id="acq-email" type="email" value={newAcquisitionTarget.email} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, email: e.target.value }))} placeholder="jane@company.com" />
+                      <Label htmlFor="acq-email" className="dark:text-slate-200">Email</Label>
+                      <Input id="acq-email" type="email" value={newAcquisitionTarget.email} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, email: e.target.value }))} placeholder="jane@company.com" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="acq-source">Source</Label>
-                      <Input id="acq-source" value={newAcquisitionTarget.source} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, source: e.target.value }))} placeholder="Google Play search" />
+                      <Label htmlFor="acq-source" className="dark:text-slate-200">Source</Label>
+                      <Input id="acq-source" value={newAcquisitionTarget.source} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, source: e.target.value }))} placeholder="Google Play search" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="acq-priority">Priority</Label>
-                      <select id="acq-priority" value={newAcquisitionTarget.priority} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, priority: e.target.value as AcquisitionTarget['priority'] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <Label htmlFor="acq-priority" className="dark:text-slate-200">Priority</Label>
+                      <select id="acq-priority" value={newAcquisitionTarget.priority} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, priority: e.target.value as AcquisitionTarget['priority'] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
                         <option value="High">High</option>
                         <option value="Medium">Medium</option>
                         <option value="Low">Low</option>
                       </select>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="acq-status">Status</Label>
-                      <select id="acq-status" value={newAcquisitionTarget.status} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, status: e.target.value as AcquisitionTarget['status'] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                      <Label htmlFor="acq-status" className="dark:text-slate-200">Status</Label>
+                      <select id="acq-status" value={newAcquisitionTarget.status} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, status: e.target.value as AcquisitionTarget['status'] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
                         {acquisitionStatuses.map(status => <option key={status} value={status}>{status}</option>)}
                       </select>
                     </div>
                     <div className="space-y-2 md:col-span-2 xl:col-span-2">
-                      <Label htmlFor="acq-action">Next action</Label>
-                      <Input id="acq-action" value={newAcquisitionTarget.nextAction} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, nextAction: e.target.value }))} placeholder="Send the intro email and ask for the app link" />
+                      <Label htmlFor="acq-action" className="dark:text-slate-200">Next action</Label>
+                      <Input id="acq-action" value={newAcquisitionTarget.nextAction} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, nextAction: e.target.value }))} placeholder="Send the intro email and ask for the app link" className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
                     </div>
                     <div className="space-y-2 md:col-span-2 xl:col-span-3">
-                      <Label htmlFor="acq-notes">Notes</Label>
-                      <Input id="acq-notes" value={newAcquisitionTarget.notes} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, notes: e.target.value }))} placeholder="Need 12 testers for the next closed test." />
+                      <Label htmlFor="acq-notes" className="dark:text-slate-200">Notes</Label>
+                      <Input id="acq-notes" value={newAcquisitionTarget.notes} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, notes: e.target.value }))} placeholder="Need 12 testers for the next closed test." className="dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100" />
                     </div>
                   </div>
                   <div className="mt-4 flex justify-end gap-2">
-                    <Button variant="outline" onClick={() => setShowAcquisitionForm(false)}>Cancel</Button>
+                    <Button variant="outline" onClick={() => setShowAcquisitionForm(false)} className="dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">Cancel</Button>
                     <Button onClick={handleAddAcquisitionTarget}>Save lead</Button>
                   </div>
                 </div>
               )}
 
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+              <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                <table className="min-w-full text-left text-sm dark:text-slate-100">
+                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500 dark:bg-slate-800 dark:text-slate-300">
                     <tr>
                       <th className="px-3 py-3">Name</th>
                       <th className="px-3 py-3">App</th>
@@ -1406,15 +1407,15 @@ export default function AdminDashboard() {
                       <th className="px-3 py-3">Action</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y">
+                  <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                     {acquisitionTargets.map(target => (
-                      <tr key={target.id} className="align-top">
+                      <tr key={target.id} className="align-top dark:bg-slate-900/70">
                         <td className="px-3 py-3">
-                          <div className="font-medium text-gray-900">{target.name}</div>
-                          <div className="text-xs text-gray-500">{target.email}</div>
+                          <div className="font-medium text-gray-900 dark:text-slate-100">{target.name}</div>
+                          <div className="text-xs text-gray-500 dark:text-slate-400">{target.email}</div>
                         </td>
-                        <td className="px-3 py-3 text-gray-800">{target.appName}</td>
-                        <td className="px-3 py-3 text-gray-600">{target.source}</td>
+                        <td className="px-3 py-3 text-gray-800 dark:text-slate-200">{target.appName}</td>
+                        <td className="px-3 py-3 text-gray-600 dark:text-slate-300">{target.source}</td>
                         <td className="px-3 py-3">
                           <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${target.priority === 'High' ? 'bg-red-100 text-red-700' : target.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
                             {target.priority}
@@ -1425,11 +1426,11 @@ export default function AdminDashboard() {
                             {target.status}
                           </span>
                         </td>
-                        <td className="px-3 py-3 text-gray-600">{target.lastContacted}</td>
-                        <td className="px-3 py-3 text-gray-600 max-w-xs">{target.nextAction}</td>
-                        <td className="px-3 py-3 text-gray-600 max-w-xs">{target.notes}</td>
+                        <td className="px-3 py-3 text-gray-600 dark:text-slate-300">{target.lastContacted}</td>
+                        <td className="px-3 py-3 text-gray-600 max-w-xs dark:text-slate-300">{target.nextAction}</td>
+                        <td className="px-3 py-3 text-gray-600 max-w-xs dark:text-slate-300">{target.notes}</td>
                         <td className="px-3 py-3">
-                          <Button size="sm" variant="outline" onClick={() => advanceAcquisitionTarget(target.id)}>
+                          <Button size="sm" variant="outline" onClick={() => advanceAcquisitionTarget(target.id)} className="dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-800">
                             {target.status === 'Paid' ? 'Keep active' : 'Advance'}
                           </Button>
                         </td>
