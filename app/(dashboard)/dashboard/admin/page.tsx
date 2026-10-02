@@ -205,6 +205,18 @@ interface TestimonialFeedback {
   user: { id: string; email: string; name: string | null; role: string }
 }
 
+interface AcquisitionTarget {
+  id: string
+  name: string
+  appName: string
+  source: string
+  status: 'Not contacted' | 'Contacted' | 'Reply received' | 'Booked demo' | 'Quoted' | 'Paid'
+  priority: 'High' | 'Medium' | 'Low'
+  email: string
+  lastContacted: string
+  nextAction: string
+  notes: string
+}
 
 // ── Reusable stat card ─────────────────────────────────────────────────────────
 function StatCard({ title, value, sub, icon: Icon, color = 'blue', loading }: {
@@ -593,6 +605,19 @@ export default function AdminDashboard() {
   const [feedbackReports, setFeedbackReports] = useState<FeedbackReport[]>([])
   const [testimonials, setTestimonials] = useState<TestimonialFeedback[]>([])
   const [feedbackFilter, setFeedbackFilter] = useState<'all' | 'pending' | 'approved'>('pending')
+  const [acquisitionTargets, setAcquisitionTargets] = useState<AcquisitionTarget[]>([])
+  const [showAcquisitionForm, setShowAcquisitionForm] = useState(false)
+  const [newAcquisitionTarget, setNewAcquisitionTarget] = useState({
+    name: '',
+    appName: '',
+    source: '',
+    status: 'Not contacted' as AcquisitionTarget['status'],
+    priority: 'Medium' as AcquisitionTarget['priority'],
+    email: '',
+    nextAction: '',
+    notes: '',
+  })
+  const acquisitionStatuses: AcquisitionTarget['status'][] = ['Not contacted', 'Contacted', 'Reply received', 'Booked demo', 'Quoted', 'Paid']
   const [loadingTab, setLoadingTab] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -684,7 +709,7 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => { if (!loading && user?.role !== 'ADMIN') router.push('/dashboard') }, [user, loading, router])
-  useEffect(() => { if (!loading && user?.role === 'ADMIN') { fetchStats(); fetchUsers(); fetchRecentActivity(); fetchSystemHealth(); fetchAuditEntries() } }, [loading, user])
+  useEffect(() => { if (!loading && user?.role === 'ADMIN') { fetchStats(); fetchUsers(); fetchRecentActivity(); fetchSystemHealth(); fetchAuditEntries(); fetchAcquisitionTargets() } }, [loading, user])
   useEffect(() => {
     if (!loading && user?.role === 'ADMIN') {
       if (activeTab === 'users') fetchUsers()
@@ -859,6 +884,114 @@ export default function AdminDashboard() {
         } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) } finally { setActionLoading(null) }
       },
     })
+  }
+
+  const advanceAcquisitionTarget = async (id: string) => {
+    const target = acquisitionTargets.find(item => item.id === id)
+    if (!target) return
+
+    const currentIndex = acquisitionStatuses.indexOf(target.status)
+    const nextStatus = acquisitionStatuses[Math.min(currentIndex + 1, acquisitionStatuses.length - 1)]
+    const nextAction =
+      nextStatus === 'Paid'
+        ? 'Close the job and mark as delivered.'
+        : nextStatus === 'Reply received'
+          ? 'Send pricing details and answer the developer’s questions.'
+          : nextStatus === 'Booked demo'
+            ? 'Send a direct signup link and confirm the requirement timing.'
+            : nextStatus === 'Quoted'
+              ? 'Follow up with a clear offer and launch timeline.'
+              : 'Continue outreach and ask for the app link or launch date.'
+
+    try {
+      const res = await fetch('/api/admin/leads', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: nextStatus, nextAction, lastContacted: new Date().toISOString() }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast({ title: 'Update failed', description: data.error || 'Could not update the lead.', variant: 'destructive' })
+        return
+      }
+
+      setAcquisitionTargets(prev => prev.map(item => item.id === id ? data.lead : item))
+      toast({ title: 'Lead updated', description: `${target.name} moved to ${nextStatus}.`, variant: 'success' })
+    } catch (error) {
+      console.error('Failed to advance acquisition target:', error)
+      toast({ title: 'Error', description: 'Could not update the lead.', variant: 'destructive' })
+    }
+  }
+
+  const handleAddAcquisitionTarget = async () => {
+    const name = newAcquisitionTarget.name.trim()
+    const appName = newAcquisitionTarget.appName.trim()
+    const email = newAcquisitionTarget.email.trim()
+    const source = newAcquisitionTarget.source.trim()
+
+    if (!name || !appName || !email) {
+      toast({ title: 'Missing fields', description: 'Name, app name, and email are required.', variant: 'destructive' })
+      return
+    }
+
+    try {
+      const res = await fetch('/api/admin/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          appName,
+          email,
+          source: source || 'Manual entry',
+          status: newAcquisitionTarget.status,
+          priority: newAcquisitionTarget.priority,
+          nextAction: newAcquisitionTarget.nextAction.trim() || 'Send the intro email and ask for the app link.',
+          notes: newAcquisitionTarget.notes.trim() || 'New lead added to the acquisition pipeline.',
+        }),
+      })
+      const data = await res.json()
+
+      if (!res.ok) {
+        toast({ title: 'Save failed', description: data.error || 'Could not add the lead.', variant: 'destructive' })
+        return
+      }
+
+      setAcquisitionTargets(prev => [data.lead, ...prev])
+      setShowAcquisitionForm(false)
+      setNewAcquisitionTarget({
+        name: '',
+        appName: '',
+        source: '',
+        status: 'Not contacted',
+        priority: 'Medium',
+        email: '',
+        nextAction: '',
+        notes: '',
+      })
+      toast({ title: 'Lead added', description: `${name} is now in the developer outreach tracker.`, variant: 'success' })
+    } catch (error) {
+      console.error('Failed to add acquisition target:', error)
+      toast({ title: 'Error', description: 'Could not save the lead.', variant: 'destructive' })
+    }
+  }
+
+  const fetchAcquisitionTargets = async () => {
+    try {
+      const res = await fetch('/api/admin/leads')
+      const data = await res.json()
+      if (res.ok) setAcquisitionTargets(data.leads || [])
+      else console.error('Failed to fetch acquisition leads:', data.error || 'Unknown error')
+    } catch (error) {
+      console.error('Failed to fetch acquisition leads:', error)
+    }
+  }
+
+  const acquisitionSummary = {
+    total: acquisitionTargets.length,
+    notContacted: acquisitionTargets.filter(t => t.status === 'Not contacted').length,
+    replies: acquisitionTargets.filter(t => t.status === 'Reply received' || t.status === 'Booked demo' || t.status === 'Quoted' || t.status === 'Paid').length,
+    paid: acquisitionTargets.filter(t => t.status === 'Paid').length,
   }
 
   const filteredJobs = jobs.filter(job => {
@@ -1163,11 +1296,151 @@ export default function AdminDashboard() {
               Reports {unresolvedReportsCount > 0 && <Badge variant="destructive" className="ml-1">{unresolvedReportsCount}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
+            <TabsTrigger value="acquisition">Acquisition</TabsTrigger>
             <TabsTrigger value="fraud" className="text-red-600">
               <ShieldAlert className="h-3.5 w-3.5 mr-1" />Fraud {(fraudStats?.unresolvedLogs ?? 0) > 0 && <Badge variant="destructive" className="ml-1">{fraudStats?.unresolvedLogs}</Badge>}
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="acquisition">
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-sm text-gray-500">Total targets</div>
+                <div className="mt-2 text-3xl font-bold text-gray-900">{acquisitionSummary.total}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-sm text-gray-500">Not contacted</div>
+                <div className="mt-2 text-3xl font-bold text-gray-900">{acquisitionSummary.notContacted}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-sm text-gray-500">Reply/interest</div>
+                <div className="mt-2 text-3xl font-bold text-emerald-600">{acquisitionSummary.replies}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-sm text-gray-500">Paid jobs</div>
+                <div className="mt-2 text-3xl font-bold text-violet-600">{acquisitionSummary.paid}</div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="mt-4">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <CardTitle>Developer outreach tracker</CardTitle>
+                <CardDescription>Track founder outreach for the 14-day developer acquisition sprint.</CardDescription>
+              </div>
+              <Button onClick={() => setShowAcquisitionForm(v => !v)} variant="outline" className="w-full sm:w-auto">
+                {showAcquisitionForm ? 'Hide form' : 'Add target'}
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {showAcquisitionForm && (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="acq-name">Contact name</Label>
+                      <Input id="acq-name" value={newAcquisitionTarget.name} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, name: e.target.value }))} placeholder="Jane Developer" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="acq-app">App name</Label>
+                      <Input id="acq-app" value={newAcquisitionTarget.appName} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, appName: e.target.value }))} placeholder="Night Grid" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="acq-email">Email</Label>
+                      <Input id="acq-email" type="email" value={newAcquisitionTarget.email} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, email: e.target.value }))} placeholder="jane@company.com" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="acq-source">Source</Label>
+                      <Input id="acq-source" value={newAcquisitionTarget.source} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, source: e.target.value }))} placeholder="Google Play search" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="acq-priority">Priority</Label>
+                      <select id="acq-priority" value={newAcquisitionTarget.priority} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, priority: e.target.value as AcquisitionTarget['priority'] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        <option value="High">High</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Low">Low</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="acq-status">Status</Label>
+                      <select id="acq-status" value={newAcquisitionTarget.status} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, status: e.target.value as AcquisitionTarget['status'] }))} className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                        {acquisitionStatuses.map(status => <option key={status} value={status}>{status}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2 md:col-span-2 xl:col-span-2">
+                      <Label htmlFor="acq-action">Next action</Label>
+                      <Input id="acq-action" value={newAcquisitionTarget.nextAction} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, nextAction: e.target.value }))} placeholder="Send the intro email and ask for the app link" />
+                    </div>
+                    <div className="space-y-2 md:col-span-2 xl:col-span-3">
+                      <Label htmlFor="acq-notes">Notes</Label>
+                      <Input id="acq-notes" value={newAcquisitionTarget.notes} onChange={e => setNewAcquisitionTarget(prev => ({ ...prev, notes: e.target.value }))} placeholder="Need 12 testers for the next closed test." />
+                    </div>
+                  </div>
+                  <div className="mt-4 flex justify-end gap-2">
+                    <Button variant="outline" onClick={() => setShowAcquisitionForm(false)}>Cancel</Button>
+                    <Button onClick={handleAddAcquisitionTarget}>Save lead</Button>
+                  </div>
+                </div>
+              )}
+
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-left text-sm">
+                  <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                    <tr>
+                      <th className="px-3 py-3">Name</th>
+                      <th className="px-3 py-3">App</th>
+                      <th className="px-3 py-3">Source</th>
+                      <th className="px-3 py-3">Priority</th>
+                      <th className="px-3 py-3">Status</th>
+                      <th className="px-3 py-3">Last contact</th>
+                      <th className="px-3 py-3">Next action</th>
+                      <th className="px-3 py-3">Notes</th>
+                      <th className="px-3 py-3">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {acquisitionTargets.map(target => (
+                      <tr key={target.id} className="align-top">
+                        <td className="px-3 py-3">
+                          <div className="font-medium text-gray-900">{target.name}</div>
+                          <div className="text-xs text-gray-500">{target.email}</div>
+                        </td>
+                        <td className="px-3 py-3 text-gray-800">{target.appName}</td>
+                        <td className="px-3 py-3 text-gray-600">{target.source}</td>
+                        <td className="px-3 py-3">
+                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${target.priority === 'High' ? 'bg-red-100 text-red-700' : target.priority === 'Medium' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
+                            {target.priority}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3">
+                          <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${target.status === 'Paid' ? 'bg-violet-100 text-violet-700' : target.status === 'Reply received' || target.status === 'Booked demo' ? 'bg-emerald-100 text-emerald-700' : target.status === 'Contacted' ? 'bg-blue-100 text-blue-700' : target.status === 'Quoted' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-700'}`}>
+                            {target.status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-3 text-gray-600">{target.lastContacted}</td>
+                        <td className="px-3 py-3 text-gray-600 max-w-xs">{target.nextAction}</td>
+                        <td className="px-3 py-3 text-gray-600 max-w-xs">{target.notes}</td>
+                        <td className="px-3 py-3">
+                          <Button size="sm" variant="outline" onClick={() => advanceAcquisitionTarget(target.id)}>
+                            {target.status === 'Paid' ? 'Keep active' : 'Advance'}
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ── Overview tab ──────────────────────────────────────────────────── */}
         <TabsContent value="overview">

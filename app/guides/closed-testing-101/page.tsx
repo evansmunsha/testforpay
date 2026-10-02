@@ -167,12 +167,26 @@ export default function ClosedTestingGuidePage() {
             <strong>Looking for testers instead of the explanation?</strong>{" "}
             See our practical comparison of every option (friends, Reddit, cheap marketplaces vs verified paid testers).
           </p>
-          <Link
-            href="/guides/google-play-closed-testing"
-            className="inline-flex items-center gap-1 mt-2 text-sm font-medium text-violet-700 hover:underline"
-          >
-            Where to find Google Play closed testers →
-          </Link>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Link
+              href="/guides/google-play-closed-testing"
+              className="inline-flex items-center gap-1 text-sm font-medium text-violet-700 hover:underline"
+            >
+              Where to find Google Play closed testers →
+            </Link>
+            <Link
+              href="/guides/how-to-get-12-testers-google-play"
+              className="inline-flex items-center gap-1 text-sm font-medium text-violet-700 hover:underline"
+            >
+              How to get 12 testers in 24 hours →
+            </Link>
+            <Link
+              href="/hire-testers"
+              className="inline-flex items-center gap-1 text-sm font-medium text-violet-700 hover:underline"
+            >
+              Hire testers for Google Play closed testing →
+            </Link>
+          </div>
         </div>
 
         {/* What is the rule */}

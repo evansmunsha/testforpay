@@ -93,7 +93,7 @@ export default function GuidePage() {
           >
             Closed Testing 101 guide
           </a>
-          .
+          . If you need the fastest path to a solution, use our developer-focused guide: <a href="/guides/how-to-get-12-testers-google-play" className="text-violet-700 font-medium underline">How to get 12 testers for Google Play closed testing</a> or <a href="/hire-testers" className="text-violet-700 font-medium underline">hire testers for Google Play closed testing</a>.
         </p>
 
         {/* The real problem */}
