@@ -577,6 +577,8 @@ export default function AdminDashboard() {
   const [loadingStats, setLoadingStats] = useState(true)
   const [processingPayouts, setProcessingPayouts] = useState(false)
   const [users, setUsers] = useState<User[]>([])
+  const [developers, setDevelopers] = useState<User[]>([])
+  const [loadingDevelopers, setLoadingDevelopers] = useState(true)
   // User management pagination and filters
   const [userPage, setUserPage] = useState(1)
   const [userLimit, setUserLimit] = useState(20)
@@ -619,7 +621,7 @@ export default function AdminDashboard() {
     notes: '',
   })
   const acquisitionStatuses: AcquisitionTarget['status'][] = ['Not contacted', 'Contacted', 'Reply received', 'Booked demo', 'Quoted', 'Paid']
-  const availableDevelopers = users.filter(user => user.role === 'DEVELOPER')
+  const availableDevelopers = developers
   const [loadingTab, setLoadingTab] = useState(false)
   const [activeTab, setActiveTab] = useState('overview')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -711,7 +713,7 @@ export default function AdminDashboard() {
   }
 
   useEffect(() => { if (!loading && user?.role !== 'ADMIN') router.push('/dashboard') }, [user, loading, router])
-  useEffect(() => { if (!loading && user?.role === 'ADMIN') { fetchStats(); fetchUsers(); fetchRecentActivity(); fetchSystemHealth(); fetchAuditEntries(); fetchAcquisitionTargets() } }, [loading, user])
+  useEffect(() => { if (!loading && user?.role === 'ADMIN') { fetchStats(); fetchUsers(); fetchDevelopers(); fetchRecentActivity(); fetchSystemHealth(); fetchAuditEntries(); fetchAcquisitionTargets() } }, [loading, user])
   useEffect(() => {
     if (!loading && user?.role === 'ADMIN') {
       if (activeTab === 'users') fetchUsers()
@@ -798,6 +800,29 @@ export default function AdminDashboard() {
     setLoadingTab(false)
   }
 }
+
+  const fetchDevelopers = async () => {
+    setLoadingDevelopers(true)
+    try {
+      const fetchPage = async (page: number) => {
+        const params = new URLSearchParams({ role: 'DEVELOPER', page: page.toString(), limit: '50' })
+        const response = await fetch(`/api/admin/users?${params}`)
+        if (!response.ok) throw new Error('Failed to load developers')
+        return response.json() as Promise<{ users: User[]; pagination: { totalPages: number } }>
+      }
+
+      const firstPage = await fetchPage(1)
+      const remainingPages = await Promise.all(
+        Array.from({ length: firstPage.pagination.totalPages - 1 }, (_, index) => fetchPage(index + 2))
+      )
+      setDevelopers([...firstPage.users, ...remainingPages.flatMap(page => page.users)])
+    } catch (error) {
+      console.error('Failed to fetch developers for acquisition:', error)
+      setDevelopers([])
+    } finally {
+      setLoadingDevelopers(false)
+    }
+  }
 
   const fetchJobs = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/jobs'); const data = await res.json(); if (res.ok) { setJobs(data.jobs || []); setJobPage(1) } } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
   const fetchApplications = async () => { setLoadingTab(true); try { const res = await fetch('/api/admin/applications'); const data = await res.json(); if (res.ok) setApplications(data.applications || []) } catch (e) { console.error(e) } finally { setLoadingTab(false) } }
@@ -1370,7 +1395,9 @@ export default function AdminDashboard() {
                         }}
                         className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
                       >
-                        <option value="">Choose an existing developer...</option>
+                        <option value="">
+                          {loadingDevelopers ? 'Loading developers...' : availableDevelopers.length ? 'Choose an existing developer...' : 'No developers found'}
+                        </option>
                         {availableDevelopers.map(user => (
                           <option key={user.id} value={user.id}>
                             {user.name || 'Unnamed developer'} — {user.email}
