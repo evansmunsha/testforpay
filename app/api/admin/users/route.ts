@@ -91,6 +91,11 @@ export async function GET(request: Request) {
             applications: true,
           },
         },
+        developedJobs: {
+          select: { appName: true },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
       },
       orderBy,
       skip: (page - 1) * limit,

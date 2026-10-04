@@ -68,6 +68,7 @@ interface User {
   stripeAccountId: string | null; suspended: boolean; suspendReason: string | null
   lastLoginAt: string | null; loginCount: number; emailVerified: boolean
   _count: { developedJobs: number; applications: number }
+  developedJobs?: Array<{ appName: string }>
 }
 
 interface Job {
@@ -1382,13 +1383,13 @@ export default function AdminDashboard() {
                         onChange={e => {
                           const value = e.target.value
                           setSelectedDeveloperId(value)
-                          const user = users.find(item => item.id === value)
+                          const user = developers.find(item => item.id === value)
                           if (user) {
                             setNewAcquisitionTarget(prev => ({
                               ...prev,
                               name: user.name || '',
                               email: user.email,
-                              appName: `${user.name || 'Existing developer'} app`,
+                              appName: user.developedJobs?.[0]?.appName || '',
                               source: 'Existing app user',
                             }))
                           }
