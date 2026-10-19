@@ -23,7 +23,6 @@ interface Transaction {
   application?: {
     tester: {
       name: string | null
-      email: string
     }
   }
 }
@@ -232,7 +231,7 @@ export default function PaymentsPage() {
                       </td>
                       {isDeveloper && (
                         <td className="px-4 py-4 text-gray-600">
-                          {t.application?.tester.name || t.application?.tester.email}
+                          {t.application?.tester.name || 'Tester'}
                         </td>
                       )}
                       <td className="px-4 py-4 font-bold">

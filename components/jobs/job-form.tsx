@@ -22,6 +22,7 @@ interface JobFormData {
   appDescription: string
   packageName: string
   googlePlayLink: string
+  supportedCountries: string[]
   appCategory: string
   testersNeeded: number
   testDuration: number
@@ -100,6 +101,7 @@ const DEFAULT_JOB_FORM_DATA: JobFormData = {
   appDescription: '',
   packageName: '',
   googlePlayLink: '',
+  supportedCountries: [],
   appCategory: '',
   testersNeeded: PLANS.STARTER.testers,
   testDuration: 14,
@@ -191,7 +193,7 @@ export function JobForm() {
     }))
   }
 
-  const handleChange = (field: keyof JobFormData, value: string | number) => {
+  const handleChange = (field: keyof JobFormData, value: string | number | string[]) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -402,6 +404,22 @@ export function JobForm() {
                 />
                 <p className="text-xs text-gray-500">
                   Testers will use this link to opt in to your closed test.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="supportedCountries">Countries where the app is available *</Label>
+                <Input
+                  id="supportedCountries"
+                  value={formData.supportedCountries.join(', ')}
+                  onChange={(event) => handleChange(
+                    'supportedCountries',
+                    event.target.value.split(',').map((country) => country.trim().toUpperCase()).filter(Boolean)
+                  )}
+                  placeholder="US, GB, ZM"
+                />
+                <p className="text-xs text-gray-500">
+                  Enter two-letter ISO country codes separated by commas. This declaration helps screen applicants, but does not guarantee Google Play availability on every account or device.
                 </p>
               </div>
             </CardContent>

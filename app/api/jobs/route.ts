@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma'
 import { toCents } from '@/lib/currency'
 import { TASK_TEMPLATES, type TaskTemplateKey } from '@/lib/constants'
 import type { Prisma } from '@/generated/prisma/client'
+import { normalizeCountryCodes } from '@/lib/tester-eligibility'
 
 type PlanType = 'STARTER' | 'GROWTH' | 'PRO'
 
@@ -63,6 +64,7 @@ interface CreateJobRequestBody {
   paymentPerTester?: number
   appCategory?: string
   minAndroidVersion?: string
+  supportedCountries?: string[]
   taskTemplate?: string
   customTasks?: string[]
 }
@@ -102,6 +104,7 @@ export async function POST(request: Request) {
       planType: rawPlanType,
       appCategory,
       minAndroidVersion,
+      supportedCountries: rawSupportedCountries,
       taskTemplate,
       customTasks,
     } = body
@@ -124,6 +127,13 @@ export async function POST(request: Request) {
     }
 
     const plan = PLANS[planType]
+    const supportedCountries = normalizeCountryCodes(rawSupportedCountries)
+    if (!supportedCountries) {
+      return NextResponse.json(
+        { error: 'Declare at least one supported country using two-letter ISO codes' },
+        { status: 400 }
+      )
+    }
 
     // Validate Google Play link format (basic check)
     if (!googlePlayLink.includes('play.google.com/apps/testing/')) {
@@ -149,6 +159,7 @@ export async function POST(request: Request) {
         googlePlayLink: googlePlayLink.trim(),
         appCategory: appCategory?.trim() || null,
         minAndroidVersion: minAndroidVersion?.trim() || null,
+        supportedCountries,
         testersNeeded: plan.testers,
         testDuration: plan.duration,
         paymentPerTester: paymentPerTesterCents,
@@ -216,8 +227,30 @@ export async function GET(request: Request) {
     if (currentUser.role === 'DEVELOPER') {
       where.developerId = currentUser.userId
     } else if (currentUser.role === 'TESTER') {
-      // Testers can only see ACTIVE jobs
-      where.status = 'ACTIVE'
+      // A paused in-progress job remains recruitable for its missing cohort positions.
+      where.OR = [
+        { status: 'ACTIVE' },
+        {
+          status: 'IN_PROGRESS',
+          AND: [
+            {
+              applications: {
+                some: {
+                  status: 'TESTING',
+                  testingPausedAt: { not: null },
+                  cohortSelected: true,
+                },
+              },
+            },
+            {
+              OR: [
+                { scheduledStartAt: null },
+                { scheduledStartAt: { lte: new Date() } },
+              ],
+            },
+          ],
+        },
+      ]
     }
 
     // Apply status filter if provided (for developers filtering their own jobs)

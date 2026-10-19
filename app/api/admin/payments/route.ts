@@ -34,6 +34,14 @@ export async function GET() {
             },
           },
         },
+        allocationHistory: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            fromApplication: { select: { tester: { select: { name: true, email: true } } } },
+            toApplication: { select: { tester: { select: { name: true, email: true } } } },
+            actor: { select: { name: true, email: true } },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
       take: 100,

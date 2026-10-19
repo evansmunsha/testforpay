@@ -91,6 +91,7 @@ export async function GET(request: Request) {
     const expiredApplications = await prisma.application.findMany({
       where: {
         status: 'TESTING',
+        testingPausedAt: null,
         testingEndDate: {
           lte: now, // Testing period has ended
         },
@@ -111,13 +112,20 @@ export async function GET(request: Request) {
 
         // Auto-complete the application (guard against double runs)
         const updated = await prisma.application.updateMany({
-          where: { id: application.id, status: 'TESTING' },
+          where: {
+            id: application.id,
+            status: 'TESTING',
+            testingPausedAt: null,
+            testingEndDate: { lte: now },
+          },
           data: {
             status: 'COMPLETED',
           },
         })
 
-        const alreadyCompleted = updated.count === 0
+        if (updated.count !== 1) {
+          continue
+        }
 
         // Ensure Payment record exists and is in PROCESSING status (ready for payout)
         let payment = await prisma.payment.findUnique({
@@ -186,7 +194,6 @@ export async function GET(request: Request) {
             paymentId: payment.id,
             status: payment.status,
             transferId: payment.transferId,
-            alreadyCompleted,
           })
         }
 

@@ -30,7 +30,7 @@ export async function GET(
           select: { developerId: true },
         },
         tester: {
-          select: { name: true, email: true },
+          select: { name: true },
         },
       },
     })
@@ -99,7 +99,7 @@ export async function POST(
           select: { developerId: true },
         },
         tester: {
-          select: { name: true, email: true },
+          select: { name: true },
         },
       },
     }) as any

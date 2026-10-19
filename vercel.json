@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/start-scheduled-tests",
+      "schedule": "* * * * *"
+    },
+    {
       "path": "/api/cron/auto-complete-tests",
       "schedule": "0 2 * * *"
     },

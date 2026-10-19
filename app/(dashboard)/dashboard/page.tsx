@@ -249,7 +249,7 @@ function DeveloperDashboard() {
                 {pendingActions.pendingApprovals.slice(0, 5).map((app) => (
                   <div key={app.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div>
-                      <p className="text-sm font-semibold">{app.tester.name || app.tester.email}</p>
+                      <p className="text-sm font-semibold">{app.tester.name || 'Tester'}</p>
                       <p className="text-xs text-gray-500">{app.job.appName}</p>
                     </div>
                     <Link href={`/dashboard/jobs/${app.jobId}`}>
@@ -282,7 +282,7 @@ function DeveloperDashboard() {
                 {pendingActions.pendingVerifications.slice(0, 5).map((app) => (
                   <div key={app.id} className="flex items-center justify-between p-3 bg-indigo-50 rounded-lg">
                     <div>
-                      <p className="text-sm font-semibold">{app.tester.name || app.tester.email}</p>
+                      <p className="text-sm font-semibold">{app.tester.name || 'Tester'}</p>
                       <p className="text-xs text-gray-500">{app.job.appName}</p>
                     </div>
                     <Link href={`/dashboard/jobs/${app.jobId}`}>
@@ -429,6 +429,27 @@ function TesterDashboard() {
         </CardContent>
       </Card>
 
+      <Card className="border-blue-200 bg-blue-50/60">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base text-blue-950">Connect with TestForPay Testers</CardTitle>
+          <CardDescription className="text-blue-900/80">
+            Join our Facebook group for job alerts, questions, and help reporting problems. You can also share screenshots of issues you encounter.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <a
+            href="https://web.facebook.com/groups/1466852055303500"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button className="gap-2">
+              Join the Facebook Group
+              <ArrowRight className="h-4 w-4" />
+            </Button>
+          </a>
+        </CardContent>
+      </Card>
+
       {/* Daily Mission — shown only when tester has an active job */}
       {!missionLoading && missionData && (
         <div>
@@ -557,6 +578,4 @@ function TesterDashboard() {
     </div>
   )
 }
-
-
 

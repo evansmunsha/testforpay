@@ -24,11 +24,8 @@ export async function GET(
 
     const isAdmin = currentUser.role === 'ADMIN'
     const isSelf = currentUser.userId === id
-    const isDeveloper = currentUser.role === 'DEVELOPER'
-
     // Public profile access is allowed for any authenticated user.
-    // Sensitive fields remain restricted to admins, the tester themself,
-    // or developers who have previously worked together with that tester.
+    // Sensitive fields remain restricted to admins and the tester themself.
     const tester = await prisma.user.findUnique({
       where: { id },
       select: {
@@ -58,22 +55,8 @@ export async function GET(
       )
     }
 
-    let hasWorkedTogether = false
-    if (isDeveloper && !isAdmin && !isSelf) {
-      const shared = await prisma.application.findFirst({
-        where: {
-          testerId: id,
-          job: {
-            developerId: currentUser.userId,
-          },
-        },
-        select: { id: true },
-      })
-      hasWorkedTogether = !!shared
-    }
-
-    // Developers can see tester email only if they've worked together.
-    const canSeeEmail = isAdmin || isSelf || hasWorkedTogether
+    // Developer email access remains closed until the application cohort is released.
+    const canSeeEmail = isAdmin || isSelf
     // Only admin or the tester can see earnings/device info.
     const canSeeEarnings = isAdmin || isSelf
     const canSeeDeviceInfo = isAdmin || isSelf

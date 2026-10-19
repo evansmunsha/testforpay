@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import {
-  Mail,
   Calendar,
   Smartphone,
   CheckCircle,
@@ -27,6 +26,7 @@ interface ApplicationCardProps {
     createdAt: string
     testingStartDate: string | null
     testingEndDate: string | null
+    testingPausedAt?: string | null
     verificationImage: string | null
     verificationImage2?: string | null
     feedback: string | null
@@ -40,7 +40,7 @@ interface ApplicationCardProps {
     tester: {
       id: string
       name: string | null
-      email: string
+      email?: string
       muteDeveloperReplies?: boolean
       createdAt: string
       deviceInfo: {
@@ -174,14 +174,13 @@ export function ApplicationCard({
                 <CardTitle className="text-lg">
                   {application.tester.name || 'Anonymous Tester'}
                 </CardTitle>
-                <p className="text-sm text-gray-500 flex items-center gap-1">
-                  <Mail className="h-3 w-3" />
-                  {application.tester.email}
-                </p>
+                {application.tester.email && (
+                  <p className="text-sm text-gray-600">{application.tester.email}</p>
+                )}
               </div>
             </div>
             <Badge className={getStatusColor(application.status)}>
-              {application.status.replace('_', ' ')}
+              {application.testingPausedAt ? 'TESTING PAUSED' : application.status.replace('_', ' ')}
             </Badge>
           </div>
         </CardHeader>
@@ -448,7 +447,7 @@ export function ApplicationCard({
                 <>
                   <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-lg">
                     <p className="text-sm text-indigo-800">
-                      📸 Tester has submitted verification screenshot. Review it above and verify to start testing.
+                      📸 The tester has submitted opt-in screenshots. Review them above and verify the screenshots; the testing clock starts at the official scheduled time.
                     </p>
                   </div>
                   <Button

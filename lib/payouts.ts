@@ -219,6 +219,15 @@ export async function processPaymentById(paymentId: string): Promise<PayoutResul
       error: 'Application not completed',
     }
   }
+  if (payment.application.testingPausedAt) {
+    return {
+      applicationId: payment.applicationId,
+      testerId: payment.application.testerId,
+      amount: payment.amount,
+      status: 'failed',
+      error: 'Application testing is paused',
+    }
+  }
 
   return processPaymentForPayout(payment)
 }
@@ -234,6 +243,7 @@ export async function processCompletedTests(): Promise<PayoutResult[]> {
       transferId: null, // Only payments that haven't initiated a transfer yet
       application: {
         status: 'COMPLETED',
+        testingPausedAt: null,
       },
     },
     include: {
@@ -329,6 +339,7 @@ export async function getPendingPayoutsSummary() {
       status: 'PROCESSING', // Only PROCESSING payments (not ESCROWED, not already COMPLETED)
       application: {
         status: 'COMPLETED',
+        testingPausedAt: null,
       },
     },
     include: {

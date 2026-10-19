@@ -22,7 +22,6 @@ interface DailyTask {
 interface Tester {
   id: string
   name: string | null
-  email: string
 }
 
 interface TasksData {
@@ -162,8 +161,8 @@ export function TaskSubmissionGrid({ jobId }: TaskSubmissionGridProps) {
                   gridTemplateColumns: `160px repeat(${tasks.length}, minmax(28px, 1fr))`,
                 }}
               >
-                <div className="p-2 text-sm text-gray-700 truncate" title={tester.email}>
-                  {tester.name ?? tester.email}
+                <div className="p-2 text-sm text-gray-700 truncate" title={tester.name || 'Tester'}>
+                  {tester.name || 'Tester'}
                 </div>
                 {tasks.map((task) => {
                   const sub = task.submissions.find((s) => s.testerId === tester.id)

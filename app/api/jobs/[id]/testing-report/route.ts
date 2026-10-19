@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { calculateEngagementScore } from '@/lib/engagement-scoring'
+import { passesDeclaredJobScreening } from '@/lib/tester-eligibility'
 
 export async function GET(
   request: Request,
@@ -30,11 +31,16 @@ export async function GET(
               select: {
                 id: true,
                 name: true,
-                email: true,
                 averageRating: true,
+                countryCode: true,
+                deviceInfo: { select: { androidVersion: true } },
               },
             },
             usageLogs: true,
+            issueReports: {
+              where: { status: { in: ['OPEN', 'UNDER_REVIEW', 'INCOMPATIBLE'] } },
+              select: { id: true },
+            },
           },
         },
       },
@@ -57,7 +63,16 @@ export async function GET(
 
     // Calculate testing report metrics
     const totalTestersRecruited = job.applications.length
-    const approvedTesters = job.applications.filter((app) => app.status !== 'REJECTED').length
+    const approvedTesters = job.applications.filter((app) =>
+      ['APPROVED', 'OPTED_IN', 'VERIFIED', 'SCHEDULED', 'TESTING', 'COMPLETED'].includes(app.status) &&
+      app.issueReports.length === 0 &&
+      passesDeclaredJobScreening({
+        testerCountryCode: app.tester.countryCode,
+        testerAndroidVersion: app.tester.deviceInfo?.androidVersion,
+        supportedCountries: job.supportedCountries,
+        minimumAndroidVersion: job.minAndroidVersion,
+      })
+    ).length
     const activeTesters = job.applications.filter((app) => app.status === 'TESTING').length
     const completedTesters = job.applications.filter((app) => app.status === 'COMPLETED').length
 
@@ -114,16 +129,35 @@ export async function GET(
     })
 
     // Compliance check
-    const testingStartDate = job.publishedAt || job.createdAt
+    const testingStartDate = job.applications.reduce<Date | null>(
+      (earliest, application) =>
+        application.testingStartDate &&
+        (!earliest || application.testingStartDate < earliest)
+          ? application.testingStartDate
+          : earliest,
+      null
+    )
     const now = new Date()
-    const daysActive = Math.floor((now.getTime() - testingStartDate.getTime()) / (1000 * 60 * 60 * 24))
-    const meetsMinDuration = daysActive >= 14
+    const activeDaysPerTester = job.applications
+      .filter((application) => application.testingStartDate && ['TESTING', 'COMPLETED'].includes(application.status))
+      .map((application) => {
+        const currentPauseMs = application.testingPausedAt
+          ? Math.max(0, now.getTime() - application.testingPausedAt.getTime())
+          : 0
+        const activeElapsedMs =
+          now.getTime() -
+          application.testingStartDate!.getTime() -
+          application.testingPausedDurationMs -
+          currentPauseMs
+        return Math.max(0, Math.floor(activeElapsedMs / (1000 * 60 * 60 * 24)))
+      })
+    const daysActive = activeDaysPerTester.length > 0 ? Math.min(...activeDaysPerTester) : 0
+    const meetsMinDuration = testingStartDate !== null && daysActive >= job.testDuration
 
     // Tester details
     const testerDetails = job.applications.map((app) => ({
       testerId: app.tester.id,
       testerName: app.tester.name,
-      testerEmail: app.tester.email,
       testerRating: app.tester.averageRating,
       status: app.status,
       feedbackProvided: app.feedback ? true : false,
@@ -140,6 +174,7 @@ export async function GET(
       optedIn: app.optInVerified,
       testingStarted: app.testingStartDate,
       testingEnded: app.testingEndDate,
+      testingPausedAt: app.testingPausedAt,
       engagementScore: calculateEngagementScore(app),
     }))
 
@@ -160,7 +195,7 @@ export async function GET(
         email: job.developer.email,
       },
       testingPeriod: {
-        startDate: job.publishedAt || job.createdAt,
+        startDate: testingStartDate,
         expectedDuration: job.testDuration,
         daysActive,
         meetsMinDuration,

@@ -114,7 +114,7 @@ export default function TesterProfilePage() {
               <div>
                 <h1 className="text-3xl font-bold">{profile.name || 'Anonymous Tester'}</h1>
                 <p className="text-gray-600">
-                  {profile.email ?? 'Contact details available after apply'}
+                  {profile.email ?? 'Tester contact details are private during recruitment'}
                 </p>
                 <p className="text-sm text-gray-500 mt-2">
                   Member for {memberDays} days

@@ -19,7 +19,7 @@ interface CheckIn {
   devAcknowledgedAt: string | null
   devNote: string | null
   createdAt: string
-  tester: { id: string; name: string | null; email: string }
+  tester: { id: string; name: string | null }
 }
 
 interface DailyCheckInPanelProps {
@@ -49,12 +49,17 @@ export function DailyCheckInPanel({
   const [success, setSuccess] = useState('')
   const [devNotes, setDevNotes] = useState<Record<string, string>>({})
 
-  const canCheckIn = ['TESTING', 'COMPLETED'].includes(applicationStatus) && !isDeveloperView
-
   // Calculate today's day number
-  const todayDayNumber = testingStartDate
-    ? Math.max(1, Math.ceil((Date.now() - new Date(testingStartDate).getTime()) / (1000 * 60 * 60 * 24)))
+  const elapsedMs = testingStartDate
+    ? Date.now() - new Date(testingStartDate).getTime()
     : null
+  const todayDayNumber = elapsedMs !== null && elapsedMs >= 0
+    ? Math.floor(elapsedMs / (1000 * 60 * 60 * 24)) + 1
+    : null
+  const canCheckIn =
+    ['TESTING', 'COMPLETED'].includes(applicationStatus) &&
+    !isDeveloperView &&
+    todayDayNumber !== null
 
   const alreadyCheckedInToday = todayDayNumber !== null &&
     checkIns.some(c => c.dayNumber === todayDayNumber)

@@ -47,6 +47,12 @@ export async function POST(
         { status: 403 }
       )
     }
+    if (!application.cohortSelected || !application.contactReleasedAt) {
+      return NextResponse.json(
+        { error: 'The developer has not released this tester cohort yet' },
+        { status: 409 }
+      )
+    }
 
     // Update application with verification images
     const updatedApplication = await prisma.application.update({

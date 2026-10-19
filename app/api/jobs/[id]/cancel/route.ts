@@ -34,7 +34,6 @@ export async function POST(
             tester: {
               select: {
                 id: true,
-                email: true,
                 name: true,
                 stripeAccountId: true,
               },
@@ -97,7 +96,6 @@ export async function POST(
     let totalPayoutToTesters = 0
     const testerPayouts: Array<{
       testerId: string
-      email: string
       status: string
       amount: number
       percentage: number
@@ -109,7 +107,6 @@ export async function POST(
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
-        email: app.tester.email,
         status: 'COMPLETED',
         amount,
         percentage: 100,
@@ -121,7 +118,6 @@ export async function POST(
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
-        email: app.tester.email,
         status: 'TESTING',
         amount,
         percentage: 75,
@@ -133,7 +129,6 @@ export async function POST(
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
-        email: app.tester.email,
         status: 'VERIFIED',
         amount,
         percentage: 50,
@@ -145,7 +140,6 @@ export async function POST(
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
-        email: app.tester.email,
         status: 'OPTED_IN',
         amount,
         percentage: 25,
@@ -156,7 +150,6 @@ export async function POST(
     for (const app of approvedTesters) {
       testerPayouts.push({
         testerId: app.testerId,
-        email: app.tester.email,
         status: 'APPROVED',
         amount: 0,
         percentage: 0,
@@ -347,7 +340,6 @@ export async function POST(
         activeTesters: activeTestersCount,
         pendingRejected: pendingTesters.length,
         testerPayouts: testerPayouts.map(p => ({
-          email: p.email,
           status: p.status,
           amount: p.amount,
           percentage: p.percentage,

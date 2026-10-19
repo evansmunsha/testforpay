@@ -1,14 +1,11 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { sendNotification, NotificationTemplates } from '@/lib/notifications'
+import { sendNotification } from '@/lib/notifications'
 import { processPaymentById } from '@/lib/payouts'
-import { 
-  sendApplicationApprovedEmail, 
-  sendTestingStartedEmail 
-} from '@/lib/email'
 import { formatEurFromCents } from '@/lib/currency'
 import { recordAdminAction } from '@/lib/admin-audit'
+import { passesDeclaredJobScreening } from '@/lib/tester-eligibility'
 
 // GET - Get single application
 export async function GET(
@@ -73,12 +70,9 @@ export async function GET(
       )
     }
 
-    const canSeePii =
-      currentUser.role === 'ADMIN' ||
-      application.job.developerId === currentUser.userId
     const isTesterSelf = application.tester.id === currentUser.userId
 
-    if (canSeePii) {
+    if (currentUser.role === 'ADMIN') {
       const full = await prisma.application.findUnique({
         where: { id },
         include: {
@@ -107,6 +101,36 @@ export async function GET(
       })
 
       return NextResponse.json({ success: true, application: full })
+    }
+
+    if (application.job.developerId === currentUser.userId) {
+      const developerView = await prisma.application.findUnique({
+        where: { id },
+        include: {
+          job: {
+            include: {
+              developer: {
+                select: {
+                  id: true,
+                  name: true,
+                  email: true,
+                },
+              },
+            },
+          },
+          tester: {
+            select: {
+              id: true,
+              name: true,
+              createdAt: true,
+              deviceInfo: true,
+            },
+          },
+          payment: true,
+        },
+      })
+
+      return NextResponse.json({ success: true, application: developerView })
     }
 
     if (isTesterSelf) {
@@ -183,7 +207,9 @@ export async function PATCH(
       where: { id },
       include: {
         job: true,
-        tester: true,
+        tester: {
+          include: { deviceInfo: true },
+        },
       },
     })
 
@@ -210,70 +236,41 @@ export async function PATCH(
           { status: 409 }
         )
       }
-      const platformFeePerTester = Math.round(application.job.platformFee / application.job.testersNeeded)
-      const totalPaymentAmount = application.job.paymentPerTester + platformFeePerTester
-      const updatedApplication = await prisma.$transaction(async (tx) => {
-        const updated = await tx.application.update({
-          where: { id },
-          data: {
-            status: 'APPROVED',
-          },
-          include: {
-            tester: {
-              select: {
-                name: true,
-                email: true,
-              },
+      const hasOpenIssue = await prisma.applicationIssueReport.findFirst({
+        where: { applicationId: id, status: { in: ['OPEN', 'UNDER_REVIEW'] } },
+        select: { id: true },
+      })
+      const eligibleAtApproval = !hasOpenIssue && passesDeclaredJobScreening({
+        testerCountryCode: application.tester.countryCode,
+        testerAndroidVersion: application.tester.deviceInfo?.androidVersion,
+        supportedCountries: application.job.supportedCountries,
+        minimumAndroidVersion: application.job.minAndroidVersion,
+      })
+      const approvedAt = new Date()
+      const updatedApplication = await prisma.application.update({
+        where: { id },
+        data: {
+          status: 'APPROVED',
+          screeningPassedAt: eligibleAtApproval ? approvedAt : null,
+        },
+        include: {
+          tester: {
+            select: {
+              name: true,
             },
-            job: true,
           },
-        })
-        const existingPayment = await tx.payment.findUnique({
-          where: { applicationId: updated.id },
-          select: { id: true },
-        })
-        if (existingPayment) {
-          throw new Error('PAYMENT_ALREADY_EXISTS')
-        }
-        const payment = await tx.payment.create({
-          data: {
-            applicationId: updated.id,
-            jobId: updated.job.id,
-            amount: application.job.paymentPerTester,
-            platformFee: platformFeePerTester,
-            totalAmount: totalPaymentAmount,
-            status: 'ESCROWED',
-            escrowedAt: new Date(),
-          },
-        })
-        console.log('Payment record created:', payment.id, 'for application:', id)
-        return updated
+          job: true,
+        },
       })
       if (currentUser.role === 'ADMIN') {
         await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'approve_application', targetType: 'application', targetId: id, reason: auditReason })
       }
-      // Send approval email
-      try {
-        const testerPaymentCents = application.job.paymentPerTester
-        await sendApplicationApprovedEmail(
-          application.tester.email,
-          {
-            testerName: application.tester.name || 'Tester',
-            appName: application.job.appName,
-            googlePlayLink: application.job.googlePlayLink,
-            paymentCents: testerPaymentCents,
-          }
-        )
-      } catch (emailError) {
-        console.error('Failed to send approval email:', emailError)
-      }
-
       // Send push notification to tester
       try {
         await sendNotification({
           userId: application.testerId,
           title: 'Application Approved! 🎉',
-          body: `Your application to test "${application.job.appName}" has been approved. Start testing now!`,
+          body: `Your application to test "${application.job.appName}" has been approved. Wait for the developer to release the selected tester group before joining the Play test.`,
           url: '/dashboard/applications',
           type: 'application_approved',
         })
@@ -306,7 +303,6 @@ export async function PATCH(
           tester: {
             select: {
               name: true,
-              email: true,
             },
           },
           job: true,
@@ -359,23 +355,18 @@ export async function PATCH(
       }
 
       const now = new Date()
-      const testingEndDate = new Date(now)
-      testingEndDate.setDate(testingEndDate.getDate() + application.job.testDuration)
 
       const updatedApplication = await prisma.application.update({
         where: { id },
         data: {
-          status: 'TESTING',
+          status: 'VERIFIED',
           optInVerified: true,
           verifiedAt: now,
-          testingStartDate: now,
-          testingEndDate,
         },
         include: {
           tester: {
             select: {
               name: true,
-              email: true,
             },
           },
           job: true,
@@ -386,28 +377,12 @@ export async function PATCH(
         await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'verify_application', targetType: 'application', targetId: id, reason: auditReason })
       }
 
-      // Send testing started email
-      try {
-        const testerPaymentCents = application.job.paymentPerTester
-        await sendTestingStartedEmail(
-          application.tester.email,
-          {
-            testerName: application.tester.name || 'Tester',
-            appName: application.job.appName,
-            endDate: testingEndDate.toLocaleDateString(),
-            paymentCents: testerPaymentCents,
-          }
-        )
-      } catch (emailError) {
-        console.error('Failed to send testing started email:', emailError)
-      }
-
-      // Send push notification to tester
+      // Verification is complete, but the testing clock waits for the job schedule.
       try {
         await sendNotification({
           userId: application.testerId,
-          title: 'Verification Approved! ✅',
-          body: `Your screenshot for "${application.job.appName}" has been verified. Testing period has started!`,
+          title: 'Opt-in verified',
+          body: `Your screenshot for "${application.job.appName}" has been verified. The developer will schedule the testing start.`,
           url: '/dashboard/applications',
           type: 'verification_approved',
         })
@@ -420,7 +395,7 @@ export async function PATCH(
         await sendNotification({
           userId: application.job.developerId,
           title: 'Tester Verified! 🎯',
-          body: `${application.tester.name || 'A tester'} verified and started testing "${application.job.appName}".`,
+          body: `${application.tester.name || 'A tester'} completed opt-in verification for "${application.job.appName}".`,
           url: `/dashboard/jobs/${application.job.id}`,
           type: 'tester_verified',
         })
@@ -431,7 +406,7 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         application: updatedApplication,
-        message: 'Opt-in verified. Testing period started.',
+        message: 'Opt-in verified. Testing will start at the scheduled time.',
       })
     }
 
@@ -443,23 +418,34 @@ export async function PATCH(
           { status: 409 }
         )
       }
+      if (application.testingPausedAt) {
+        return NextResponse.json(
+          { error: 'A paused testing application cannot be completed' },
+          { status: 409 }
+        )
+      }
 
-      const updatedApplication = await prisma.application.update({
+      const completed = await prisma.application.updateMany({
+        where: { id, status: 'TESTING', testingPausedAt: null },
+        data: { status: 'COMPLETED' },
+      })
+      if (completed.count !== 1) {
+        return NextResponse.json(
+          { error: 'The application changed state or is paused; refresh before completing it' },
+          { status: 409 }
+        )
+      }
+      const updatedApplication = await prisma.application.findUnique({
         where: { id },
-        data: {
-          status: 'COMPLETED',
-        },
         include: {
-          tester: {
-            select: {
-              name: true,
-              email: true,
-            },
-          },
+          tester: { select: { name: true } },
           job: true,
           payment: true,
         },
       })
+      if (!updatedApplication) {
+        return NextResponse.json({ error: 'Application not found' }, { status: 404 })
+      }
       if (currentUser.role === 'ADMIN') {
         await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'complete_application', targetType: 'application', targetId: id, reason: auditReason })
       }
@@ -636,5 +622,3 @@ export async function DELETE(
     )
   }
 }
-
-

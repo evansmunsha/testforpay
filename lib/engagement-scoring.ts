@@ -17,6 +17,8 @@ interface EngagementInput {
   verificationImage2?: string | null
   testingStartDate?: Date | string | null
   testingEndDate?: Date | string | null
+  testingPausedAt?: Date | string | null
+  testingPausedDurationMs?: number | null
   createdAt: Date | string
   feedbackSubmittedAt?: Date | string | null
   status: string
@@ -61,7 +63,12 @@ export function calculateEngagementScore(application: EngagementInput): number {
   if (application.testingStartDate && application.testingEndDate) {
     const start = new Date(application.testingStartDate)
     const end = new Date(application.testingEndDate)
-    const durationDays = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)
+    const currentPauseMs = application.testingPausedAt
+      ? Math.max(0, Date.now() - new Date(application.testingPausedAt).getTime())
+      : 0
+    const pausedDurationMs = (application.testingPausedDurationMs || 0) + currentPauseMs
+    const durationDays =
+      (end.getTime() - start.getTime() - pausedDurationMs) / (1000 * 60 * 60 * 24)
 
     if (durationDays >= 7) {
       score += 20 // Full week or more

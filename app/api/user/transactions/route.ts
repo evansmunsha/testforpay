@@ -27,7 +27,6 @@ export async function GET(request: Request) {
               tester: {
                 select: {
                   name: true,
-                  email: true
                 }
               }
             }

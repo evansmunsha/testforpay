@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { sendNotification } from '@/lib/notifications'
+import { getMissionDay } from '@/lib/mission-clock'
 
 // POST — tester submits a daily check-in
 export async function POST(
@@ -26,8 +27,12 @@ export async function POST(
     const application = await prisma.application.findUnique({
       where: { id },
       include: {
-        job: { select: { id: true, appName: true, developerId: true } },
+        job: { select: { id: true, appName: true, developerId: true, testDuration: true } },
         tester: { select: { id: true, name: true } },
+        issueReports: {
+          where: { status: { in: ['OPEN', 'UNDER_REVIEW'] } },
+          select: { id: true },
+        },
       },
     })
 
@@ -36,30 +41,101 @@ export async function POST(
     if (!['TESTING', 'COMPLETED'].includes(application.status)) {
       return NextResponse.json({ error: 'Check-ins can only be submitted during the testing period' }, { status: 400 })
     }
-
-    // Calculate which day of the testing period this is
-    const startDate = application.testingStartDate || application.verifiedAt || application.createdAt
-    const dayNumber = Math.max(1, Math.ceil((Date.now() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)))
-
-    // Check if already submitted today (same day number)
-    const existing = await prisma.dailyCheckIn.findUnique({
-      where: { applicationId_dayNumber: { applicationId: id, dayNumber } },
-    })
-    if (existing) {
-      return NextResponse.json({ error: `You already submitted a check-in for day ${dayNumber}` }, { status: 409 })
+    if (application.issueReports.length > 0) {
+      return NextResponse.json({ error: 'Check-ins are paused while your testing issue report is under review' }, { status: 409 })
+    }
+    if (application.testingPausedAt) {
+      return NextResponse.json({ error: 'Check-ins are unavailable while testing is paused' }, { status: 409 })
     }
 
-    const checkIn = await prisma.dailyCheckIn.create({
-      data: {
-        applicationId: id,
-        testerId: currentUser.userId,
-        dayNumber,
-        message: message.trim(),
-        usedApp,
-        issuesFound,
-        issueDetails: issueDetails?.trim() || null,
-      },
-    })
+    if (!application.testingStartDate) {
+      return NextResponse.json({ error: 'Testing has not started for this application' }, { status: 400 })
+    }
+
+    const preliminaryDayNumber = getMissionDay(
+      application.testingStartDate,
+      new Date(),
+      application.testingPausedDurationMs
+    )
+    if (preliminaryDayNumber === null || preliminaryDayNumber > application.job.testDuration) {
+      return NextResponse.json({ error: 'Testing has not started for this application' }, { status: 400 })
+    }
+
+    let dayNumber: number
+    let checkIn
+    try {
+      const created = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "Application" WHERE id = ${id} FOR UPDATE`
+        const fresh = await tx.application.findUnique({
+          where: { id },
+          select: {
+            testerId: true,
+            status: true,
+            testingStartDate: true,
+            testingPausedAt: true,
+            testingPausedDurationMs: true,
+            job: { select: { testDuration: true } },
+            issueReports: {
+              where: { status: { in: ['OPEN', 'UNDER_REVIEW'] } },
+              select: { id: true },
+            },
+          },
+        })
+        if (!fresh || fresh.testerId !== currentUser.userId || !['TESTING', 'COMPLETED'].includes(fresh.status)) {
+          throw new Error('CHECKIN_NOT_ACTIVE')
+        }
+        if (fresh.testingPausedAt) throw new Error('CHECKIN_PAUSED')
+        if (fresh.issueReports.length > 0) throw new Error('CHECKIN_ISSUE_REVIEW')
+        if (!fresh.testingStartDate) throw new Error('CHECKIN_NOT_STARTED')
+        const activeDay = getMissionDay(
+          fresh.testingStartDate,
+          new Date(),
+          fresh.testingPausedDurationMs
+        )
+        if (activeDay === null || activeDay > fresh.job.testDuration) {
+          throw new Error('CHECKIN_NOT_ACTIVE')
+        }
+        const existing = await tx.dailyCheckIn.findUnique({
+          where: { applicationId_dayNumber: { applicationId: id, dayNumber: activeDay } },
+          select: { id: true },
+        })
+        if (existing) throw new Error('CHECKIN_EXISTS')
+
+        return {
+          dayNumber: activeDay,
+          checkIn: await tx.dailyCheckIn.create({
+            data: {
+              applicationId: id,
+              testerId: currentUser.userId,
+              dayNumber: activeDay,
+              message: message.trim(),
+              usedApp,
+              issuesFound,
+              issueDetails: issueDetails?.trim() || null,
+            },
+          }),
+        }
+      })
+      dayNumber = created.dayNumber
+      checkIn = created.checkIn
+    } catch (stateError) {
+      if (stateError instanceof Error) {
+        const errors: Record<string, { status: number; message: string }> = {
+          CHECKIN_NOT_ACTIVE: { status: 409, message: 'This application is not in an active check-in period' },
+          CHECKIN_PAUSED: { status: 409, message: 'Check-ins are unavailable while testing is paused' },
+          CHECKIN_ISSUE_REVIEW: { status: 409, message: 'Check-ins are paused while your testing issue report is under review' },
+          CHECKIN_NOT_STARTED: { status: 409, message: 'Testing has not started for this application' },
+          CHECKIN_EXISTS: { status: 409, message: 'You already submitted a check-in for this testing day' },
+        }
+        if (errors[stateError.message]) {
+          return NextResponse.json(
+            { error: errors[stateError.message].message },
+            { status: errors[stateError.message].status }
+          )
+        }
+      }
+      throw stateError
+    }
 
     // Notify developer
     try {
@@ -106,7 +182,7 @@ export async function GET(
 
     const checkIns = await prisma.dailyCheckIn.findMany({
       where: { applicationId: id },
-      include: { tester: { select: { id: true, name: true, email: true } } },
+      include: { tester: { select: { id: true, name: true } } },
       orderBy: { dayNumber: 'asc' },
     })
 

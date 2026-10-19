@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import { useAuth } from '@/hooks/use-auth'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +19,7 @@ import {
 } from 'lucide-react'
 import { formatEurFromCents } from '@/lib/currency'
 import type { Cents } from '@/types/money'
+import { ApplicationIssueQueue } from '@/components/admin/application-issue-queue'
 
 interface Stats {
   totalUsers: number
@@ -110,13 +112,39 @@ interface Job {
 
 interface Application {
   id: string; status: string; createdAt: string
-  job: { id: string; appName: string }
-  tester: { id: string; email: string; name: string | null }
+  job: {
+    id: string
+    appName: string
+    developer: { id: string; name: string | null; email: string }
+  }
+  tester: {
+    id: string
+    email: string
+    name: string | null
+    countryCode: string | null
+    deviceInfo: { deviceModel: string; androidVersion: string; screenSize: string | null } | null
+  }
+  verificationImage: string | null
+  verificationImage2: string | null
+  optInVerified: boolean
+  verifiedAt: string | null
+  testingStartDate: string | null
+  testingEndDate: string | null
+  testingPausedAt?: string | null
+  payment?: { status: string } | null
 }
 
 interface Payment {
   id: string; amount: Cents; status: string; createdAt: string; failureReason?: string | null
   application: { job: { id: string; appName: string }; tester: { id: string; email: string; name: string | null } }
+  allocationHistory: Array<{
+    id: string
+    createdAt: string
+    reason: string
+    fromApplication: { tester: { name: string | null; email: string } }
+    toApplication: { tester: { name: string | null; email: string } }
+    actor: { name: string | null; email: string }
+  }>
 }
 
 interface AdminActivityEvent {
@@ -709,6 +737,41 @@ export default function AdminDashboard() {
           else toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' })
         } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) }
         finally { setProcessingPayouts(false) }
+      },
+    })
+  }
+
+  const requestTestingPauseAction = (application: Application, action: 'pause' | 'resume') => {
+    const isPausing = action === 'pause'
+    openConfirm({
+      title: isPausing ? 'Pause testing clock?' : 'Resume testing clock?',
+      description: isPausing
+        ? `Pause ${application.tester.name || application.tester.email}'s active testing period for ${application.job.appName}. Missions and check-ins stop; existing work and payment history are preserved.`
+        : `Resume ${application.tester.name || application.tester.email}'s testing period for ${application.job.appName}. Only the saved remaining duration will continue.`,
+      confirmLabel: isPausing ? 'Pause testing' : 'Resume testing',
+      reasonRequired: true,
+      onConfirm: async reason => {
+        setActionLoading(application.id)
+        try {
+          const response = await fetch(`/api/admin/applications/${application.id}/pause`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action, reason }),
+          })
+          const data = await response.json()
+          if (!response.ok) {
+            toast({ title: 'Error', description: data.error || 'Could not update testing state', variant: 'destructive' })
+            return
+          }
+          toast({ title: isPausing ? 'Testing paused' : 'Testing resumed', description: data.message, variant: 'success' })
+          await fetchApplications()
+          await fetchAuditEntries()
+        } catch (error) {
+          console.error('Failed to update testing pause state:', error)
+          toast({ title: 'Error', description: 'Could not update testing state', variant: 'destructive' })
+        } finally {
+          setActionLoading(null)
+        }
       },
     })
   }
@@ -1324,6 +1387,7 @@ export default function AdminDashboard() {
             <TabsTrigger value="reports">
               Reports {unresolvedReportsCount > 0 && <Badge variant="destructive" className="ml-1">{unresolvedReportsCount}</Badge>}
             </TabsTrigger>
+            <TabsTrigger value="application-issues">App Issues</TabsTrigger>
             <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
             <TabsTrigger value="acquisition">Acquisition</TabsTrigger>
             <TabsTrigger value="fraud" className="text-red-600">
@@ -1331,6 +1395,18 @@ export default function AdminDashboard() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="application-issues">
+          <Card>
+            <CardHeader>
+              <CardTitle>Private application issue reports</CardTitle>
+              <CardDescription>Review installation, country, and device problems without mixing them with public platform feedback.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ApplicationIssueQueue />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="acquisition">
           <div className="grid gap-4 md:grid-cols-4">
@@ -2031,18 +2107,90 @@ export default function AdminDashboard() {
                 <ScrollTable>
                   <table className="w-full text-sm">
                     <thead><tr className="border-b text-left text-gray-500">
-                      <th className="py-3 px-2 font-medium">Tester</th>
-                      <th className="py-3 px-2 font-medium">App</th>
+                      <th className="py-3 px-2 font-medium">Tester and device</th>
+                      <th className="py-3 px-2 font-medium">Job and developer</th>
                       <th className="py-3 px-2 font-medium">Status</th>
-                      <th className="py-3 px-2 font-medium">Applied</th>
+                      <th className="py-3 px-2 font-medium">Opt-in uploads</th>
+                      <th className="py-3 px-2 font-medium">Timeline</th>
+                      <th className="py-3 px-2 font-medium">Testing controls</th>
                     </tr></thead>
                     <tbody>
                       {applications.map(a => (
                         <tr key={a.id} className="border-b hover:bg-gray-50 transition-colors">
-                          <td className="py-3 px-2">{a.tester.name || a.tester.email}</td>
-                          <td className="py-3 px-2">{a.job.appName}</td>
-                          <td className="py-3 px-2">{getStatusBadge(a.status)}</td>
-                          <td className="py-3 px-2 text-gray-400">{new Date(a.createdAt).toLocaleDateString()}</td>
+                          <td className="py-3 px-2 align-top">
+                            <p className="font-medium">{a.tester.name || a.tester.email}</p>
+                            <p className="text-xs text-gray-500">{a.tester.email}</p>
+                            <p className="mt-1 text-xs text-gray-600">
+                              {a.tester.countryCode || 'Country not provided'}
+                              {a.tester.deviceInfo
+                                ? ` · ${a.tester.deviceInfo.deviceModel} · Android ${a.tester.deviceInfo.androidVersion}`
+                                : ' · Device not provided'}
+                              {a.tester.deviceInfo?.screenSize ? ` · ${a.tester.deviceInfo.screenSize}` : ''}
+                            </p>
+                          </td>
+                          <td className="py-3 px-2 align-top">
+                            <a href={`/dashboard/jobs/${a.job.id}`} className="font-medium text-blue-700 hover:underline">
+                              {a.job.appName}
+                            </a>
+                            <p className="mt-1 text-xs text-gray-500">
+                              Developer: {a.job.developer.name || a.job.developer.email}
+                            </p>
+                            <p className="text-xs text-gray-500">{a.job.developer.email}</p>
+                          </td>
+                          <td className="py-3 px-2">
+                            {getStatusBadge(a.status)}
+                            {a.testingPausedAt && <span className="ml-2 text-amber-700">Paused</span>}
+                            <p className="mt-1 text-xs text-gray-500">
+                              {a.optInVerified ? 'Opt-in verified' : 'Opt-in not verified'}
+                            </p>
+                          </td>
+                          <td className="py-3 px-2 align-top">
+                            {(a.verificationImage || a.verificationImage2) ? (
+                              <div className="flex gap-2">
+                                {[a.verificationImage, a.verificationImage2].map((imageUrl, index) => imageUrl && (
+                                  <a
+                                    key={imageUrl}
+                                    href={imageUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    aria-label={`Open opt-in screenshot ${index + 1} for ${a.tester.name || a.tester.email}`}
+                                    className="block"
+                                  >
+                                    <Image
+                                      src={imageUrl}
+                                      alt={`Opt-in screenshot ${index + 1}`}
+                                      width={96}
+                                      height={64}
+                                      unoptimized
+                                      loading="lazy"
+                                      className="h-16 w-24 rounded border object-cover"
+                                    />
+                                    <span className="text-xs text-blue-700 hover:underline">Screenshot {index + 1}</span>
+                                  </a>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-gray-400">No screenshots uploaded</span>
+                            )}
+                          </td>
+                          <td className="py-3 px-2 align-top text-xs text-gray-500">
+                            <p>Applied: {new Date(a.createdAt).toLocaleString()}</p>
+                            {a.verifiedAt && <p className="mt-1">Verified: {new Date(a.verifiedAt).toLocaleString()}</p>}
+                            {a.testingStartDate && <p className="mt-1">Testing starts: {new Date(a.testingStartDate).toLocaleString()}</p>}
+                            {a.testingEndDate && <p className="mt-1">Testing ends: {new Date(a.testingEndDate).toLocaleString()}</p>}
+                          </td>
+                          <td className="py-3 px-2">
+                            {a.status === 'TESTING' ? (
+                              <Button
+                                size="sm"
+                                variant={a.testingPausedAt ? 'outline' : 'destructive'}
+                                disabled={actionLoading === a.id}
+                                onClick={() => requestTestingPauseAction(a, a.testingPausedAt ? 'resume' : 'pause')}
+                              >
+                                {a.testingPausedAt ? 'Resume' : 'Pause'}
+                              </Button>
+                            ) : '—'}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -2139,7 +2287,17 @@ export default function AdminDashboard() {
                     <tbody>
                       {payments.map(p => (
                         <tr key={p.id} className={`border-b hover:bg-gray-50 transition-colors ${p.status === 'FAILED' ? 'bg-red-50' : ''}`}>
-                          <td className="py-3 px-2">{p.application?.tester?.name || p.application?.tester?.email || '—'}</td>
+                          <td className="py-3 px-2">
+                            <p>{p.application?.tester?.name || p.application?.tester?.email || '—'}</p>
+                            {p.allocationHistory.map(allocation => (
+                              <p key={allocation.id} className="mt-1 text-xs text-blue-700">
+                                Reassigned from {allocation.fromApplication.tester.name || allocation.fromApplication.tester.email}
+                                {' '}to {allocation.toApplication.tester.name || allocation.toApplication.tester.email}
+                                {' '}· {new Date(allocation.createdAt).toLocaleString()}
+                                {' '}· {allocation.reason}
+                              </p>
+                            ))}
+                          </td>
                           <td className="py-3 px-2">{p.application?.job?.appName || '—'}</td>
                           <td className="py-3 px-2 font-medium">{formatEurFromCents(p.amount)}</td>
                           <td className="py-3 px-2">

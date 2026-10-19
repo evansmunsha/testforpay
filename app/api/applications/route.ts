@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { sendNotification, NotificationTemplates } from '@/lib/notifications'
 import { sendApplicationReceivedEmail } from '@/lib/email'
 import { checkApplicationFraud } from '@/lib/fraud-detection'
+import { passesDeclaredJobScreening } from '@/lib/tester-eligibility'
 
 // GET - List user's applications
 export async function GET(request: Request) {
@@ -128,9 +129,52 @@ export async function POST(request: Request) {
       )
     }
 
-    if (job.status !== 'ACTIVE') {
+    const canRecruitForPausedCohort = job.status === 'IN_PROGRESS' &&
+      await prisma.application.count({
+        where: {
+          jobId,
+          status: 'TESTING',
+          testingPausedAt: { not: null },
+          cohortSelected: true,
+        },
+      }) > 0
+    if (job.status !== 'ACTIVE' && !canRecruitForPausedCohort) {
       return NextResponse.json(
         { error: 'This job is not accepting applications' },
+        { status: 400 }
+      )
+    }
+
+    if (job.scheduledStartAt && job.scheduledStartAt > new Date()) {
+      return NextResponse.json(
+        { error: 'Recruitment has closed because testing has been scheduled' },
+        { status: 409 }
+      )
+    }
+    if (job.supportedCountries.length === 0) {
+      return NextResponse.json(
+        { error: 'This job has not declared supported countries and cannot accept screened applications yet' },
+        { status: 409 }
+      )
+    }
+    const tester = await prisma.user.findUnique({
+      where: { id: currentUser.userId },
+      select: { countryCode: true, deviceInfo: { select: { androidVersion: true } } },
+    })
+    if (!tester?.countryCode || !tester.deviceInfo?.androidVersion) {
+      return NextResponse.json(
+        { error: 'Add your country and Android device details in Settings before applying' },
+        { status: 400 }
+      )
+    }
+    if (!passesDeclaredJobScreening({
+      testerCountryCode: tester.countryCode,
+      testerAndroidVersion: tester.deviceInfo.androidVersion,
+      supportedCountries: job.supportedCountries,
+      minimumAndroidVersion: job.minAndroidVersion,
+    })) {
+      return NextResponse.json(
+        { error: 'Your declared country or Android version does not meet this job’s stated requirements. Google Play availability may still vary by account or device.' },
         { status: 400 }
       )
     }
@@ -154,10 +198,24 @@ export async function POST(request: Request) {
 
       const latestJob = await tx.testingJob.findUnique({
         where: { id: jobId },
-        select: { status: true, testersNeeded: true },
+        select: {
+          status: true,
+          testersNeeded: true,
+          scheduledStartAt: true,
+          applications: {
+            where: { status: 'TESTING', testingPausedAt: { not: null }, cohortSelected: true },
+            select: { id: true },
+          },
+        },
       })
 
-      if (!latestJob || latestJob.status !== 'ACTIVE') {
+      const jobAcceptsApplications = latestJob &&
+        (latestJob.status === 'ACTIVE' || (latestJob.status === 'IN_PROGRESS' && latestJob.applications.length > 0))
+      if (
+        !latestJob ||
+        !jobAcceptsApplications ||
+        (latestJob.scheduledStartAt && latestJob.scheduledStartAt > new Date())
+      ) {
         throw new Error('JOB_NOT_ACTIVE')
       }
 
@@ -175,10 +233,13 @@ export async function POST(request: Request) {
       }
 
       const currentCount = await tx.application.count({
-        where: { jobId },
+        where: {
+          jobId,
+          status: { notIn: ['REJECTED', 'INELIGIBLE'] },
+        },
       })
 
-      if (currentCount >= latestJob.testersNeeded) {
+      if (currentCount >= latestJob.testersNeeded * 3) {
         throw new Error('JOB_FULL')
       }
 
@@ -211,16 +272,11 @@ export async function POST(request: Request) {
 
     // Send notification email to developer
     try {
-      const tester = await prisma.user.findUnique({
-        where: { id: currentUser.userId },
-      })
-
       await sendApplicationReceivedEmail(
         job.developer.email,
         {
           developerName: job.developer.name || 'Developer',
           appName: job.appName,
-          testerEmail: tester?.email || 'Unknown',
           dashboardLink: `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/jobs/${job.id}`,
         }
       )

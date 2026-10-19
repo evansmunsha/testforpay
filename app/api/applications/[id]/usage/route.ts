@@ -60,19 +60,51 @@ export async function POST(
         { status: 400 }
       )
     }
+    if (application.testingPausedAt) {
+      return NextResponse.json(
+        { error: 'Cannot log usage while testing is paused' },
+        { status: 409 }
+      )
+    }
 
     // Create usage log
-    const usageLog = await prisma.appUsageLog.create({
-      data: {
-        applicationId: id,
-        testerId: currentUser.userId,
-        eventType,
-        featureName: featureName || null,
-        sessionDuration: sessionDuration || null,
-        ipAddress: request.headers.get('x-forwarded-for') || undefined,
-        userAgent: request.headers.get('user-agent') || undefined,
-      },
-    })
+    let usageLog
+    try {
+      usageLog = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "Application" WHERE id = ${id} FOR UPDATE`
+        const fresh = await tx.application.findUnique({
+          where: { id },
+          select: { testerId: true, status: true, testingPausedAt: true },
+        })
+        if (
+          !fresh ||
+          fresh.testerId !== currentUser.userId ||
+          !['TESTING', 'COMPLETED'].includes(fresh.status)
+        ) {
+          throw new Error('USAGE_NOT_ACTIVE')
+        }
+        if (fresh.testingPausedAt) throw new Error('USAGE_PAUSED')
+        return tx.appUsageLog.create({
+          data: {
+            applicationId: id,
+            testerId: currentUser.userId,
+            eventType,
+            featureName: featureName || null,
+            sessionDuration: sessionDuration || null,
+            ipAddress: request.headers.get('x-forwarded-for') || undefined,
+            userAgent: request.headers.get('user-agent') || undefined,
+          },
+        })
+      })
+    } catch (stateError) {
+      if (stateError instanceof Error && stateError.message === 'USAGE_PAUSED') {
+        return NextResponse.json({ error: 'Cannot log usage while testing is paused' }, { status: 409 })
+      }
+      if (stateError instanceof Error && stateError.message === 'USAGE_NOT_ACTIVE') {
+        return NextResponse.json({ error: 'Cannot log usage for an inactive application' }, { status: 409 })
+      }
+      throw stateError
+    }
 
     return NextResponse.json({
       success: true,
@@ -186,7 +218,6 @@ export async function GET(
       tester: {
         id: application.tester.id,
         name: application.tester.name,
-        email: application.tester.email,
       },
       metrics,
       logs: usageLogs,

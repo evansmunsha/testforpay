@@ -11,7 +11,6 @@ import Link from 'next/link'
 interface TesterCard {
   id: string
   name: string | null
-  email: string | null
   averageEngagementScore: number | null
   totalTestsCompleted: number | null
   averageRating: number | null
@@ -65,11 +64,7 @@ export default function TesterBrowserPage() {
           <div className="flex justify-between items-start mb-3">
             <div>
               <h3 className="font-semibold text-lg">{tester.name || 'Anonymous'}</h3>
-              {tester.email ? (
-                <p className="text-sm text-gray-600">{tester.email}</p>
-              ) : (
-                <p className="text-xs text-gray-500">testers Email available after apply</p>
-              )}
+              <p className="text-xs text-gray-500">Tester contact details are private during recruitment</p>
             </div>
           </div>
 

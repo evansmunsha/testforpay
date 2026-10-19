@@ -48,9 +48,18 @@ enum ApplicationStatus {
   APPROVED
   OPTED_IN
   VERIFIED
+  SCHEDULED
   TESTING
   COMPLETED
+  INELIGIBLE
   REJECTED
+}
+
+enum ApplicationIssueStatus {
+  OPEN
+  UNDER_REVIEW
+  RESOLVED
+  INCOMPATIBLE
 }
 
 enum PaymentStatus {
@@ -115,6 +124,7 @@ model User {
   muteDeveloperReplies Boolean @default(false)
   paypalEmail      String?
   phoneNumber      String?
+  countryCode      String?
   applications     Application[]
   deviceInfo       DeviceInfo?
   
@@ -127,6 +137,10 @@ model User {
   usageLogs         AppUsageLog[] @relation("UsageLogs")
   checkIns          DailyCheckIn[] @relation("TesterCheckIns")
   taskSubmissions   TaskSubmission[]
+  issueReports      ApplicationIssueReport[]
+  applicationPausesInitiated  ApplicationPause[] @relation("ApplicationPauseInitiator")
+  applicationResumesInitiated ApplicationPause[] @relation("ApplicationPauseResumeInitiator")
+  paymentAllocationActions PaymentAllocationHistory[]
   
   // Ratings
   averageRating    Float?   @default(0)
@@ -228,6 +242,7 @@ model TestingJob {
   testersNeeded     Int         @default(12)
   testDuration      Int         @default(14)
   minAndroidVersion String?
+  supportedCountries String[] @default([])
   
   // Compensation
   paymentPerTester  Int
@@ -245,13 +260,16 @@ model TestingJob {
   status            JobStatus   @default(DRAFT)
   publishedAt       DateTime?
   startedAt         DateTime?
+  scheduledStartAt  DateTime?
   completedAt       DateTime?
   
   // Relations
   applications      Application[]
   payments          Payment[]
+  paymentAllocationHistory PaymentAllocationHistory[]
   questionnaire     ProductionQuestionnaire?
   dailyTasks        DailyTask[]
+  issueReports      ApplicationIssueReport[]
   
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -268,6 +286,9 @@ model Application {
   tester            User                @relation(fields: [testerId], references: [id])
   
   status            ApplicationStatus   @default(PENDING)
+  cohortSelected    Boolean             @default(false)
+  contactReleasedAt DateTime?
+  screeningPassedAt DateTime?
   
   // Verification
   optInVerified     Boolean             @default(false)
@@ -282,6 +303,8 @@ model Application {
   // Testing Period
   testingStartDate  DateTime?
   testingEndDate    DateTime?
+  testingPausedAt   DateTime?
+  testingPausedDurationMs Float @default(0)
   
   // Feedback
   feedback          String?             @db.Text
@@ -301,6 +324,10 @@ model Application {
   payment           Payment?
   feedbackReports   FeedbackReport[]
   feedbacks Feedback[]
+  issueReports ApplicationIssueReport[]
+  pauseHistory ApplicationPause[]
+  paymentAllocationsFrom PaymentAllocationHistory[] @relation("PaymentAllocationFrom")
+  paymentAllocationsTo PaymentAllocationHistory[] @relation("PaymentAllocationTo")
   
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -311,6 +338,44 @@ model Application {
   @@index([status])
   @@index([ipAddress])
   
+}
+
+model ApplicationPause {
+  id                    String      @id @default(cuid())
+  applicationId         String
+  application           Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  pausedAt              DateTime
+  pauseReason           String      @db.Text
+  pausedById            String
+  pausedBy              User        @relation("ApplicationPauseInitiator", fields: [pausedById], references: [id])
+  resumeScheduledAt     DateTime?
+  resumeReason          String?     @db.Text
+  resumeInitiatedById   String?
+  resumeInitiatedBy     User?       @relation("ApplicationPauseResumeInitiator", fields: [resumeInitiatedById], references: [id])
+  resumedAt             DateTime?
+  createdAt             DateTime    @default(now())
+
+  @@index([applicationId, resumedAt])
+}
+
+model ApplicationIssueReport {
+  id            String                @id @default(cuid())
+  applicationId String
+  application   Application           @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  jobId         String
+  job           TestingJob            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  testerId      String
+  tester        User                  @relation(fields: [testerId], references: [id], onDelete: Cascade)
+  category      String
+  details       String                @db.Text
+  status        ApplicationIssueStatus @default(OPEN)
+  adminNote     String?               @db.Text
+  resolvedAt    DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([applicationId, status])
+  @@index([status, createdAt])
 }
 
 model FeedbackReport {
@@ -349,12 +414,34 @@ model Payment {
   escrowedAt        DateTime?
   completedAt       DateTime?
   failedAt          DateTime?
+  allocationHistory PaymentAllocationHistory[]
   
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
   
   @@index([status])
   @@index([jobId])
+}
+
+model PaymentAllocationHistory {
+  id                String      @id @default(cuid())
+  paymentId         String
+  payment           Payment     @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+  jobId             String
+  job               TestingJob  @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  fromApplicationId String
+  fromApplication   Application @relation("PaymentAllocationFrom", fields: [fromApplicationId], references: [id], onDelete: Restrict)
+  toApplicationId   String
+  toApplication     Application @relation("PaymentAllocationTo", fields: [toApplicationId], references: [id], onDelete: Restrict)
+  actorId           String
+  actor             User        @relation(fields: [actorId], references: [id], onDelete: Restrict)
+  reason            String      @db.Text
+  createdAt         DateTime    @default(now())
+
+  @@index([jobId, createdAt])
+  @@index([paymentId, createdAt])
+  @@index([fromApplicationId])
+  @@index([toApplicationId])
 }
 
 model PushSubscription {

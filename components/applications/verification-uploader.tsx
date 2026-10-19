@@ -90,6 +90,9 @@ export function VerificationUploader({
               <p className="text-sm text-indigo-700">
                 Upload two screenshots proving you can access the app on Google Play.
               </p>
+              <p className="mt-2 text-sm font-medium text-indigo-900">
+                Checking whether the app is available or installing it is only preparation. Your testing period and daily missions start only at the official scheduled start time shown in your application.
+              </p>
             </div>
 
             {/* Step-by-step guide */}

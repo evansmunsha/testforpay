@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { z } from 'zod'
+import { getMissionDay } from '@/lib/mission-clock'
 
 const submitSchema = z.object({
   content: z.string().min(10, 'Please write at least 10 characters'),
@@ -36,11 +37,19 @@ export async function POST(
       where: { id: taskId },
       include: {
         job: {
-          include: {
+          select: {
+            testDuration: true,
             applications: {
               where: {
                 testerId: currentUser.userId,
-                status: { in: ['APPROVED', 'OPTED_IN', 'VERIFIED', 'TESTING'] },
+                status: 'TESTING',
+                issueReports: { none: { status: { in: ['OPEN', 'UNDER_REVIEW'] } } },
+              },
+              select: {
+                id: true,
+                testingStartDate: true,
+                testingPausedAt: true,
+                testingPausedDurationMs: true,
               },
             },
           },
@@ -59,31 +68,106 @@ export async function POST(
       )
     }
 
-    // Check for duplicate submission
-    const existing = await prisma.taskSubmission.findUnique({
-      where: {
-        taskId_testerId: {
-          taskId: taskId,
-          testerId: currentUser.userId,
-        },
-      },
-    })
-
-    if (existing) {
+    const application = task.job.applications[0]
+    if (!application.testingStartDate) {
       return NextResponse.json(
-        { error: 'You have already submitted this task' },
-        { status: 409 }
+        { error: 'Testing has not started for this application' },
+        { status: 400 }
       )
     }
 
-    const submission = await prisma.taskSubmission.create({
-      data: {
-        taskId: taskId,
-        testerId: currentUser.userId,
-        content,
-        screenshotUrl: screenshotUrl || null,
-      },
-    })
+    if (application.testingPausedAt) {
+      return NextResponse.json({ error: 'Testing is paused for this application' }, { status: 409 })
+    }
+
+    const missionDay = getMissionDay(
+      application.testingStartDate,
+      new Date(),
+      application.testingPausedDurationMs
+    )
+    if (
+      missionDay === null ||
+      missionDay > task.job.testDuration ||
+      task.dayNumber !== missionDay
+    ) {
+      return NextResponse.json(
+        { error: 'Only the mission for the current testing day can be submitted' },
+        { status: 400 }
+      )
+    }
+
+    let submission
+    try {
+      submission = await prisma.$transaction(async (tx) => {
+        await tx.$executeRaw`SELECT id FROM "Application" WHERE id = ${application.id} FOR UPDATE`
+        const fresh = await tx.application.findUnique({
+          where: { id: application.id },
+          select: {
+            status: true,
+            testingStartDate: true,
+            testingPausedAt: true,
+            testingPausedDurationMs: true,
+            issueReports: {
+              where: { status: { in: ['OPEN', 'UNDER_REVIEW'] } },
+              select: { id: true },
+            },
+          },
+        })
+        if (!fresh || fresh.status !== 'TESTING' || fresh.issueReports.length > 0) {
+          throw new Error('TESTING_NOT_ACTIVE')
+        }
+        if (fresh.testingPausedAt) throw new Error('TESTING_PAUSED')
+        if (!fresh.testingStartDate) throw new Error('TESTING_NOT_STARTED')
+        const currentMissionDay = getMissionDay(
+          fresh.testingStartDate,
+          new Date(),
+          fresh.testingPausedDurationMs
+        )
+        if (
+          currentMissionDay === null ||
+          currentMissionDay > task.job.testDuration ||
+          task.dayNumber !== currentMissionDay
+        ) {
+          throw new Error('MISSION_NOT_CURRENT')
+        }
+        const existing = await tx.taskSubmission.findUnique({
+          where: {
+            taskId_testerId: {
+              taskId,
+              testerId: currentUser.userId,
+            },
+          },
+          select: { id: true },
+        })
+        if (existing) throw new Error('DUPLICATE_SUBMISSION')
+
+        return tx.taskSubmission.create({
+          data: {
+            taskId,
+            testerId: currentUser.userId,
+            content,
+            screenshotUrl: screenshotUrl || null,
+          },
+        })
+      })
+    } catch (stateError) {
+      if (stateError instanceof Error) {
+        const errors: Record<string, { status: number; message: string }> = {
+          TESTING_NOT_ACTIVE: { status: 409, message: 'Testing is not active for this application' },
+          TESTING_PAUSED: { status: 409, message: 'Testing is paused for this application' },
+          TESTING_NOT_STARTED: { status: 409, message: 'Testing has not started for this application' },
+          MISSION_NOT_CURRENT: { status: 400, message: 'Only the mission for the current testing day can be submitted' },
+          DUPLICATE_SUBMISSION: { status: 409, message: 'You have already submitted this task' },
+        }
+        if (errors[stateError.message]) {
+          return NextResponse.json(
+            { error: errors[stateError.message].message },
+            { status: errors[stateError.message].status }
+          )
+        }
+      }
+      throw stateError
+    }
 
     return NextResponse.json({ success: true, submission })
   } catch (error) {

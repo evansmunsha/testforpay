@@ -17,6 +17,7 @@ export default function SettingsPage() {
   const payoneerReferralUrl = process.env.NEXT_PUBLIC_PAYONEER_REFERRAL_URL
 
   const [name, setName] = useState('')
+  const [countryCode, setCountryCode] = useState('')
   const [deviceModel, setDeviceModel] = useState('')
   const [androidVersion, setAndroidVersion] = useState('')
   const [screenSize, setScreenSize] = useState('')
@@ -53,6 +54,12 @@ export default function SettingsPage() {
   useEffect(() => {
     if (user) {
       setName(user.name || '')
+      fetch('/api/user/profile')
+        .then(async (response) => response.ok ? response.json() : null)
+        .then((profile) => {
+          if (profile?.countryCode) setCountryCode(profile.countryCode)
+        })
+        .catch((error) => console.error('Failed to load profile country:', error))
     }
   }, [user])
 
@@ -96,7 +103,7 @@ export default function SettingsPage() {
       const response = await fetch('/api/user/profile', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, countryCode }),
       })
 
       if (response.ok) {
@@ -342,6 +349,23 @@ export default function SettingsPage() {
             />
             <p className="text-xs text-gray-500">Email cannot be changed</p>
           </div>
+
+          {user?.role === 'TESTER' && (
+            <div className="space-y-2">
+              <Label htmlFor="countryCode">Country code</Label>
+              <Input
+                id="countryCode"
+                value={countryCode}
+                onChange={(event) => setCountryCode(event.target.value.toUpperCase().slice(0, 2))}
+                placeholder="e.g. MA"
+                maxLength={2}
+                autoComplete="country"
+              />
+              <p className="text-xs text-gray-500">
+                Enter your two-letter country code (for example, MA for Morocco). Developers use this to screen recruitment, but it cannot guarantee Google Play availability.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Account Type</Label>

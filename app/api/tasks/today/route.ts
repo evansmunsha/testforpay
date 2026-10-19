@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { getMissionDay } from '@/lib/mission-clock'
 
 export async function GET() {
   try {
@@ -14,7 +15,8 @@ export async function GET() {
     const application = await prisma.application.findFirst({
       where: {
         testerId: currentUser.userId,
-        status: { in: ['APPROVED', 'OPTED_IN', 'VERIFIED', 'TESTING'] },
+        status: 'TESTING',
+        issueReports: { none: { status: { in: ['OPEN', 'UNDER_REVIEW'] } } },
       },
       orderBy: { updatedAt: 'desc' },
       include: {
@@ -30,16 +32,24 @@ export async function GET() {
       return NextResponse.json({ error: 'No active job' }, { status: 404 })
     }
 
-    // Use testingStartDate if set, otherwise fall back to job createdAt
-    const startDate: Date = application.testingStartDate
-      ? new Date(application.testingStartDate)
-      : new Date(application.job.createdAt)
+    if (application.testingPausedAt) {
+      return NextResponse.json({ error: 'Testing is paused for this application' }, { status: 409 })
+    }
 
-    const now = new Date()
-    const diffMs = now.getTime() - startDate.getTime()
-    const dayNumber = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1
+    if (!application.testingStartDate) {
+      return NextResponse.json(
+        { error: 'Testing has not started for this application' },
+        { status: 400 }
+      )
+    }
 
-    if (dayNumber < 1 || dayNumber > 14) {
+    const dayNumber = getMissionDay(
+      application.testingStartDate,
+      new Date(),
+      application.testingPausedDurationMs
+    )
+
+    if (dayNumber === null || dayNumber > application.job.testDuration) {
       return NextResponse.json(
         { error: 'Testing period not active' },
         { status: 400 }
@@ -70,7 +80,7 @@ export async function GET() {
     return NextResponse.json({
       task: todayTask,
       dayNumber,
-      totalDays: 14,
+      totalDays: application.job.testDuration,
       isCompleted: !!submission,
       submission: submission ?? null,
       jobName: application.job.appName,

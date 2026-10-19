@@ -23,7 +23,7 @@ export async function GET(
           include: {
             submissions: {
               include: {
-                tester: { select: { id: true, name: true, email: true } },
+                tester: { select: { id: true, name: true } },
               },
             },
           },
@@ -31,7 +31,7 @@ export async function GET(
         applications: {
           where: { status: { in: ['APPROVED', 'OPTED_IN', 'VERIFIED', 'TESTING', 'COMPLETED'] } },
           include: {
-            tester: { select: { id: true, name: true, email: true } },
+            tester: { select: { id: true, name: true } },
           },
         },
       },

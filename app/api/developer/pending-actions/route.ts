@@ -21,8 +21,7 @@ export async function GET() {
         tester: {
           select: {
             id: true,
-            name: true,
-            email: true
+            name: true
           }
         }
       },
@@ -40,8 +39,7 @@ export async function GET() {
         tester: {
           select: {
             id: true,
-            name: true,
-            email: true
+            name: true
           }
         }
       },

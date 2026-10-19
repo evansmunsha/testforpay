@@ -31,8 +31,6 @@ import {
   RefreshCw,
   MessageSquare,
   Package,
-  Copy,
-  Mail,
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatEurFromCents, formatUsdFromEurCents } from '@/lib/currency'
@@ -45,6 +43,7 @@ interface Job {
   packageName: string | null
   googlePlayLink: string
   appCategory: string | null
+  supportedCountries: string[]
   testersNeeded: number
   testDuration: number
   minAndroidVersion: string | null
@@ -59,6 +58,7 @@ interface Job {
   status: string
   createdAt: string
   publishedAt: string | null
+  scheduledStartAt: string | null
   developer: {
     name: string | null
     email: string
@@ -77,6 +77,7 @@ interface Application {
   verificationImage: string | null
   verificationImage2?: string | null
   testingEndDate: string | null
+  testingPausedAt?: string | null
   optInVerified: boolean
   feedback: string | null
   rating: number | null
@@ -89,7 +90,7 @@ interface Application {
   tester: {
       id: string
       name: string | null
-      email: string
+      email?: string
       createdAt: string
       muteDeveloperReplies?: boolean
       deviceInfo: {
@@ -112,89 +113,16 @@ const PLAN_COLORS: Record<string, string> = {
   PRO: 'bg-purple-100 text-purple-800',
 }
 
-// Standalone card so it can use useState without issues in the parent
-function TesterEmailsCard({ emails, emailText }: { emails: string[]; emailText: string }) {
-  const [copied, setCopied] = useState(false)
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(emailText)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      const el = document.createElement('textarea')
-      el.value = emailText
-      document.body.appendChild(el)
-      el.select()
-      document.execCommand('copy')
-      document.body.removeChild(el)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    }
-  }
-
-  return (
-    <Card className="border-blue-200">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm flex items-center gap-2">
-            <Mail className="h-4 w-4 text-blue-600" />
-            Tester Emails
-          </CardTitle>
-          <Badge variant="secondary" className="text-xs">{emails.length}</Badge>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">
-          Copy and paste into your Google Play Console email list.
-        </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {emails.length === 0 ? (
-          <div className="rounded-md bg-gray-50 border border-dashed border-gray-200 p-4 text-center">
-            <Mail className="h-6 w-6 text-gray-300 mx-auto mb-2" />
-            <p className="text-xs text-gray-500 font-medium">No approved testers yet</p>
-            <p className="text-xs text-gray-400 mt-1">
-              Once testers apply and are approved, their emails will appear here ready to copy into your Google Play Console.
-            </p>
-          </div>
-        ) : (
-          <>
-            <div className="bg-gray-50 border rounded-md p-3 max-h-48 overflow-y-auto">
-              {emails.map((email, i) => (
-                <p key={i} className="text-xs font-mono text-gray-700 leading-6 select-all">
-                  {email}
-                </p>
-              ))}
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full"
-              onClick={handleCopy}
-            >
-              {copied ? (
-                <>
-                  <CheckCircle className="h-3.5 w-3.5 mr-2 text-green-600" />
-                  Copied!
-                </>
-              ) : (
-                <>
-                  <Copy className="h-3.5 w-3.5 mr-2" />
-                  Copy all emails
-                </>
-              )}
-            </Button>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function JobDetailPage() {
   const params = useParams()
   const router = useRouter()
   const { toast } = useToast()
   const [job, setJob] = useState<Job | null>(null)
+  const [recruitment, setRecruitment] = useState<{ eligible: number; required: number; selected: number; paused: number; contactReleased: boolean } | null>(null)
+  const [countryCodes, setCountryCodes] = useState('')
+  const [scheduledStartInput, setScheduledStartInput] = useState('')
+  const [resumePausedApplications, setResumePausedApplications] = useState(false)
+  const [resumeReason, setResumeReason] = useState('')
   const [loading, setLoading] = useState(true)
   const [actionLoading, setActionLoading] = useState(false)
   const [error, setError] = useState('')
@@ -259,6 +187,8 @@ export default function JobDetailPage() {
 
       if (response.ok) {
         setJob(data.job)
+        setRecruitment(data.recruitment ?? null)
+        setCountryCodes((data.job.supportedCountries || []).join(', '))
       } else {
         setError(data.error || 'Failed to load job')
       }
@@ -267,6 +197,79 @@ export default function JobDetailPage() {
     } finally {
       if (!silent) setLoading(false)
       setRefreshing(false)
+    }
+  }
+
+  const saveSupportedCountries = async () => {
+    try {
+      const response = await fetch(`/api/jobs/${params.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          supportedCountries: countryCodes.split(',').map((code) => code.trim().toUpperCase()).filter(Boolean),
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        toast({ title: 'Error', description: data.error || 'Could not save supported countries', variant: 'destructive' })
+        return
+      }
+      await fetchJob(true)
+      toast({ title: 'Saved', description: 'Country coverage updated', variant: 'success' })
+    } catch (error) {
+      console.error('Failed to save supported countries:', error)
+      toast({ title: 'Error', description: 'Could not save supported countries', variant: 'destructive' })
+    }
+  }
+
+  const assembleCohort = async () => {
+    setActionLoading(true)
+    try {
+      const response = await fetch(`/api/jobs/${params.id}/recruitment`, { method: 'POST' })
+      const data = await response.json()
+      if (!response.ok) {
+        toast({ title: 'Error', description: data.error || 'Could not assemble tester cohort', variant: 'destructive' })
+        return
+      }
+      await fetchJob(true)
+      toast({ title: 'Recruitment progress', description: data.message, variant: 'success' })
+    } catch (error) {
+      console.error('Failed to assemble tester cohort:', error)
+      toast({ title: 'Error', description: 'Could not assemble tester cohort', variant: 'destructive' })
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  const scheduleTesting = async () => {
+    if (!scheduledStartInput) {
+      toast({ title: 'Choose a start time', description: 'Select a future local date and time first.', variant: 'destructive' })
+      return
+    }
+    setActionLoading(true)
+    try {
+      const response = await fetch(`/api/jobs/${params.id}/schedule`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduledStartAt: new Date(scheduledStartInput).toISOString(),
+          ...(recruitment?.paused
+            ? { resumePausedApplications, resumeReason }
+            : {}),
+        }),
+      })
+      const data = await response.json()
+      if (!response.ok) {
+        toast({ title: 'Error', description: data.error || 'Could not schedule testing', variant: 'destructive' })
+        return
+      }
+      await fetchJob(true)
+      toast({ title: 'Testing scheduled', description: 'The selected testers have been notified.', variant: 'success' })
+    } catch (error) {
+      console.error('Failed to schedule testing:', error)
+      toast({ title: 'Error', description: 'Could not schedule testing', variant: 'destructive' })
+    } finally {
+      setActionLoading(false)
     }
   }
 
@@ -436,9 +439,9 @@ You will receive a partial refund for unused budget.`
 
   const handleVerify = async (applicationId: string) => {
     openConfirm({
-      title: 'Confirm tester opt-in?',
-      description: 'Confirm that the tester has opted-in to your Google Play test? This will start the 14-day testing period.',
-      confirmLabel: 'Confirm',
+      title: 'Verify tester opt-in?',
+      description: 'Confirm the tester’s screenshots show they joined your Google Play test. This verifies their opt-in only; the testing countdown and daily missions begin at the official scheduled start.',
+      confirmLabel: 'Verify opt-in',
       onConfirm: async () => {
         setActionLoading(true)
         try {
@@ -450,7 +453,7 @@ You will receive a partial refund for unused budget.`
 
           if (response.ok) {
             fetchJob()
-            toast({ title: 'Verified', description: 'Testing period started. Payment will be processed after 14 days.', variant: 'success' })
+            toast({ title: 'Opt-in verified', description: 'The tester is verified. Their testing period will begin at the official scheduled start.', variant: 'success' })
           } else {
             toast({ title: 'Error', description: 'Failed to verify application', variant: 'destructive' })
           }
@@ -493,7 +496,7 @@ You will receive a partial refund for unused budget.`
     }
   }
 
-  const progressPercentage = (job._count.applications / job.testersNeeded) * 100
+  const progressPercentage = ((recruitment?.eligible ?? 0) / job.testersNeeded) * 100
   const planLabel = job.planType ? (PLAN_LABELS[job.planType] || job.planType) : 'Custom'
   const planBadgeClass = job.planType ? (PLAN_COLORS[job.planType] || 'bg-gray-100 text-gray-800') : 'bg-gray-100 text-gray-800'
 
@@ -501,7 +504,7 @@ You will receive a partial refund for unused budget.`
   const pendingApplications = job.applications.filter(app => app.status === 'PENDING')
   const approvedApplications = job.applications.filter(app => app.status === 'APPROVED')
   const activeApplications = job.applications.filter(app => 
-    ['OPTED_IN', 'VERIFIED', 'TESTING'].includes(app.status)
+    ['OPTED_IN', 'VERIFIED', 'SCHEDULED', 'TESTING'].includes(app.status)
   )
   const completedApplications = job.applications.filter(app => app.status === 'COMPLETED')
   const rejectedApplications = job.applications.filter(app => app.status === 'REJECTED')
@@ -510,18 +513,10 @@ You will receive a partial refund for unused budget.`
   const isCompleted = job.status === 'COMPLETED'
   const isActive = ['ACTIVE', 'IN_PROGRESS'].includes(job.status)
 
-  // Count testers who are approved or beyond (ready to be added to Play Console)
-  const readyTesters = job.applications.filter(app =>
-    ['APPROVED', 'OPTED_IN', 'VERIFIED', 'TESTING', 'COMPLETED'].includes(app.status)
-  )
   // Testers who have uploaded opt-in screenshots — waiting for dev to verify
   const awaitingVerification = job.applications.filter(app => app.status === 'OPTED_IN')
   // Testers currently in testing
   const currentlyTesting = job.applications.filter(app => app.status === 'TESTING')
-  // "Ready to send emails" — enough approved testers, none have started testing yet
-  const isReadyToSendEmails = isActive &&
-    readyTesters.length >= job.testersNeeded &&
-    currentlyTesting.length === 0
   // "Ready to verify" — enough testers have uploaded screenshots, verify all same day
   const isReadyToVerifyAll = isActive &&
     awaitingVerification.length >= job.testersNeeded &&
@@ -647,7 +642,7 @@ You will receive a partial refund for unused budget.`
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {job._count.applications} / {job.testersNeeded}
+              {recruitment?.eligible ?? 0} / {job.testersNeeded} eligible testers
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
               <div 
@@ -694,33 +689,111 @@ You will receive a partial refund for unused budget.`
               📸 All {awaitingVerification.length} testers have uploaded their opt-in screenshots
             </p>
             <p className="text-sm text-blue-800 mt-1">
-              Review each screenshot to confirm they joined your Play Console closed test. Once you verify all of them on the same day, their 14-day countdowns will all start together — keeping them in sync.
+              Review each screenshot to confirm they joined your Play Console closed test. After the full eligible cohort is selected, schedule the official start time. Testing and daily missions begin together at that scheduled time.
             </p>
             <p className="text-xs text-blue-700 mt-2 font-medium">
-              ⚠️ Verify all testers on the same day so their 14-day periods end at the same time.
+              The countdown does not start when you approve or verify screenshots.
             </p>
           </div>
         </div>
       )}
 
-      {!isReadyToVerifyAll && isReadyToSendEmails && (
-        <div className="rounded-xl border-2 border-green-400 bg-green-50 p-5 flex flex-col sm:flex-row sm:items-start gap-4">
-          <CheckCircle className="h-6 w-6 text-green-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="font-bold text-green-900 text-base">
-              🎉 You have {readyTesters.length} approved testers — time to add them to Play Console
-            </p>
-            <p className="text-sm text-green-800 mt-1">
-              Copy all tester emails from the sidebar and paste them into your Google Play Console email list. Share the opt-in link back here — testers will click it, upload a screenshot as proof, and then you verify all of them together to start the 14-day clock.
-            </p>
-            <a
-              href="/guides/play-console-setup"
-              className="inline-flex items-center gap-1 text-xs text-green-700 hover:underline font-medium mt-2"
-            >
-              Step-by-step: How to add testers to Play Console →
-            </a>
-          </div>
-        </div>
+      {isActive && (
+        <Card className="border-indigo-200">
+          <CardHeader>
+            <CardTitle>Recruitment and testing schedule</CardTitle>
+            <CardDescription>
+              Eligible progress counts approved testers who pass the declared country/device checks and have no unresolved install report. Country declarations do not guarantee Google Play availability.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="job-supported-countries" className="text-sm font-medium">Supported country codes</label>
+              <div className="flex gap-2">
+                <input
+                  id="job-supported-countries"
+                  value={countryCodes}
+                  onChange={(event) => setCountryCodes(event.target.value.toUpperCase())}
+                  placeholder="US, GB, MA"
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  disabled={!!job.scheduledStartAt}
+                />
+                <Button onClick={saveSupportedCountries} disabled={actionLoading || !!job.scheduledStartAt}>Save</Button>
+              </div>
+              <p className="text-xs text-gray-500">Enter two-letter ISO codes separated by commas.</p>
+            </div>
+            <div className="rounded-md bg-gray-50 p-3 text-sm">
+              Eligible testers: <strong>{recruitment?.eligible ?? 0}/{job.testersNeeded}</strong>
+              <span className="ml-2 text-gray-500">
+                ({recruitment?.selected ?? 0} selected; other eligible applicants remain reserves)
+              </span>
+            </div>
+            {(recruitment?.paused ?? 0) > 0 && (
+              <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+                <p>
+                  {recruitment?.paused} existing tester{recruitment?.paused === 1 ? ' is' : 's are'} paused.
+                  Scheduling this complete cohort will resume only their saved remaining duration at the scheduled start;
+                  their original start date and completed work will be preserved.
+                </p>
+                <label className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    checked={resumePausedApplications}
+                    onChange={(event) => setResumePausedApplications(event.target.checked)}
+                  />
+                  <span>I explicitly authorize resuming paused testers at this cohort’s scheduled start.</span>
+                </label>
+                <input
+                  value={resumeReason}
+                  onChange={(event) => setResumeReason(event.target.value)}
+                  maxLength={1000}
+                  placeholder="Document the reason for resuming the existing tester (at least 10 characters)"
+                  className="w-full rounded-md border border-amber-400 bg-white px-3 py-2"
+                />
+              </div>
+            )}
+            {!job.scheduledStartAt && (
+              <Button
+                onClick={assembleCohort}
+                disabled={actionLoading || (recruitment?.eligible ?? 0) < job.testersNeeded}
+              >
+                Release selected cohort contact emails
+              </Button>
+            )}
+            {job.scheduledStartAt ? (
+              <p className="text-sm text-blue-800">
+                Official testing start: {new Date(job.scheduledStartAt).toLocaleString()}.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                <label htmlFor="scheduled-start" className="text-sm font-medium">Official testing start (your local time)</label>
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    id="scheduled-start"
+                    type="datetime-local"
+                    value={scheduledStartInput}
+                    onChange={(event) => setScheduledStartInput(event.target.value)}
+                    className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <Button
+                    onClick={scheduleTesting}
+                    disabled={
+                      actionLoading ||
+                      (recruitment?.selected ?? 0) < job.testersNeeded ||
+                      ((recruitment?.paused ?? 0) > 0 &&
+                        (!resumePausedApplications || resumeReason.trim().length < 10))
+                    }
+                  >
+                    Schedule start
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Scheduling requires all selected testers to have verified opt-in proof and pass checks. Mission day 1 and the 14-day clock begin at the chosen instant.
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       <Card>
@@ -920,7 +993,7 @@ You will receive a partial refund for unused budget.`
                 [...activeApplications, ...completedApplications].map(application => (
                   <div key={application.id}>
                     <p className="text-sm font-medium text-gray-600 mb-2">
-                      {application.tester.name || application.tester.email}
+                      {application.tester.name || 'Tester'}
                     </p>
                     <DailyCheckInPanel
                       applicationId={application.id}
@@ -1011,18 +1084,14 @@ You will receive a partial refund for unused budget.`
             </CardContent>
           </Card>
 
-          {/* Tester Email List — for pasting into Google Play Console */}
-          {(() => {
-            const eligibleEmails = job.applications
-              .filter(app => ['APPROVED', 'OPTED_IN', 'VERIFIED', 'TESTING', 'COMPLETED'].includes(app.status))
-              .map(app => app.tester.email)
-
-            const emailText = eligibleEmails.join('\n')
-
-            return (
-              <TesterEmailsCard emails={eligibleEmails} emailText={emailText} />
-            )
-          })()}
+          <Card>
+            <CardHeader>
+              <CardTitle>Tester contact details</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm text-gray-600">
+              Tester email addresses are private during recruitment.
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

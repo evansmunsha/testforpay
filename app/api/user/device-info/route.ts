@@ -43,6 +43,16 @@ export async function POST(request: Request) {
       )
     }
 
+    if (currentUser.role === 'TESTER') {
+      const user = await prisma.user.findUnique({
+        where: { id: currentUser.userId },
+        select: { countryCode: true },
+      })
+      if (!user?.countryCode) {
+        return NextResponse.json({ error: 'Set your country in Profile Information before saving device details' }, { status: 400 })
+      }
+    }
+
     const body = await request.json()
     
     // Validate with Zod schema

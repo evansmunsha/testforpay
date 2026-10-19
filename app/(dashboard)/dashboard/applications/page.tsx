@@ -10,15 +10,20 @@ import { FileText, DollarSign, Clock, Calendar, ExternalLink, Upload, MessageSqu
 import Link from 'next/link'
 import { FeedbackForm } from '@/components/applications/feedback-form'
 import { DailyCheckInPanel } from '@/components/applications/daily-checkin-panel'
+import { ApplicationIssueReportForm } from '@/components/applications/application-issue-report-form'
 import { formatEurFromCents } from '@/lib/currency'
 import type { Cents } from '@/types/money'
 
 interface Application {
   id: string
   status: string
+  cohortSelected: boolean
+  contactReleasedAt: string | null
   createdAt: string
   testingStartDate: string | null
   testingEndDate: string | null
+  testingPausedAt: string | null
+  testingPausedDurationMs: number
   optInVerified: boolean
   verificationImage: string | null
   verificationImage2?: string | null
@@ -33,6 +38,7 @@ interface Application {
     appName: string
     appDescription: string
     googlePlayLink: string
+    scheduledStartAt?: string | null
     /** Payment per tester in integer cents (EUR). */
     paymentPerTester: Cents
     testDuration: number
@@ -99,9 +105,11 @@ export default function ApplicationsPage() {
       case 'APPROVED': return 'bg-blue-100 text-blue-800'
       case 'OPTED_IN': return 'bg-indigo-100 text-indigo-800'
       case 'VERIFIED': return 'bg-green-100 text-green-800'
+      case 'SCHEDULED': return 'bg-blue-100 text-blue-800'
       case 'TESTING': return 'bg-purple-100 text-purple-800'
       case 'COMPLETED': return 'bg-green-100 text-green-800'
       case 'REJECTED': return 'bg-red-100 text-red-800'
+      case 'INELIGIBLE': return 'bg-amber-100 text-amber-800'
       default: return 'bg-gray-100 text-gray-800'
     }
   }
@@ -111,10 +119,12 @@ export default function ApplicationsPage() {
       case 'PENDING': return 'Waiting for developer approval'
       case 'APPROVED': return 'Approved! Next: Opt-in to Google Play test'
       case 'OPTED_IN': return 'Verification submitted. Waiting for developer review'
-      case 'VERIFIED': return 'Verified! Testing period will start soon'
+      case 'VERIFIED': return 'Opt-in verified. Waiting for the developer to schedule the cohort start'
+      case 'SCHEDULED': return 'Testing is scheduled and has not started yet'
       case 'TESTING': return 'Testing in progress'
       case 'COMPLETED': return 'Testing completed! Payment processing'
       case 'REJECTED': return 'Application was not approved'
+      case 'INELIGIBLE': return 'This app is not available for your declared country or device. This will not count against your tester record.'
       default: return ''
     }
   }
@@ -260,7 +270,7 @@ export default function ApplicationsPage() {
                     <Clock className="h-4 w-4" />
                     {app.job.testDuration} day testing period
                   </div>
-                  {app.testingEndDate && app.status === 'TESTING' && (
+                  {app.testingEndDate && app.status === 'TESTING' && !app.testingPausedAt && (
                     <div className="flex items-center gap-2 text-gray-600">
                       <Clock className="h-4 w-4" />
                       {calculateDaysRemaining(app.testingEndDate)} days remaining
@@ -277,7 +287,31 @@ export default function ApplicationsPage() {
                   </div>
                 )}
 
-                {app.status === 'APPROVED' && !app.verificationImage && (
+                {app.status === 'SCHEDULED' && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+                    Your opt-in is verified. The testing clock and daily missions begin at{' '}
+                    <strong>
+                      {app.job.scheduledStartAt
+                        ? new Date(app.job.scheduledStartAt).toLocaleString()
+                        : 'the scheduled start time'}
+                    </strong>
+                    . No mission or check-in is available before then.
+                  </div>
+                )}
+
+                {app.status === 'INELIGIBLE' && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                    This app could not be tested with the declared country or device. This confirmed incompatibility does not count against your tester record.
+                  </div>
+                )}
+
+                {app.status === 'APPROVED' && !app.contactReleasedAt && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                    Your application is approved. Wait for the developer to select and release the tester group before joining the Google Play test.
+                  </div>
+                )}
+
+                {app.status === 'APPROVED' && !!app.contactReleasedAt && !app.verificationImage && (
                   <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg space-y-3">
                     <p className="text-sm text-blue-800 font-medium">
                       ✅ Congratulations! Your application was approved.
@@ -306,6 +340,9 @@ export default function ApplicationsPage() {
                           <span>Upload your screenshot(s) below</span>
                         </li>
                       </ol>
+                      <p className="mt-3 rounded-md bg-blue-50 p-3 text-sm text-blue-900">
+                        Checking Google Play or installing the app is only preparation. Your testing period and daily missions do not begin until the developer schedules the official start and that time arrives. We will show the scheduled time here.
+                      </p>
                     </div>
                     <div className="flex gap-2 pt-2">
                       <Button asChild size="sm" className="flex-1">
@@ -331,13 +368,17 @@ export default function ApplicationsPage() {
                   </div>
                 )}
 
+                {!['REJECTED', 'INELIGIBLE', 'COMPLETED'].includes(app.status) && (
+                  <ApplicationIssueReportForm applicationId={app.id} />
+                )}
+
                 {app.status === 'OPTED_IN' && (
                   <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-lg space-y-3">
                     <p className="text-sm text-indigo-800 font-medium">
                       📸 Verification screenshot submitted
                     </p>
                     <p className="text-sm text-indigo-800">
-                      The developer is reviewing your screenshot. Testing will start once verified.
+                      The developer is reviewing your screenshot. Verification only confirms your Google Play opt-in; it does not start testing. Your testing period and daily missions begin when the full cohort’s official scheduled start arrives.
                     </p>
                     {(app.verificationImage || app.verificationImage2) && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -362,6 +403,15 @@ export default function ApplicationsPage() {
 
                 {app.status === 'TESTING' && app.testingStartDate && app.testingEndDate && (
                   <div className="space-y-4">
+                    {app.testingPausedAt ? (
+                      <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
+                        <p className="text-sm font-medium text-amber-900">Testing is paused by an administrator.</p>
+                        <p className="mt-1 text-sm text-amber-800">
+                          Your completed missions and check-ins are preserved. The clock and new submissions are stopped;
+                          the saved remaining duration will continue only after an authorized resume.
+                        </p>
+                      </div>
+                    ) : (
                     <div className="bg-purple-50 border border-purple-200 p-4 rounded-lg">
                       <div className="space-y-2">
                         <p className="text-sm text-purple-800 font-medium">
@@ -385,14 +435,15 @@ export default function ApplicationsPage() {
                         </div>
                       </div>
                     </div>
+                    )}
                     
                     {/* Feedback Form for Testing */}
-                    <DailyCheckInPanel
+                    {!app.testingPausedAt && <DailyCheckInPanel
                       applicationId={app.id}
                       applicationStatus={app.status}
                       testingStartDate={app.testingStartDate}
-                    />
-                    <FeedbackForm
+                    />}
+                    {!app.testingPausedAt && <FeedbackForm
                       applicationId={app.id}
                       appName={app.job.appName}
                       applicationStatus={app.status}
@@ -403,7 +454,7 @@ export default function ApplicationsPage() {
                       existingTesterFollowup={app.testerFollowupReply || undefined}
                       existingTesterFollowupAt={app.testerFollowupAt || undefined}
                       onSubmit={fetchApplications}
-                    />
+                    />}
                   </div>
                 )}
 

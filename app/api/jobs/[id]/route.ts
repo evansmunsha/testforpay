@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 import { toCents } from '@/lib/currency'
+import { normalizeCountryCodes, passesDeclaredJobScreening } from '@/lib/tester-eligibility'
 
 // GET - Get single job
 export async function GET(
@@ -40,8 +41,14 @@ export async function GET(
                 email: true,
                 muteDeveloperReplies: true,
                 deviceInfo: true,
+                countryCode: true,
               },
             },
+            issueReports: {
+              where: { status: { in: ['OPEN', 'UNDER_REVIEW', 'INCOMPATIBLE'] } },
+              select: { id: true },
+            },
+            payment: { select: { status: true, transferId: true } },
           },
         },
         _count: {
@@ -67,7 +74,52 @@ export async function GET(
       )
     }
 
-    return NextResponse.json({ success: true, job })
+    const eligibleApplications = job.applications.filter((application) =>
+      (
+        ['APPROVED', 'OPTED_IN', 'VERIFIED', 'SCHEDULED'].includes(application.status) ||
+        (application.status === 'TESTING' && application.testingPausedAt !== null && application.cohortSelected)
+      ) &&
+      (!application.payment || (application.payment.status === 'ESCROWED' && !application.payment.transferId)) &&
+      application.issueReports.length === 0 &&
+      passesDeclaredJobScreening({
+        testerCountryCode: application.tester.countryCode,
+        testerAndroidVersion: application.tester.deviceInfo?.androidVersion,
+        supportedCountries: job.supportedCountries,
+        minimumAndroidVersion: job.minAndroidVersion,
+      })
+    )
+    const canSeeTesterEmail = (application: typeof job.applications[number]) =>
+      currentUser.role === 'ADMIN' ||
+      (job.developerId === currentUser.userId &&
+        application.cohortSelected &&
+        application.contactReleasedAt !== null &&
+        !['REJECTED', 'INELIGIBLE'].includes(application.status) &&
+        application.issueReports.length === 0)
+    const safeJob = {
+      ...job,
+      applications: job.applications.map((application) => {
+        const { issueReports: _issueReports, ...safeApplication } = application
+        const { email, ...safeTester } = application.tester
+        return {
+          ...safeApplication,
+          tester: {
+            ...safeTester,
+            ...(canSeeTesterEmail(application) ? { email } : {}),
+          },
+        }
+      }),
+    }
+    return NextResponse.json({
+      success: true,
+      job: safeJob,
+      recruitment: {
+        eligible: eligibleApplications.length,
+        required: job.testersNeeded,
+        selected: eligibleApplications.filter((application) => application.cohortSelected).length,
+        paused: eligibleApplications.filter((application) => application.status === 'TESTING' && application.testingPausedAt !== null).length,
+        contactReleased: eligibleApplications.some((application) => application.contactReleasedAt !== null),
+      },
+    })
   } catch (error) {
     console.error('Get job error:', error)
     return NextResponse.json(
@@ -132,8 +184,35 @@ export async function PATCH(
             { status: 400 }
           )
         }
+
         updateData[field] = body[field]
       }
+    }
+
+    if ('supportedCountries' in body) {
+      const supportedCountries = normalizeCountryCodes(body.supportedCountries)
+      if (!supportedCountries) {
+        return NextResponse.json(
+          { error: 'Declare at least one supported country using two-letter ISO codes' },
+          { status: 400 }
+        )
+      }
+      if (existingJob.scheduledStartAt && existingJob.scheduledStartAt > new Date()) {
+        return NextResponse.json(
+          { error: 'Supported countries cannot change after testing is scheduled' },
+          { status: 409 }
+        )
+      }
+      const releasedContacts = await prisma.application.count({
+        where: { jobId: id, contactReleasedAt: { not: null } },
+      })
+      if (releasedContacts > 0) {
+        return NextResponse.json(
+          { error: 'Supported countries cannot change after tester contacts have been released' },
+          { status: 409 }
+        )
+      }
+      updateData.supportedCountries = supportedCountries
     }
 
     if ('testersNeeded' in body) {

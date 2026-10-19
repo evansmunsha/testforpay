@@ -17,6 +17,7 @@ export async function GET() {
         id: true,
         email: true,
         name: true,
+        countryCode: true,
         role: true,
         stripeAccountId: true,
         createdAt: true
@@ -46,7 +47,7 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json()
-    const { name } = body
+    const { name, countryCode } = body
 
     if (!name || name.trim().length < 2) {
       return NextResponse.json(
@@ -55,13 +56,24 @@ export async function PATCH(request: Request) {
       )
     }
 
+    if (countryCode !== undefined && countryCode !== null &&
+      (typeof countryCode !== 'string' || !/^[A-Za-z]{2}$/.test(countryCode.trim()))) {
+      return NextResponse.json({ error: 'Country must be a two-letter ISO code' }, { status: 400 })
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: currentUser.userId },
-      data: { name: name.trim() },
+      data: {
+        name: name.trim(),
+        ...(countryCode !== undefined
+          ? { countryCode: countryCode?.trim().toUpperCase() || null }
+          : {}),
+      },
       select: {
         id: true,
         email: true,
         name: true,
+        countryCode: true,
         role: true
       }
     })

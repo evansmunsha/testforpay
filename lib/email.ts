@@ -205,21 +205,14 @@ export async function sendApplicationApprovedEmail(
         <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <h2 style="margin-top: 0; color: #1e40af;">Next Steps:</h2>
           <ol>
-            <li>Opt-in to the Google Play closed test using the link below</li>
-            <li>Upload a screenshot to verify your opt-in</li>
-            <li>Test the app for 14 days</li>
+            <li>Wait until the developer releases the selected tester group and sends the opt-in link</li>
+            <li>Join the Google Play closed test and upload screenshots to verify your opt-in</li>
+            <li>Your testing period begins at the scheduled start time, not when you apply</li>
             <li>Get paid ${formatEurFromCents(data.paymentCents)}</li>
           </ol>
         </div>
-        
-        <a href="${data.googlePlayLink}" 
-           style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; 
-                  text-decoration: none; border-radius: 6px; margin: 10px 0;">
-          Opt-in to Google Play Test
-        </a>
-        
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          Questions? Reply to this email or visit your dashboard.
+          You will receive a separate notification with the opt-in link when the tester group is ready. Questions? Reply to this email or visit your dashboard.
         </p>
       </div>
     `,
@@ -231,7 +224,6 @@ export async function sendApplicationReceivedEmail(
   data: {
     developerName: string
     appName: string
-    testerEmail: string
     dashboardLink: string
   }
 ) {
@@ -244,11 +236,6 @@ export async function sendApplicationReceivedEmail(
         <h1 style="color: #2563eb;">New Application Received</h1>
         <p>Hi ${data.developerName},</p>
         <p>A new tester has applied to test <strong>${data.appName}</strong>.</p>
-        
-        <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0;">
-          <p style="margin: 5px 0;"><strong>Tester:</strong> ${data.testerEmail}</p>
-        </div>
-        
         <a href="${data.dashboardLink}" 
            style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; 
                   text-decoration: none; border-radius: 6px; margin: 10px 0;">
@@ -664,4 +651,3 @@ export async function sendTestimonialRequestEmail(
     `),
   })
 }
-

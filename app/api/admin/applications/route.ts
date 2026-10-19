@@ -19,6 +19,10 @@ export async function GET() {
           select: {
             id: true,
             appName: true,
+            developerId: true,
+            developer: {
+              select: { id: true, name: true, email: true },
+            },
           },
         },
         tester: {
@@ -26,8 +30,17 @@ export async function GET() {
             id: true,
             email: true,
             name: true,
+            countryCode: true,
+            deviceInfo: {
+              select: {
+                deviceModel: true,
+                androidVersion: true,
+                screenSize: true,
+              },
+            },
           },
         },
+        payment: { select: { status: true } },
       },
       orderBy: { createdAt: 'desc' },
       take: 100,
