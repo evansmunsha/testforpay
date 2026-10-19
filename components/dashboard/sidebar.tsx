@@ -171,6 +171,18 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
               </Link>
             )
           })}
+          {userRole === 'TESTER' && (
+            <a
+              href="https://www.facebook.com/groups/1466852055303500/"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={onClose}
+              className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 rounded-lg text-sm font-medium text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-700"
+            >
+              <MessageSquare className="h-5 w-5 shrink-0" />
+              <span className="truncate">Join Community</span>
+            </a>
+          )}
         </nav>
 
         {/* Promo card - positioned at bottom */}

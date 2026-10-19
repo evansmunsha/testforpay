@@ -433,12 +433,12 @@ function TesterDashboard() {
         <CardHeader className="pb-3">
           <CardTitle className="text-base text-blue-950">Connect with TestForPay Testers</CardTitle>
           <CardDescription className="text-blue-900/80">
-            Join our Facebook group for job alerts, questions, and help reporting problems. You can also share screenshots of issues you encounter.
+            Join our Facebook group for job alerts, questions, and help reporting problems. You can also share screenshots of issues you encounter. Log in to Facebook and request to join if prompted.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <a
-            href="https://web.facebook.com/groups/1466852055303500"
+            href="https://www.facebook.com/groups/1466852055303500/"
             target="_blank"
             rel="noopener noreferrer"
           >
@@ -578,4 +578,3 @@ function TesterDashboard() {
     </div>
   )
 }
-
