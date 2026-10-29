@@ -21,6 +21,7 @@ import { formatEurFromCents } from '@/lib/currency'
 import type { Cents } from '@/types/money'
 import { ApplicationIssueQueue } from '@/components/admin/application-issue-queue'
 import { JobOperations } from '@/components/admin/job-operations'
+import { CommunityModerationQueue } from '@/components/admin/community-moderation-queue'
 
 interface Stats {
   totalUsers: number
@@ -1424,6 +1425,7 @@ export default function AdminDashboard() {
               Reports {unresolvedReportsCount > 0 && <Badge variant="destructive" className="ml-1">{unresolvedReportsCount}</Badge>}
             </TabsTrigger>
             <TabsTrigger value="application-issues">App Issues</TabsTrigger>
+            <TabsTrigger value="community">Community</TabsTrigger>
             <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
             <TabsTrigger value="acquisition">Acquisition</TabsTrigger>
             <TabsTrigger value="fraud" className="text-red-600">
@@ -1444,6 +1446,18 @@ export default function AdminDashboard() {
             </CardHeader>
             <CardContent>
               <ApplicationIssueQueue />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="community">
+          <Card>
+            <CardHeader>
+              <CardTitle>Community reports</CardTitle>
+              <CardDescription>Posts and comments members have reported. Every action needs a written reason and is logged.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CommunityModerationQueue />
             </CardContent>
           </Card>
         </TabsContent>

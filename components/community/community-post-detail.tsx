@@ -7,6 +7,7 @@ import { ArrowLeft, Heart, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { CommunityItemMenu } from '@/components/community/item-menu'
 import { timeAgo, type CommunityPostView } from '@/components/community/community-feed'
 
 interface CommentView {
@@ -15,6 +16,7 @@ interface CommentView {
   status: string
   createdAt: string
   author: { name: string; role: string }
+  authorId: string
   mine: boolean
 }
 
@@ -112,6 +114,7 @@ export function CommunityPostDetail({ postId }: { postId: string }) {
               <span className="font-medium">{post.author.name}</span>
               <Badge variant="outline">{roleLabel[post.author.role] ?? post.author.role}</Badge>
               <span className="ml-auto text-xs text-muted-foreground">{timeAgo(post.createdAt)}</span>
+              <CommunityItemMenu postId={postId} authorId={post.authorId} authorRole={post.author.role} mine={post.mine} isAdmin={isAdmin} pinned={post.pinned} status={post.status} isPost onChanged={load} />
             </div>
             {post.title && <h2 className="font-semibold">{post.title}</h2>}
             <p className="whitespace-pre-wrap break-words text-sm">{post.body}</p>
@@ -132,6 +135,7 @@ export function CommunityPostDetail({ postId }: { postId: string }) {
                   <span className="font-medium">{item.author.name}</span>
                   <Badge variant="outline">{roleLabel[item.author.role] ?? item.author.role}</Badge>
                   <span className="ml-auto text-xs text-muted-foreground">{timeAgo(item.createdAt)}</span>
+                  <CommunityItemMenu postId={postId} commentId={item.id} authorId={item.authorId} authorRole={item.author.role} mine={item.mine} isAdmin={isAdmin} status={item.status} onChanged={load} />
                 </div>
                 <p className="mt-1 whitespace-pre-wrap break-words">{item.body}</p>
               </div>

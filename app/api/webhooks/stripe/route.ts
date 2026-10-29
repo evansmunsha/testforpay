@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { headers } from 'next/headers'
 import Stripe from 'stripe'
 import { stripe } from '@/lib/stripe'
 import prisma from '@/lib/prisma'
 import { sendJobPostedEmail } from '@/lib/email'
+import { communityPostPath, createJobPost, notifyUsers } from '@/lib/community'
 
 // This is CRITICAL for Stripe webhooks
 export const runtime = 'nodejs'
@@ -70,6 +71,26 @@ export async function POST(request: Request) {
               paymentPerTesterCents: job.paymentPerTester,
               jobId: job.id,
             })
+
+            try {
+              const jobPost = await createJobPost(job)
+              if (jobPost) {
+                const testers = await prisma.user.findMany({
+                  where: { role: 'TESTER', suspended: false },
+                  select: { id: true },
+                })
+                after(() =>
+                  notifyUsers(testers.map((tester) => tester.id), {
+                    title: '🚀 New job available',
+                    body: `${job.appName} needs testers.`,
+                    url: communityPostPath(jobPost.id),
+                    type: 'community_job',
+                  }).catch((notifyError) => console.error('Job post notification failed:', notifyError))
+                )
+              }
+            } catch (postError) {
+              console.error('Failed to create community job post:', postError)
+            }
           } catch (e) {
             console.error('Failed to activate job or send confirmation email:', e)
           }

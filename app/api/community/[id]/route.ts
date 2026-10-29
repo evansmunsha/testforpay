@@ -57,6 +57,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
         status: comment.status,
         createdAt: comment.createdAt,
         author: displayAuthor(comment.author),
+        authorId: comment.authorId,
         mine: comment.authorId === user.userId,
       })),
       isAdmin: isAdmin(viewer),

@@ -6,6 +6,7 @@ import { Heart, MessageCircle, Pin, Users, Megaphone, Briefcase } from 'lucide-r
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
+import { CommunityItemMenu } from '@/components/community/item-menu'
 
 export interface CommunityPostView {
   id: string
@@ -18,6 +19,7 @@ export interface CommunityPostView {
   commentCount: number
   createdAt: string
   author: { name: string; role: string }
+  authorId: string
   mine: boolean
   liked: boolean
   job: { id: string; appName: string } | null
@@ -177,6 +179,7 @@ export function CommunityFeed() {
             {post.pinned && <Pin className="h-4 w-4 text-primary" aria-label="Pinned" />}
             {post.status === 'HIDDEN' && <Badge variant="destructive">Hidden</Badge>}
             <span className="ml-auto text-xs text-muted-foreground">{timeAgo(post.createdAt)}</span>
+            <CommunityItemMenu postId={post.id} authorId={post.authorId} authorRole={post.author.role} mine={post.mine} isAdmin={isAdmin} pinned={post.pinned} status={post.status} isPost onChanged={() => load(tab)} />
           </div>
           {post.title && <h3 className="font-semibold">{post.title}</h3>}
           <p className="whitespace-pre-wrap break-words text-sm">{post.body}</p>

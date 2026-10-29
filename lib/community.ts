@@ -106,9 +106,29 @@ export function serializePost(post: PostRow, viewer: CommunityViewer, likedIds: 
     commentCount: post.commentCount,
     createdAt: post.createdAt,
     author: displayAuthor(post.author),
+    authorId: post.authorId,
     mine: post.authorId === viewer.userId,
     liked: likedIds.has(post.id),
     job: post.job && post.job.status === 'ACTIVE' ? { id: post.job.id, appName: post.job.appName } : null,
+  }
+}
+
+/** Creates the automatic "new job" post. The unique jobId makes webhook retries safe. */
+export async function createJobPost(job: { id: string; developerId: string; appName: string; testersNeeded: number }) {
+  try {
+    return await prisma.communityPost.create({
+      data: {
+        authorId: job.developerId,
+        kind: 'JOB',
+        jobId: job.id,
+        title: `New job: ${job.appName}`,
+        body: `${job.appName} is looking for ${job.testersNeeded} testers. Open Browse Jobs to apply.`,
+      },
+      select: { id: true },
+    })
+  } catch (error) {
+    if (typeof error === 'object' && error !== null && (error as { code?: string }).code === 'P2002') return null
+    throw error
   }
 }
 
