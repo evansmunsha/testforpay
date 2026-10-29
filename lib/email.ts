@@ -207,7 +207,7 @@ export async function sendApplicationApprovedEmail(
           <ol>
             <li>Wait until the developer releases the selected tester group and sends the opt-in link</li>
             <li>Join the Google Play closed test and upload screenshots to verify your opt-in</li>
-            <li>Your testing period begins at the scheduled start time, not when you apply</li>
+            <li>Your testing period begins when the developer starts testing for the whole group, not when you apply</li>
             <li>Get paid ${formatEurFromCents(data.paymentCents)}</li>
           </ol>
         </div>
@@ -605,6 +605,33 @@ export async function sendDay7CheckInEmail(
         You're on track to meet Google's requirement. Keep going.<br/>
         <strong>Evans</strong>, TestForPay
       </p>
+    `),
+  })
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+}
+
+export async function sendThreadReplyEmail(
+  to: string,
+  data: { recipientName?: string | null; authorLabel: string; subject: string; preview: string; threadPath: string }
+) {
+  const preview = escapeHtml(data.preview.length > 300 ? `${data.preview.slice(0, 300)}…` : data.preview)
+  return resend.emails.send({
+    from: FROM_EMAIL,
+    to,
+    subject: `New reply: ${data.subject}`,
+    html: emailShell(`
+      <h2 style="color: #1e293b; margin-top: 0;">You have a new reply</h2>
+      <p style="color: #374151; line-height: 1.6;">Hi ${escapeHtml(data.recipientName || 'there')},</p>
+      <p style="color: #374151; line-height: 1.6;"><strong>${escapeHtml(data.authorLabel)}</strong> wrote in "${escapeHtml(data.subject)}":</p>
+      <div style="background: #f9fafb; border-left: 4px solid #2563eb; padding: 12px 16px; margin: 16px 0; color: #374151;">${preview}</div>
+      ${btn('Open the conversation', `${APP_URL}${data.threadPath}`)}
     `),
   })
 }

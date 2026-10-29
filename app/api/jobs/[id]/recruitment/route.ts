@@ -88,6 +88,14 @@ export async function GET(_: Request, { params }: RouteContext) {
 }
 
 export async function POST(_: Request, { params }: RouteContext) {
+  // Retired: approving a tester now allocates their paid slot (see PATCH /api/applications/[id]).
+  // The cohort-release logic below is kept only until this file is deleted.
+  if (process.env.NODE_ENV !== undefined) {
+    return NextResponse.json(
+      { error: 'Cohort release is no longer used. Approve testers one by one, then use Start testing now.' },
+      { status: 410 }
+    )
+  }
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

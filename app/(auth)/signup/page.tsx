@@ -89,6 +89,7 @@ export default function SignupPage() {
       const params = new URLSearchParams({
         email: data.user.email,
         sent: data.verificationEmailSent ? '1' : '0',
+        role: formData.role,
       })
       window.location.href = `/verify-email?${params.toString()}`
     } catch (err) {
@@ -224,4 +225,3 @@ export default function SignupPage() {
     </div>
   )
 }
-

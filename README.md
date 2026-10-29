@@ -981,3 +981,297 @@ Update the Payment deletion to use REFUNDED status instead?
 Add auto-completion cron for expired tests?
 
 
+
+
+
+
+# TestForPay handoff summary
+
+## Product goal
+
+The work is aimed at preventing testers’ 14-day testing periods from starting before the developer has assembled and scheduled the required eligible cohort. It also covers tester screening, reporting app-install problems, safely pausing existing tests, payment handling, and access to the tester community.
+
+## What’s implemented in the current code
+
+### Scheduled testing and daily missions
+
+- Developers can set supported countries and a minimum Android version, assemble a selected tester cohort, and schedule an official start time.
+- Scheduling requires the requested number of selected testers, verified opt-ins, eligibility checks, and escrowed payments.
+- For newly scheduled testers, mission day 1 and the testing period start at the scheduled time—not when the tester applies, uploads screenshots, or is verified.
+- The scheduled-start cron is configured to run every minute in `vercel.json`; it activates due cohorts and notifies testers. Actual operation depends on the cron running and the database being migrated.
+- Mission-day calculations use rolling 24-hour periods from the application’s testing start, subtracting recorded paused time. Relevant files include `mission-clock.ts`, `today’s task API`, and `scheduled-start cron`.
+- The developer interface and tester interface have been updated to explain that verifying an opt-in does **not** start testing. See `job dashboard`, `tester applications page`, and `application card`.
+
+### Recruitment, countries, and device screening
+
+- Developers declare supported country codes and optionally a minimum Android version.
+- Testers can see active job listings, but application submission is checked on the server against their country and device details.
+- These checks screen applicants; they do **not** guarantee Google Play availability for a particular account or device.
+- The recruitment API reports eligible and selected counts, and only exposes tester contact details after cohort selection. See `tester eligibility helpers`, `jobs API`, and `recruitment API`.
+- Developers enter countries during job creation in `job form`, and can edit them on the active job dashboard before scheduling or releasing contacts.
+
+### Reporting app-install or compatibility problems
+
+- Testers have a private application-linked “Can’t install this app?” report. It is separate from public feedback and testimonials. See `issue report form` and `issue reports API`.
+- An admin can review a report and mark incompatibility confirmed. The tester is then marked ineligible and removed from the selected cohort without a tester-record penalty. See `admin application issue API` and `admin issue queue`.
+- Testers do **not** currently have a self-service withdrawal action. Admin review is required to confirm incompatibility.
+
+### Escrow reuse for confirmed incompatibility
+
+- For a confirmed incompatibility **before testing starts**, a selected tester’s existing escrowed slot is intended to be reused for a qualified replacement rather than creating a second payment allocation.
+- The reassignment is recorded in `PaymentAllocationHistory`, including old and new applications, the actor, time, and reason. Admins can see this history in the payments view.
+- Reassignment is blocked if testing has started or the payment is no longer safely escrowed.
+- Relevant changes are in `recruitment API`, `admin payments API`, and `admin dashboard`.
+
+### Pausing and resuming existing tests
+
+- An admin-only pause/resume endpoint requires a reason, writes pause history and admin audit entries, and preserves the application status, original testing start date, completed work, and payment record.
+- Paused testing is intended to block missions, task submissions, check-ins, auto-completion, and payout eligibility.
+- Manual resume extends the end date by the pause duration. A paused tester can instead be explicitly authorized to resume with saved remaining time when a replacement cohort is scheduled.
+- Transfers already initiated or settled cannot be undone by pausing. The app does not silently change compensation or refund policy.
+- Relevant files include `pause endpoint`, `auto-completion cron`, and `payout helper`.
+
+### Admin visibility and community link
+
+- Admins can see opt-in screenshot previews, tester contact and device/country details, verification status and timeline, and developer/job details in Applications. See `admin applications API` and `admin dashboard`.
+- Testers have a **Join Community** link in the shared sidebar, plus a Facebook group card on the dashboard. The link uses `www.facebook.com/groups/1466852055303500/`. See `sidebar` and `dashboard`.
+
+## Database changes and important setup
+
+The code adds pause fields and pause-history relations, along with a payment-allocation history model. Corresponding migration files include:
+
+- `coordinated testing launch migration`
+- `application pause migration`
+- `payment allocation history migration`
+
+**These migrations were not applied by the assistant.** The user asked to handle Prisma commands themselves. Before using the new database-backed features, the user must generate the Prisma client and apply the migrations in their intended development environment.
+
+## Known gap to address
+
+The replacement flow still has a likely **no-reserve problem**: once a future start is scheduled, the application API rejects new applications. If a confirmed incompatible tester is removed and there is no already-applied eligible reserve, the developer may not be able to recruit a new replacement without an additional explicit reopen/reschedule flow. Do not assume the replacement path works in that scenario until it is fixed and tested.
+
+There is no self-withdrawal action for testers. The incompatibility handling is for reports reviewed and confirmed by an admin, and its payment reassignment guard is specifically designed for before testing starts. Existing active tests are not automatically paused by the new flows.
+
+## Validation status
+
+- The user reported that `npm run build` completed successfully **before later admin screenshot, payment-allocation, and community-sidebar changes**. That build included `prisma generate`; it does not validate the most recent edits or confirm that migrations are applied.
+- Diagnostics reported no errors for several edited files during the session, but there is no verified passing test suite for the latest set of changes. An earlier focused Jest run did not finish.
+- No production data was modified, and the assistant did not apply migrations or deploy.
+
+
+
+
+
+
+I’ll map the admin screens and APIs against the actions you need—pause/resume, inspect tester uploads and reports, verify opt-ins, and schedule a ready cohort—then give you a concrete UI and implementation plan without changing files.
+
+Read 
+Completed with input: {
+  "path": "C:\\Users\\Evans Munsha\\testforpay\\app\\api\\admin\\applications\\route.ts"
+}
+
+Read 
+Completed with input: {
+  "path": "C:\\Users\\Evans Munsha\\testforpay\\app\\api\\admin\\jobs\\route.ts"
+}
+
+Read , lines 1980 to 2160
+Completed with input: {
+  "path": "C:\\Users\\Evans Munsha\\testforpay\\app\\(dashboard)\\dashboard\\admin\\page.tsx",
+  "view_range": [
+    1980,
+    2160
+  ]
+}
+
+Read , lines 1 to 205
+Completed with input: {
+  "path": "C:\\Users\\Evans Munsha\\testforpay\\app\\api\\jobs\\[id]\\schedule\\route.ts",
+  "view_range": [
+    1,
+    205
+  ]
+}
+
+Read , lines 1 to 220
+Completed with input: {
+  "path": "C:\\Users\\Evans Munsha\\testforpay\\app\\api\\admin\\applications\\[id]\\pause\\route.ts",
+  "view_range": [
+    1,
+    220
+  ]
+}
+
+Search for `model (TaskSubmission|ApplicationIssueReport|Application|Payment)|screenshot|...`
+
+Read , lines 280 to 390
+Completed with input: {
+  "path": "C:\\Users\\Evans Munsha\\testforpay\\prisma\\schema.prisma",
+  "view_range": [
+    280,
+    390
+  ]
+}
+
+Search for `screenshotUrl|verificationImage|issueReports|requestTestingPauseAction`
+
+You’re right—the admin should have a clear place to manage testing, not have to hunt through a table or pretend to be the developer. **Some admin controls exist, but they aren’t brought together into a usable management screen yet.**
+
+## What’s there now—and what’s missing
+
+- **Pause/resume:** The admin Applications tab has a Pause/Resume button for applications in `TESTING`, but it’s tucked into that table. The admin issue reports it could be easier to find. The admin-only API exists at `pause route`.
+- **Screenshot visibility:** The admin screen has UI code intended to preview opt-in screenshots, but `the admin applications API` does not return those image fields. The `admin jobs API` also doesn’t return them. So admins may see empty previews even when screenshots were uploaded.
+- **Tester reports:** Install-issue reports currently save text and a category; the report form does not accept image attachments. The `ApplicationIssueReport` model has no image field in `schema.prisma`. Daily mission submissions can have a screenshot URL, but the admin jobs API does not include it.
+- **Scheduling:** The schedule API allows admins as well as the job owner, but there is no dedicated admin scheduling workspace. The existing developer job page has a schedule form; its verify action also doesn’t provide the admin reason required by the API, so it may fail when an admin tries to use that button.
+
+## Recommended admin experience
+
+Add a **Testing Operations** workspace under the Admin Panel. Admins would select a job and see one clear overview:
+
+1. **Cohort readiness:** required tester count, eligible and selected counts, each tester’s status, country/device check, opt-in verification, payment status, and whether any issue report is unresolved.
+2. **Uploads and review:** previews for every uploaded opt-in screenshot and mission screenshot, with links to open full-size images. Show the linked tester, job, upload type, date, and review status. Add image attachments to private issue reports if testers need to send screenshots of Google Play errors.
+3. **Tester actions:** prominent Pause/Resume controls for active testers, with a required reason and visible current pause state. Add admin-authorized verify/reject actions with an audit reason. Verification must remain separate from starting the testing clock.
+4. **Schedule the cohort:** when all required testers are ready, let the admin choose the official start time. Show a clear readiness checklist and require confirmation. Notify all selected testers and the developer.
+5. **Review problem reports and replacements:** show reports beside the affected application. When incompatibility is confirmed before testing starts, remove that tester without penalty and preserve their escrow for a qualified replacement, with an audit trail.
+
+## Safety rules I’d keep
+
+- The server—not just the interface—must enforce admin authorization, readiness checks, and audit reasons.
+- Never schedule with fewer than the required testers or with unresolved issues, missing verification, or unreconciled payment records.
+- Don’t alter payment or compensation for tests that have already started. Keep the existing rules and require a separate, explicit decision for unusual cases.
+- Paginate job/applicant lists so admins can review every record, not only the newest 100.
+- Show clear error messages if a screenshot can’t load or a payment isn’t safe to reassign.
+
+That would make it possible for you to oversee **every job, tester, upload, report, pause, and cohort start** from the admin side. I have not made these changes; this is the implementation plan.
+
+
+
+
+
+Ask User
+Completed with input: {
+  "question": "Got it: each approved tester should immediately get the Play Store link and upload option, and the developer should see that tester’s email so they can add them to Play Console. Once the developer confirms the screenshot shows the Install button, that tester joins the verified waiting list; recruiting continues until the required count is reached. To confirm the last step, should testing start automatically as soon as the required number are verified, with no manual scheduling control?",
+  "choices": [
+    "Yes—start the cohort automatically once the required number are verified",
+    "No—keep a manual start action, but only enable it when the required number are verified"
+  ]
+}
+
+Yes, I understand now. **The developer should approve applicants one by one and check that each can actually access the app before counting them toward the required tester group.**
+
+### The flow you want
+
+1. A tester applies.
+2. The developer approves them. **At that point**, the developer can see their email to add them to Play Console, and the tester gets a notification.
+3. The tester sees the Play Store link and screenshot-upload option. They check whether Play Store shows **Install** and upload proof.
+4. The developer reviews the screenshot:
+   - If it shows the tester can install the app, the developer verifies them and they join the **ready-to-start waiting list**.
+   - If they can’t install it, the developer can close that application, so they don’t count toward the required group.
+5. Recruitment continues until the required number of testers are verified and ready.
+6. Only then does a **Start testing** button become available. The developer starts the cohort manually; there’s no need to pick a future date and time. That start action begins the testing clocks and daily missions for the cohort.
+
+So yes: **the developer needs access to each approved tester’s email before the whole group is assembled**. That changes the earlier email-release rule, which kept emails hidden until cohort selection.
+
+The current app doesn’t fully match this yet: the Play Store link and upload steps are currently tied to releasing the selected cohort, and the start flow asks for a scheduled time. The relevant areas are `cohort recruitment`, [tester applications page](<C:/Yes, I understand now. You want **recruitment and checking to happen first; the real testing starts only when the whole group is ready.**
+
+1. A tester applies.
+2. The developer approves that tester. **At that point**, the tester gets a notification and sees the Play Store link and screenshot-upload steps. The developer can see the tester’s email to add them to Play Console.
+3. The tester opens the link and uploads proof that Google Play shows the **Install** button.
+4. The developer reviews the screenshot. If it shows the Install button, the developer verifies the tester, who joins the **verified waiting list**. If not, the developer closes that application, and the tester can report the problem.
+5. Recruitment continues; the developer can invite more people to apply until the required number of testers are verified.
+6. Once the full group is verified and ready, a **Start testing now** button becomes available. Pressing it starts the whole group’s testing period and daily missions together. There is **no future-date scheduling step**.
+
+A tester opening the link, installing the app, uploading proof, or being verified does **not** start the testing clock.
+
+**The current code does not fully follow this flow yet.** It currently holds back the Play Store link, upload steps, and developer email access until the cohort is released; the planned start is also handled through scheduling. Those parts need to change to match what you described.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+## Tester video guide script
+
+**Note before recording:** This script follows the flow you described: testers see the Play Store link and upload option after the developer approves their application. The current app flow may not show those until the tester is selected into a cohort, so update and check the app screens before recording.
+
+### Scene 1 — Welcome
+
+**Show:** TestForPay logo and a tester opening the app.
+
+**Say:**  
+“Hi! I’ll show you how to apply for a testing job and check whether you can download the app. Don’t worry—we’ll do it one step at a time.”
+
+**On-screen text:**  
+*Apply → Check the app → Upload proof → Wait for the testing start*
+
+### Scene 2 — Find a job and apply
+
+**Show:** Tester dashboard, then Browse Jobs and a job card.
+
+**Say:**  
+“First, sign in to your TestForPay account. Open **Browse Jobs** and choose a job you like. Check the job details, then press **Apply**.”
+
+“Now wait for the developer to review your application. You’ll get a notification when they approve you.”
+
+### Scene 3 — Open the Play Store link
+
+**Show:** Approved application and its Play Store link.
+
+**Say:**  
+“After the developer approves you, open **My Applications** and choose this job. Press the Google Play link to see if the app is available for your phone and country.”
+
+“Look for the **Install** button. Just checking the link—or installing the app—does **not** mean your testing period has started.”
+
+### Scene 4 — If the app is available
+
+**Show:** Play Store page with the Install button visible.
+
+**Say:**  
+“If you can see the **Install** button, take a clear screenshot of this page. Follow the upload instructions in TestForPay and send the screenshot to the developer for review.”
+
+“If the page asks you to install the app, follow the instructions shown for the job and upload any other proof it requests.”
+
+**On-screen text:**  
+*Take a clear, honest screenshot. Don’t edit or fake your proof.*
+
+### Scene 5 — If the app is unavailable
+
+**Show:** An example unavailable message, then the private issue-report form.
+
+**Say:**  
+“If Google Play says the app isn’t available in your country or your phone can’t use it, don’t worry. Don’t pretend you can install it, and don’t upload a different screenshot as proof.”
+
+“Go back to your application and use **Can’t install this app?** to report what Google Play showed. Support can review the problem. A confirmed issue won’t count against you.”
+
+### Scene 6 — Wait for the developer’s review
+
+**Show:** Application marked as waiting for screenshot review, then verified/waiting status.
+
+**Say:**  
+“The developer will check your screenshot. If it clearly shows the **Install** button and the required proof, they can verify your opt-in. Then you’ll wait with the other verified testers while the group is being completed.”
+
+“Being approved, opening the link, uploading screenshots, or being verified does **not** start your daily missions or testing timer.”
+
+### Scene 7 — The whole group starts together
+
+**Show:** A notification with the official testing start, then the tester dashboard showing Today’s Mission.
+
+**Say:**  
+“When the required number of testers are verified and ready, the developer can start the group’s testing period. You’ll be notified when testing officially starts.”
+
+“Your timer and daily missions begin at that official start—not before. When you see **Today’s Mission**, follow the instructions and submit your work for that day.”
+
+### Scene 8 — Friendly sign-off
+
+**Show:** Tester dashboard and support/report link.
+
+**Say:**  
+“That’s it! Apply, check the app, upload honest proof, and wait for the official start message. If something doesn’t work, report it so the team can help. Happy testing!”

@@ -190,7 +190,7 @@ export async function POST(
         TESTING_PERIOD_EXPIRED: { status: 409, message: 'This testing period has expired; do not pause it instead of processing completion' },
         PAYOUT_ALREADY_SETTLED: { status: 409, message: 'A payout has already been initiated or settled; contact support before changing testing state' },
         RESUME_ALREADY_SCHEDULED: { status: 409, message: 'A cohort resume is already scheduled; change or cancel that schedule first' },
-        COHORT_NOT_READY: { status: 409, message: 'The full paid tester cohort is not active yet; assemble and schedule the cohort before resuming this tester' },
+        COHORT_NOT_READY: { status: 409, message: 'The full paid tester group is not active yet. Use Start testing now on the job to resume this tester together with the group' },
         INVALID_PAUSE_TIME: { status: 409, message: 'The pause timestamp is invalid' },
         PAUSE_AUDIT_MISSING: { status: 409, message: 'Pause history is missing; contact support before resuming' },
         STATE_CHANGED: { status: 409, message: 'The application state changed; refresh and try again' },

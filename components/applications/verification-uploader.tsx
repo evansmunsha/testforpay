@@ -38,7 +38,7 @@ export function VerificationUploader({
   }
 
   const handleSubmit = async () => {
-    if (!uploadedUrls[0] || !uploadedUrls[1]) return
+    if (!uploadedUrls[0]) return
 
     setSubmitting(true)
     setError('')
@@ -49,7 +49,7 @@ export function VerificationUploader({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           verificationImageUrl: uploadedUrls[0],
-          verificationImageUrl2: uploadedUrls[1]
+          verificationImageUrl2: uploadedUrls[1] ?? undefined
         }),
       })
 
@@ -88,28 +88,28 @@ export function VerificationUploader({
                 Upload Verification Screenshots
               </h3>
               <p className="text-sm text-indigo-700">
-                Upload two screenshots proving you can access the app on Google Play.
+                Upload a screenshot of the Google Play page showing the Install button. A second screenshot is optional.
               </p>
               <p className="mt-2 text-sm font-medium text-indigo-900">
-                Checking whether the app is available or installing it is only preparation. Your testing period and daily missions start only at the official scheduled start time shown in your application.
+                Checking whether the app is available or installing it is only preparation. Your testing days and daily missions start only when the developer starts testing for the whole group.
               </p>
             </div>
 
             {/* Step-by-step guide */}
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4 text-left">
-              <p className="text-sm font-semibold text-blue-900 mb-3">What to screenshot (upload 2):</p>
+              <p className="text-sm font-semibold text-blue-900 mb-3">What to screenshot:</p>
               <ul className="text-sm text-blue-800 space-y-2">
                 <li className="flex gap-2">
                   <span className="text-green-600 font-bold">✓</span>
-                  <span><strong>Play Store page</strong> showing the app with Install button</span>
+                  <span><strong>Required:</strong> the Play Store page showing the app with the green Install button</span>
                 </li>
                 <li className="flex gap-2">
                   <span className="text-green-600 font-bold">✓</span>
-                  <span><strong>Home screen</strong> showing the app installed on your phone</span>
+                  <span><strong>Optional:</strong> your home screen showing the app installed</span>
                 </li>
               </ul>
               <p className="text-xs text-blue-600 mt-3">
-                Upload both screenshots to verify access to the closed test.
+                If you do not see an Install button, do not upload. Use “Can’t install this app?” instead.
               </p>
             </div>
 
@@ -141,7 +141,7 @@ export function VerificationUploader({
 
             {/* Image 1 Upload/Display */}
             <div className="mb-6">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Screenshot 1</h4>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Screenshot 1 (Install button)</h4>
               {!uploadedUrls[0] ? (
                 <UploadButton<OurFileRouter, "verificationImage">
                   endpoint="verificationImage"
@@ -176,7 +176,7 @@ export function VerificationUploader({
 
             {/* Image 2 Upload/Display */}
             <div className="mb-6">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Screenshot 2</h4>
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">Screenshot 2 (optional)</h4>
               {!uploadedUrls[1] ? (
                 <UploadButton<OurFileRouter, "verificationImage">
                   endpoint="verificationImage"
@@ -221,7 +221,7 @@ export function VerificationUploader({
         </div>
 
         {/* Fixed submit button at bottom - always visible */}
-        {uploadedUrls[0] && uploadedUrls[1] && (
+        {uploadedUrls[0] && (
           <div className="mt-4 pt-4 border-t border-gray-200 shrink-0">
             <Button 
               onClick={handleSubmit}
@@ -240,10 +240,10 @@ export function VerificationUploader({
             </Button>
           </div>
         )}
-        {(!uploadedUrls[0] || !uploadedUrls[1]) && (
+        {!uploadedUrls[0] && (
           <div className="mt-4 pt-4 border-t border-gray-200 shrink-0">
             <p className="text-center text-sm text-gray-500">
-              Upload both screenshots to submit
+              Upload the Install button screenshot to submit
             </p>
           </div>
         )}

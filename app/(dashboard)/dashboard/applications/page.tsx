@@ -117,10 +117,10 @@ export default function ApplicationsPage() {
   const getStatusMessage = (status: string) => {
     switch (status) {
       case 'PENDING': return 'Waiting for developer approval'
-      case 'APPROVED': return 'Approved! Next: Opt-in to Google Play test'
-      case 'OPTED_IN': return 'Verification submitted. Waiting for developer review'
-      case 'VERIFIED': return 'Opt-in verified. Waiting for the developer to schedule the cohort start'
-      case 'SCHEDULED': return 'Testing is scheduled and has not started yet'
+      case 'APPROVED': return 'Approved! Next: open the Play Store link and upload a screenshot showing the Install button'
+      case 'OPTED_IN': return 'Screenshot submitted. Waiting for the developer to check it'
+      case 'VERIFIED': return 'Verified. You are on the ready list. Testing starts when the developer starts the whole group'
+      case 'SCHEDULED': return 'Verified. Waiting for the whole group to start'
       case 'TESTING': return 'Testing in progress'
       case 'COMPLETED': return 'Testing completed! Payment processing'
       case 'REJECTED': return 'Application was not approved'
@@ -289,13 +289,7 @@ export default function ApplicationsPage() {
 
                 {app.status === 'SCHEDULED' && (
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                    Your opt-in is verified. The testing clock and daily missions begin at{' '}
-                    <strong>
-                      {app.job.scheduledStartAt
-                        ? new Date(app.job.scheduledStartAt).toLocaleString()
-                        : 'the scheduled start time'}
-                    </strong>
-                    . No mission or check-in is available before then.
+                    You are verified and on the ready list. Your testing days and daily missions begin when the developer starts testing for the whole group. You will get a notification. No mission or check-in is available before then.
                   </div>
                 )}
 
@@ -305,43 +299,36 @@ export default function ApplicationsPage() {
                   </div>
                 )}
 
-                {app.status === 'APPROVED' && !app.contactReleasedAt && (
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-                    Your application is approved. Wait for the developer to select and release the tester group before joining the Google Play test.
-                  </div>
-                )}
-
-                {app.status === 'APPROVED' && !!app.contactReleasedAt && !app.verificationImage && (
+                {app.status === 'APPROVED' && !app.verificationImage && (
                   <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg space-y-3">
                     <p className="text-sm text-blue-800 font-medium">
-                      ✅ Congratulations! Your application was approved.
+                      ✅ Congratulations! The developer approved you.
                     </p>
                     <div className="bg-white border border-blue-100 rounded-lg p-3">
                       <p className="text-sm text-blue-900 font-semibold mb-2">Next steps:</p>
                       <ol className="text-sm text-blue-800 space-y-2">
                         <li className="flex gap-2">
                           <span className="font-bold">1.</span>
-                          <span>Click the link below to open the app in Google Play Store</span>
+                          <span>Tap <strong>Open in Play Store</strong> below. The developer has already added you.</span>
                         </li>
                         <li className="flex gap-2">
                           <span className="font-bold">2.</span>
-                          <span>Take a <strong>screenshot of the Play Store page</strong> showing the app</span>
+                          <span>Look for the green <strong>Install</strong> button.</span>
                         </li>
                         <li className="flex gap-2">
                           <span className="font-bold">3.</span>
-                          <span>Install the app on your phone</span>
+                          <span>Take a <strong>screenshot that shows the Install button</strong>.</span>
                         </li>
                         <li className="flex gap-2">
                           <span className="font-bold">4.</span>
-                          <span>Take a <strong>screenshot of the app on your home screen</strong></span>
-                        </li>
-                        <li className="flex gap-2">
-                          <span className="font-bold">5.</span>
-                          <span>Upload your screenshot(s) below</span>
+                          <span>Upload the screenshot below. If you also install the app, you can add a second screenshot.</span>
                         </li>
                       </ol>
+                      <p className="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
+                        If Google Play says the app is <strong>not available in your country</strong> or there is no Install button, tell us using “Can’t install this app?” below. You will not be penalised.
+                      </p>
                       <p className="mt-3 rounded-md bg-blue-50 p-3 text-sm text-blue-900">
-                        Checking Google Play or installing the app is only preparation. Your testing period and daily missions do not begin until the developer schedules the official start and that time arrives. We will show the scheduled time here.
+                        Checking Google Play or installing the app is only preparation. Your testing days and daily missions do not begin until the developer starts testing for the whole group.
                       </p>
                     </div>
                     <div className="flex gap-2 pt-2">
@@ -368,6 +355,15 @@ export default function ApplicationsPage() {
                   </div>
                 )}
 
+                {['VERIFIED', 'SCHEDULED', 'TESTING', 'COMPLETED'].includes(app.status) && (
+                  <Link href={`/dashboard/group/${app.job.id}`}>
+                    <Button variant="outline" className="min-h-11 w-full">
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                      Group chat
+                    </Button>
+                  </Link>
+                )}
+
                 {!['REJECTED', 'INELIGIBLE', 'COMPLETED'].includes(app.status) && (
                   <ApplicationIssueReportForm applicationId={app.id} />
                 )}
@@ -378,7 +374,7 @@ export default function ApplicationsPage() {
                       📸 Verification screenshot submitted
                     </p>
                     <p className="text-sm text-indigo-800">
-                      The developer is reviewing your screenshot. Verification only confirms your Google Play opt-in; it does not start testing. Your testing period and daily missions begin when the full cohort’s official scheduled start arrives.
+                      The developer is checking your screenshot. If it shows the Install button, you join the ready list. This does not start testing. Your testing days and daily missions begin when the developer starts the whole group.
                     </p>
                     {(app.verificationImage || app.verificationImage2) && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

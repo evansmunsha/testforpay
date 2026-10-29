@@ -112,6 +112,9 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
     ? developerLinks 
     : testerLinks
 
+  const messagesLink = { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare }
+  const allLinks = [...links.slice(0, -1), messagesLink, ...links.slice(-1)]
+
   return (
     <>
       {/* Mobile overlay */}
@@ -150,7 +153,7 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex-1 px-3 sm:px-4 space-y-1 overflow-y-auto">
-          {links.map((link) => {
+          {allLinks.map((link) => {
             const Icon = link.icon
             const isActive = pathname === link.href
 

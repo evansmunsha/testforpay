@@ -35,6 +35,7 @@ interface Job {
 
 interface Application {
   jobId: string
+  status: string
 }
 
 export default function BrowsePage() {
@@ -177,7 +178,7 @@ export default function BrowsePage() {
   }
 
   const hasApplied = (jobId: string) => {
-    return applications.some(app => app.jobId === jobId)
+    return applications.some(app => app.jobId === jobId && app.status !== 'WITHDRAWN')
   }
 
   // Filter and sort jobs
@@ -221,7 +222,7 @@ export default function BrowsePage() {
 
       {/* Welcome banner — shown to new testers who haven't applied to anything yet */}
       {!loading && applications.length === 0 && (
-        <Card className="border-blue-300 bg-gradient-to-r from-blue-50 to-purple-50">
+        <Card className="border-blue-300 bg-linear-to-r from-blue-50 to-purple-50">
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="text-4xl">👋</div>

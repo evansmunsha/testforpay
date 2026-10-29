@@ -26,6 +26,7 @@ export async function GET() {
         testerId: true,
         category: true,
         details: true,
+        attachmentUrls: true,
         status: true,
         createdAt: true,
         tester: { select: { name: true, email: true } },
@@ -120,6 +121,22 @@ export async function PATCH(request: Request) {
           data: { status: 'INELIGIBLE', cohortSelected: false },
         })
         if (applicationChanged.count !== 1) throw new Error('TESTING_ALREADY_STARTED')
+
+        // An older future-dated schedule would block recruiting a replacement, so release it.
+        const scheduledJob = await tx.testingJob.findUnique({
+          where: { id: report.jobId },
+          select: { scheduledStartAt: true },
+        })
+        if (scheduledJob?.scheduledStartAt) {
+          await tx.application.updateMany({
+            where: { jobId: report.jobId, status: 'SCHEDULED' },
+            data: { status: 'VERIFIED', testingStartDate: null, testingEndDate: null },
+          })
+          await tx.testingJob.update({
+            where: { id: report.jobId },
+            data: { scheduledStartAt: null },
+          })
+        }
       }
       return tx.applicationIssueReport.findUniqueOrThrow({ where: { id } })
     })
@@ -147,7 +164,7 @@ export async function PATCH(request: Request) {
         userId: report.job.developerId,
         title: 'Testing issue reviewed',
         body: parsed.data.status === 'INCOMPATIBLE'
-          ? `Support confirmed an availability or compatibility issue for "${report.job.appName}". The tester was removed without penalty, and their escrowed slot can be used for a qualified replacement.`
+          ? `Support confirmed an availability or compatibility issue for "${report.job.appName}". The tester was removed without penalty, and their paid spot is free. Approve another applicant to fill it.`
           : `Support reviewed a testing issue for "${report.job.appName}".`,
         url: `/dashboard/jobs/${report.jobId}`,
         type: 'application_issue_update',

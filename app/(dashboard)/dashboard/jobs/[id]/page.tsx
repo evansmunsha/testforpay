@@ -14,6 +14,7 @@ import { DailyCheckInPanel } from '@/components/applications/daily-checkin-panel
 import { CheckoutForm } from '@/components/payments/checkout-form'
 import { useToast } from '@/components/ui/toast-provider'
 import { TestingReportViewer } from '@/components/jobs/testing-report-viewer'
+import { DeveloperReports } from '@/components/jobs/developer-reports'
 import { TaskSubmissionGrid } from '@/components/jobs/task-submission-grid'
 import { 
   ArrowLeft, 
@@ -118,9 +119,18 @@ export default function JobDetailPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [job, setJob] = useState<Job | null>(null)
-  const [recruitment, setRecruitment] = useState<{ eligible: number; required: number; selected: number; paused: number; contactReleased: boolean } | null>(null)
+  const [recruitment, setRecruitment] = useState<{
+    eligible: number
+    required: number
+    selected: number
+    paused: number
+    verifiedCount: number
+    canStart: boolean
+    pausedToResume: number
+    blockers: Array<{ code: string; message: string }>
+    contactReleased: boolean
+  } | null>(null)
   const [countryCodes, setCountryCodes] = useState('')
-  const [scheduledStartInput, setScheduledStartInput] = useState('')
   const [resumePausedApplications, setResumePausedApplications] = useState(false)
   const [resumeReason, setResumeReason] = useState('')
   const [loading, setLoading] = useState(true)
@@ -222,55 +232,60 @@ export default function JobDetailPage() {
     }
   }
 
-  const assembleCohort = async () => {
-    setActionLoading(true)
-    try {
-      const response = await fetch(`/api/jobs/${params.id}/recruitment`, { method: 'POST' })
-      const data = await response.json()
-      if (!response.ok) {
-        toast({ title: 'Error', description: data.error || 'Could not assemble tester cohort', variant: 'destructive' })
-        return
-      }
-      await fetchJob(true)
-      toast({ title: 'Recruitment progress', description: data.message, variant: 'success' })
-    } catch (error) {
-      console.error('Failed to assemble tester cohort:', error)
-      toast({ title: 'Error', description: 'Could not assemble tester cohort', variant: 'destructive' })
-    } finally {
-      setActionLoading(false)
-    }
-  }
+  const [startDateInput, setStartDateInput] = useState('')
+  const tomorrowUtc = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
-  const scheduleTesting = async () => {
-    if (!scheduledStartInput) {
-      toast({ title: 'Choose a start time', description: 'Select a future local date and time first.', variant: 'destructive' })
+  const startTesting = () => {
+    const resumesPaused = (recruitment?.pausedToResume ?? 0) > 0
+    if (resumesPaused && (!resumePausedApplications || resumeReason.trim().length < 10)) {
+      toast({
+        title: 'Confirm resuming paused testers',
+        description: 'Tick the confirmation box and give a reason of at least 10 characters first.',
+        variant: 'destructive',
+      })
       return
     }
-    setActionLoading(true)
-    try {
-      const response = await fetch(`/api/jobs/${params.id}/schedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          scheduledStartAt: new Date(scheduledStartInput).toISOString(),
-          ...(recruitment?.paused
-            ? { resumePausedApplications, resumeReason }
-            : {}),
-        }),
+    if (!resumesPaused && (!startDateInput || startDateInput < tomorrowUtc)) {
+      toast({
+        title: 'Pick a start date',
+        description: `Choose tomorrow (${tomorrowUtc}) or a later date. Days change at midnight UTC.`,
+        variant: 'destructive',
       })
-      const data = await response.json()
-      if (!response.ok) {
-        toast({ title: 'Error', description: data.error || 'Could not schedule testing', variant: 'destructive' })
-        return
-      }
-      await fetchJob(true)
-      toast({ title: 'Testing scheduled', description: 'The selected testers have been notified.', variant: 'success' })
-    } catch (error) {
-      console.error('Failed to schedule testing:', error)
-      toast({ title: 'Error', description: 'Could not schedule testing', variant: 'destructive' })
-    } finally {
-      setActionLoading(false)
+      return
     }
+    openConfirm({
+      title: resumesPaused ? 'Resume paused testers now?' : `Schedule testing for ${startDateInput}?`,
+      description: resumesPaused
+        ? `This resumes the paused testers right now with their saved remaining time.`
+        : `Day 1 is ${startDateInput} for all ${job?.testersNeeded ?? 0} verified testers, and day ${job?.testDuration} is the same calendar day for everyone (days change at midnight UTC). Testers can start any time on day 1. All verified testers will be told the date.`,
+      confirmLabel: resumesPaused ? 'Resume' : 'Schedule testing',
+      onConfirm: async () => {
+        setActionLoading(true)
+        try {
+          const response = await fetch(`/api/jobs/${params.id}/start`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(
+              resumesPaused
+                ? { resumePausedApplications: true, reason: resumeReason.trim() }
+                : { startDate: startDateInput }
+            ),
+          })
+          const data = await response.json()
+          if (!response.ok) {
+            toast({ title: 'Error', description: data.error || 'Could not schedule testing', variant: 'destructive' })
+            return
+          }
+          await fetchJob(true)
+          toast({ title: data.scheduled ? 'Testing scheduled 📅' : 'Testing resumed', description: data.message, variant: 'success' })
+        } catch (error) {
+          console.error('Failed to start testing:', error)
+          toast({ title: 'Error', description: 'Could not start testing', variant: 'destructive' })
+        } finally {
+          setActionLoading(false)
+        }
+      },
+    })
   }
 
   const handleDelete = () => {
@@ -348,9 +363,9 @@ export default function JobDetailPage() {
 
   const handleReject = async (applicationId: string) => {
     openConfirm({
-      title: 'Reject application?',
-      description: 'Are you sure you want to reject this application?',
-      confirmLabel: 'Reject',
+      title: 'Close this application?',
+      description: 'The tester is told their application was closed. Use this when a tester cannot see the Install button or cannot join. Their paid spot becomes free for another tester.',
+      confirmLabel: 'Close application',
       onConfirm: async () => {
         setActionLoading(true)
         try {
@@ -362,9 +377,10 @@ export default function JobDetailPage() {
 
           if (response.ok) {
             fetchJob()
-            toast({ title: 'Rejected', description: 'Application rejected', variant: 'default' })
+            toast({ title: 'Application closed', description: 'The paid spot is free for another tester', variant: 'default' })
           } else {
-            toast({ title: 'Error', description: 'Failed to reject application', variant: 'destructive' })
+            const data = await response.json().catch(() => ({}))
+            toast({ title: 'Error', description: data.error || 'Failed to close application', variant: 'destructive' })
           }
         } catch (err) {
           toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
@@ -439,9 +455,9 @@ You will receive a partial refund for unused budget.`
 
   const handleVerify = async (applicationId: string) => {
     openConfirm({
-      title: 'Verify tester opt-in?',
-      description: 'Confirm the tester’s screenshots show they joined your Google Play test. This verifies their opt-in only; the testing countdown and daily missions begin at the official scheduled start.',
-      confirmLabel: 'Verify opt-in',
+      title: 'Verify this tester?',
+      description: 'Confirm the screenshot if itshows the Install button on Google Play. The tester joins the ready list. Testing does not start until you schedule a start date.',
+      confirmLabel: 'Verify tester',
       onConfirm: async () => {
         setActionLoading(true)
         try {
@@ -453,7 +469,7 @@ You will receive a partial refund for unused budget.`
 
           if (response.ok) {
             fetchJob()
-            toast({ title: 'Opt-in verified', description: 'The tester is verified. Their testing period will begin at the official scheduled start.', variant: 'success' })
+            toast({ title: 'Tester verified', description: 'The tester is on the ready list. Testing starts only on the date you schedule.', variant: 'success' })
           } else {
             toast({ title: 'Error', description: 'Failed to verify application', variant: 'destructive' })
           }
@@ -517,10 +533,8 @@ You will receive a partial refund for unused budget.`
   const awaitingVerification = job.applications.filter(app => app.status === 'OPTED_IN')
   // Testers currently in testing
   const currentlyTesting = job.applications.filter(app => app.status === 'TESTING')
-  // "Ready to verify" — enough testers have uploaded screenshots, verify all same day
-  const isReadyToVerifyAll = isActive &&
-    awaitingVerification.length >= job.testersNeeded &&
-    currentlyTesting.length === 0
+  // An earlier job with paused testers is IN_PROGRESS but can still restart them together with a new group.
+  const isReadyToStart = isActive && (recruitment?.canStart ?? false)
   const totalChargeEurCents = job.totalBudget + job.platformFee
   const paymentReceived = !isDraft && !!job.stripePaymentIntent
   const paymentSummary = isDraft
@@ -681,29 +695,45 @@ You will receive a partial refund for unused budget.`
       </div>
 
       {/* Step banners — guide dev through the correct sequence */}
-      {isReadyToVerifyAll && (
-        <div className="rounded-xl border-2 border-blue-400 bg-blue-50 p-5 flex flex-col sm:flex-row sm:items-start gap-4">
-          <CheckCircle className="h-6 w-6 text-blue-600 mt-0.5 shrink-0" />
-          <div>
-            <p className="font-bold text-blue-900 text-base">
-              📸 All {awaitingVerification.length} testers have uploaded their opt-in screenshots
+      {/* Ready-to-start banner */}
+      {isReadyToStart && (recruitment?.pausedToResume ?? 0) === 0 && (
+        <div className="rounded-xl border-2 border-green-400 bg-green-50 p-5 flex flex-col sm:flex-row sm:items-start gap-4">
+          <CheckCircle className="h-6 w-6 text-green-600 mt-0.5 shrink-0" />
+          <div className="flex-1">
+            <p className="font-bold text-green-900 text-base">
+              {recruitment?.verifiedCount} / {job.testersNeeded} testers verified — ready to start!
             </p>
-            <p className="text-sm text-blue-800 mt-1">
-              Review each screenshot to confirm they joined your Play Console closed test. After the full eligible cohort is selected, schedule the official start time. Testing and daily missions begin together at that scheduled time.
+            <p className="text-sm text-green-800 mt-1">
+              All required testers have confirmed they can install the app. Pick a start date (tomorrow or later). Day 1 is that date for everyone, and the {job.testDuration}-day period ends on the same calendar day for every tester. Days change at midnight UTC.
+              {job.scheduledStartAt && (
+                <> Currently scheduled: <strong>{job.scheduledStartAt.slice(0, 10)}</strong>.</>
+              )}
             </p>
-            <p className="text-xs text-blue-700 mt-2 font-medium">
-              The countdown does not start when you approve or verify screenshots.
-            </p>
+            <input
+              type="date"
+              min={tomorrowUtc}
+              value={startDateInput}
+              onChange={(event) => setStartDateInput(event.target.value)}
+              aria-label="Testing start date"
+              className="mt-2 rounded-md border border-green-400 bg-white px-3 py-2 text-sm"
+            />
           </div>
+          <Button
+            onClick={startTesting}
+            disabled={actionLoading}
+            className="bg-green-600 hover:bg-green-700 text-white shrink-0"
+          >
+            {job.scheduledStartAt ? 'Change start date' : 'Schedule testing'}
+          </Button>
         </div>
       )}
 
       {isActive && (
         <Card className="border-indigo-200">
           <CardHeader>
-            <CardTitle>Recruitment and testing schedule</CardTitle>
+            <CardTitle>Recruitment progress</CardTitle>
             <CardDescription>
-              Eligible progress counts approved testers who pass the declared country/device checks and have no unresolved install report. Country declarations do not guarantee Google Play availability.
+              Approve applicants one by one. Each approved tester gets the Play Store link immediately and their email is visible so you can add them to Play Console. Once they upload a screenshot showing the Install button, verify them. The Schedule testing button appears when you have enough verified testers.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -716,24 +746,34 @@ You will receive a partial refund for unused budget.`
                   onChange={(event) => setCountryCodes(event.target.value.toUpperCase())}
                   placeholder="US, GB, MA"
                   className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm"
-                  disabled={!!job.scheduledStartAt}
                 />
-                <Button onClick={saveSupportedCountries} disabled={actionLoading || !!job.scheduledStartAt}>Save</Button>
+                <Button onClick={saveSupportedCountries} disabled={actionLoading}>Save</Button>
               </div>
               <p className="text-xs text-gray-500">Enter two-letter ISO codes separated by commas.</p>
             </div>
-            <div className="rounded-md bg-gray-50 p-3 text-sm">
-              Eligible testers: <strong>{recruitment?.eligible ?? 0}/{job.testersNeeded}</strong>
-              <span className="ml-2 text-gray-500">
-                ({recruitment?.selected ?? 0} selected; other eligible applicants remain reserves)
-              </span>
+
+            <div className="rounded-md bg-gray-50 p-3 text-sm space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Approved (waiting for screenshot)</span>
+                <strong>{job.applications.filter(a => a.status === 'APPROVED').length}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-gray-600">Screenshot submitted (awaiting review)</span>
+                <strong>{awaitingVerification.length}</strong>
+              </div>
+              <div className="flex items-center justify-between border-t pt-2">
+                <span className="font-medium">Verified — ready to start</span>
+                <strong className={(recruitment?.verifiedCount ?? 0) >= job.testersNeeded ? 'text-green-700' : 'text-gray-900'}>
+                  {recruitment?.verifiedCount ?? 0} / {job.testersNeeded} needed
+                </strong>
+              </div>
             </div>
-            {(recruitment?.paused ?? 0) > 0 && (
+
+            {(recruitment?.pausedToResume ?? 0) > 0 && (
               <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
                 <p>
-                  {recruitment?.paused} existing tester{recruitment?.paused === 1 ? ' is' : 's are'} paused.
-                  Scheduling this complete cohort will resume only their saved remaining duration at the scheduled start;
-                  their original start date and completed work will be preserved.
+                  {recruitment?.pausedToResume} earlier tester{recruitment?.pausedToResume === 1 ? ' is' : 's are'} paused.
+                  Starting will resume only their saved remaining time. Their original start date and finished work stay.
                 </p>
                 <label className="flex items-start gap-2">
                   <input
@@ -741,55 +781,44 @@ You will receive a partial refund for unused budget.`
                     checked={resumePausedApplications}
                     onChange={(event) => setResumePausedApplications(event.target.checked)}
                   />
-                  <span>I explicitly authorize resuming paused testers at this cohort’s scheduled start.</span>
+                  <span>I confirm resuming the paused testers now.</span>
                 </label>
                 <input
                   value={resumeReason}
                   onChange={(event) => setResumeReason(event.target.value)}
                   maxLength={1000}
-                  placeholder="Document the reason for resuming the existing tester (at least 10 characters)"
+                  placeholder="Reason for resuming (at least 10 characters)"
                   className="w-full rounded-md border border-amber-400 bg-white px-3 py-2"
                 />
               </div>
             )}
-            {!job.scheduledStartAt && (
-              <Button
-                onClick={assembleCohort}
-                disabled={actionLoading || (recruitment?.eligible ?? 0) < job.testersNeeded}
-              >
-                Release selected cohort contact emails
-              </Button>
-            )}
-            {job.scheduledStartAt ? (
-              <p className="text-sm text-blue-800">
-                Official testing start: {new Date(job.scheduledStartAt).toLocaleString()}.
-              </p>
-            ) : (
+
+            {isReadyToStart ? (
               <div className="space-y-2">
-                <label htmlFor="scheduled-start" className="text-sm font-medium">Official testing start (your local time)</label>
-                <div className="flex flex-wrap gap-2">
-                  <input
-                    id="scheduled-start"
-                    type="datetime-local"
-                    value={scheduledStartInput}
-                    onChange={(event) => setScheduledStartInput(event.target.value)}
-                    className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-                  />
-                  <Button
-                    onClick={scheduleTesting}
-                    disabled={
-                      actionLoading ||
-                      (recruitment?.selected ?? 0) < job.testersNeeded ||
-                      ((recruitment?.paused ?? 0) > 0 &&
-                        (!resumePausedApplications || resumeReason.trim().length < 10))
-                    }
-                  >
-                    Schedule start
-                  </Button>
-                </div>
-                <p className="text-xs text-gray-500">
-                  Scheduling requires all selected testers to have verified opt-in proof and pass checks. Mission day 1 and the 14-day clock begin at the chosen instant.
+                <Button
+                  onClick={startTesting}
+                  disabled={actionLoading}
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
+                  size="lg"
+                >
+                  {(recruitment?.pausedToResume ?? 0) > 0
+                    ? `Resume paused testers (${recruitment?.verifiedCount} ready)`
+                    : `Schedule testing (${recruitment?.verifiedCount} testers ready)`}
+                </Button>
+                {(recruitment?.pausedToResume ?? 0) === 0 && (
+                  <p className="text-xs text-gray-500">Use the date picker in the green box above to choose the start date.</p>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-1 text-xs text-gray-500">
+                <p>
+                  Keep approving applicants and verifying their screenshots. The Schedule testing button appears once {job.testersNeeded} testers are verified.
                 </p>
+                {(recruitment?.blockers ?? [])
+                  .filter((blocker) => blocker.code !== 'NOT_ENOUGH_VERIFIED')
+                  .map((blocker) => (
+                    <p key={blocker.code} className="font-medium text-amber-700">{blocker.message}</p>
+                  ))}
               </div>
             )}
           </CardContent>
@@ -832,6 +861,14 @@ You will receive a partial refund for unused budget.`
           </div>
         </CardContent>
       </Card>
+
+      <div className="mb-6">
+        <Link href={`/dashboard/group/${job.id}`}>
+          <Button variant="outline" className="min-h-11 w-full sm:w-auto">Open group chat</Button>
+        </Link>
+      </div>
+
+      <DeveloperReports jobId={job.id} />
 
       {/* Main Content */}
       <div className="grid lg:grid-cols-3 gap-6">
@@ -1089,7 +1126,7 @@ You will receive a partial refund for unused budget.`
               <CardTitle>Tester contact details</CardTitle>
             </CardHeader>
             <CardContent className="text-sm text-gray-600">
-              Tester email addresses are private during recruitment.
+              Tester emails appear on each application as soon as you approve that tester, so you can add them in Google Play Console. Pending applicants’ emails stay private.
             </CardContent>
           </Card>
 

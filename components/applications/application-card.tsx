@@ -434,10 +434,23 @@ export function ApplicationCard({
           )}
 
           {application.status === 'APPROVED' && (
-            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg">
-              <p className="text-sm text-blue-800">
-                ✅ Approved - Waiting for tester to opt-in to Google Play test
+            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg space-y-2">
+              <p className="text-sm text-blue-800 font-medium">
+                ✅ Approved — waiting for tester to open Play Store and upload a screenshot
               </p>
+              <p className="text-xs text-blue-700">
+                The tester has been notified. Their email is shown above so you can add them to Play Console.
+              </p>
+              <Button
+                onClick={() => onReject?.(application.id)}
+                disabled={loading}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Close application
+              </Button>
             </div>
           )}
 
@@ -447,26 +460,59 @@ export function ApplicationCard({
                 <>
                   <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-lg">
                     <p className="text-sm text-indigo-800">
-                      📸 The tester has submitted opt-in screenshots. Review them above and verify the screenshots; the testing clock starts at the official scheduled time.
+                      📸 Screenshot submitted. Check it above. If Google Play shows the Install button, verify this tester to add them to your ready list. If it does not, close the application.
                     </p>
                   </div>
-                  <Button
-                    onClick={() => onVerify?.(application.id)}
-                    disabled={loading}
-                    size="sm"
-                    className="w-full"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Verify & Start Testing Period
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={() => onVerify?.(application.id)}
+                      disabled={loading}
+                      size="sm"
+                      className="flex-1"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Verify — Install button visible
+                    </Button>
+                    <Button
+                      onClick={() => onReject?.(application.id)}
+                      disabled={loading}
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      Close application
+                    </Button>
+                  </div>
                 </>
               ) : (
                 <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
                   <p className="text-sm text-yellow-800">
-                    ⏳ Waiting for tester to upload verification screenshot
+                    ⏳ Waiting for tester to upload their Play Store screenshot
                   </p>
                 </div>
               )}
+            </div>
+          )}
+
+          {['VERIFIED', 'SCHEDULED'].includes(application.status) && (
+            <div className="bg-green-50 border border-green-200 p-3 rounded-lg space-y-2">
+              <p className="text-sm text-green-800 font-medium">
+                ✅ Verified — on the ready list
+              </p>
+              <p className="text-xs text-green-700">
+                Testing starts for everyone together when you press Start testing now on this job.
+              </p>
+              <Button
+                onClick={() => onReject?.(application.id)}
+                disabled={loading}
+                variant="outline"
+                size="sm"
+                className="w-full"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Close application
+              </Button>
             </div>
           )}
 
@@ -492,7 +538,7 @@ export function ApplicationCard({
           {application.status === 'REJECTED' && (
             <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
               <p className="text-sm text-red-800">
-                ❌ Application was rejected
+                ❌ Application closed
               </p>
             </div>
           )}

@@ -75,6 +75,7 @@ export async function GET() {
           testerId: currentUser.userId,
         },
       },
+      include: { video: { select: { id: true, deletedAt: true } } },
     })
 
     return NextResponse.json({
@@ -83,6 +84,9 @@ export async function GET() {
       totalDays: application.job.testDuration,
       isCompleted: !!submission,
       submission: submission ?? null,
+      videoDeleteAfter: submission?.video && application.testingEndDate
+        ? new Date(application.testingEndDate.getTime() + 14 * 24 * 60 * 60 * 1000)
+        : null,
       jobName: application.job.appName,
     })
   } catch (error) {

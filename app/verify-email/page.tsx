@@ -14,6 +14,7 @@ function VerifyEmailContent() {
   const token = searchParams?.get('token') || ''
   const email = searchParams?.get('email') || ''
   const sent = searchParams?.get('sent') === '1'
+  const isTesterSignup = searchParams?.get('role') === 'TESTER'
   const status = searchParams?.get('status') || ''
   const statusMessage = searchParams?.get('message') || ''
 
@@ -120,6 +121,22 @@ function VerifyEmailContent() {
           <CardDescription>{description}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {isTesterSignup && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 space-y-2">
+              <p className="font-semibold text-sm text-blue-900">Next step: meet other TestForPay testers</p>
+              <p className="text-sm text-blue-800">
+                Join the tester community for help, updates, and testing tips. Joining is optional and does not affect your account.
+              </p>
+              <a
+                href="https://www.facebook.com/groups/1466852055303500/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                Join the tester community
+              </a>
+            </div>
+          )}
           {message && (
             <div
               className={`rounded-md p-3 text-sm ${

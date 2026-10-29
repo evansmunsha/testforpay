@@ -4,9 +4,20 @@ import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { sendNotification } from '@/lib/notifications'
 
+const isUploadedImageUrl = (value: string) => {
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' &&
+      (url.hostname === 'utfs.io' || url.hostname.endsWith('.ufs.sh') || url.hostname.endsWith('.uploadthing.com'))
+  } catch {
+    return false
+  }
+}
+
 const reportSchema = z.object({
   category: z.enum(['INSTALL_UNAVAILABLE', 'COUNTRY_RESTRICTION', 'DEVICE_INCOMPATIBLE', 'OTHER']),
   details: z.string().trim().min(10).max(2000),
+  attachmentUrls: z.array(z.string().max(500).refine(isUploadedImageUrl, 'Attachments must be images uploaded through TestForPay')).max(3).optional(),
 })
 
 export async function GET(
@@ -35,6 +46,7 @@ export async function GET(
         id: true,
         category: true,
         details: true,
+        attachmentUrls: true,
         status: true,
         createdAt: true,
         resolvedAt: true,
@@ -93,8 +105,9 @@ export async function POST(
         testerId: user.userId,
         category: parsed.data.category,
         details: parsed.data.details,
+        attachmentUrls: parsed.data.attachmentUrls ?? [],
       },
-      select: { id: true, category: true, details: true, status: true, createdAt: true },
+      select: { id: true, category: true, details: true, attachmentUrls: true, status: true, createdAt: true },
     })
 
     const adminUsers = await prisma.user.findMany({

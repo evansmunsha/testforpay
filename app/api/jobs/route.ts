@@ -263,7 +263,9 @@ export async function GET(request: Request) {
       include: {
         _count: {
           select: {
-            applications: true
+            applications: {
+              where: { status: { notIn: ['REJECTED', 'INELIGIBLE', 'WITHDRAWN'] } },
+            },
           }
         }
       },

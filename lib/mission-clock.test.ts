@@ -3,9 +3,36 @@ import {
   extendTestingEndDate,
   getMissionDay,
   getPauseDurationMs,
+  getTestingEndForStartDay,
+  isTomorrowOrLater,
+  parseTestingStartDate,
 } from './mission-clock'
 
 const DAY_IN_MS = 24 * 60 * 60 * 1000
+
+describe('calendar-day scheduling', () => {
+  it('parses only real YYYY-MM-DD dates as midnight UTC', () => {
+    expect(parseTestingStartDate('2026-03-05')).toEqual(new Date('2026-03-05T00:00:00.000Z'))
+    expect(parseTestingStartDate('2026-02-30')).toBeNull()
+    expect(parseTestingStartDate('05/03/2026')).toBeNull()
+  })
+
+  it('requires tomorrow or later in UTC', () => {
+    const now = new Date('2026-03-05T23:59:00.000Z')
+    expect(isTomorrowOrLater(new Date('2026-03-05T00:00:00.000Z'), now)).toBe(false)
+    expect(isTomorrowOrLater(new Date('2026-03-06T00:00:00.000Z'), now)).toBe(true)
+  })
+
+  it('gives every tester the same day 1 and day 14', () => {
+    const start = new Date('2026-03-10T00:00:00.000Z')
+    const end = getTestingEndForStartDay(start, 14)
+    expect(end).toEqual(new Date('2026-03-24T00:00:00.000Z'))
+    expect(getMissionDay(start, new Date('2026-03-10T00:00:00.000Z'))).toBe(1)
+    expect(getMissionDay(start, new Date('2026-03-10T23:59:59.000Z'))).toBe(1)
+    expect(getMissionDay(start, new Date('2026-03-23T23:59:59.000Z'))).toBe(14)
+    expect(getMissionDay(start, new Date('2026-03-09T23:59:59.000Z'))).toBeNull()
+  })
+})
 
 describe('getMissionDay', () => {
   const startDate = new Date('2026-01-01T12:00:00.000Z')

@@ -20,6 +20,7 @@ import {
 import { formatEurFromCents } from '@/lib/currency'
 import type { Cents } from '@/types/money'
 import { ApplicationIssueQueue } from '@/components/admin/application-issue-queue'
+import { JobOperations } from '@/components/admin/job-operations'
 
 interface Stats {
   totalUsers: number
@@ -112,6 +113,8 @@ interface Job {
 
 interface Application {
   id: string; status: string; createdAt: string
+  cohortSelected: boolean
+  contactReleasedAt: string | null
   job: {
     id: string
     appName: string
@@ -131,7 +134,7 @@ interface Application {
   testingStartDate: string | null
   testingEndDate: string | null
   testingPausedAt?: string | null
-  payment?: { status: string } | null
+  payment?: { id: string; status: string } | null
 }
 
 interface Payment {
@@ -280,7 +283,7 @@ function StatCard({ title, value, sub, icon: Icon, color = 'blue', loading }: {
 
 // ── Table wrapper — scroll on small screens ─────────────────────────────────────
 function ScrollTable({ children }: { children: React.ReactNode }) {
-  return <div className="overflow-x-auto -mx-4 sm:mx-0"><div className="min-w-[600px] sm:min-w-0 px-4 sm:px-0">{children}</div></div>
+  return <div className="overflow-x-auto -mx-4 sm:mx-0"><div className="min-w-150 sm:min-w-0 px-4 sm:px-0">{children}</div></div>
 }
 
 // ── Loading skeleton rows ───────────────────────────────────────────────────────
@@ -776,6 +779,37 @@ export default function AdminDashboard() {
     })
   }
 
+  const requestApplicationWithdrawal = (application: Application) => {
+    openConfirm({
+      title: 'Withdraw this application?',
+      description: `Remove ${application.tester.name || application.tester.email} from ${application.job.appName} before testing starts. Their application history is kept, any escrowed payment stays on record and its paid spot is freed for another tester, and they can apply again while the job is recruiting. Unavailable once testing has started.`,
+      confirmLabel: 'Withdraw application',
+      reasonRequired: true,
+      onConfirm: async reason => {
+        setActionLoading(application.id)
+        try {
+          const response = await fetch(`/api/admin/applications/${application.id}/withdraw`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason }),
+          })
+          const data = await response.json()
+          if (!response.ok) {
+            toast({ title: 'Error', description: data.error || 'Could not withdraw application', variant: 'destructive' })
+            return
+          }
+          toast({ title: 'Application withdrawn', description: data.message, variant: 'success' })
+          await Promise.all([fetchApplications(), fetchStats(), fetchAuditEntries()])
+        } catch (error) {
+          console.error('Failed to withdraw application:', error)
+          toast({ title: 'Error', description: 'Could not withdraw application', variant: 'destructive' })
+        } finally {
+          setActionLoading(null)
+        }
+      },
+    })
+  }
+
   useEffect(() => { if (!loading && user?.role !== 'ADMIN') router.push('/dashboard') }, [user, loading, router])
   useEffect(() => { if (!loading && user?.role === 'ADMIN') { fetchStats(); fetchUsers(); fetchDevelopers(); fetchRecentActivity(); fetchSystemHealth(); fetchAuditEntries(); fetchAcquisitionTargets() } }, [loading, user])
   useEffect(() => {
@@ -1114,6 +1148,7 @@ export default function AdminDashboard() {
       ACTIVE: { variant: 'default', icon: CheckCircle }, COMPLETED: { variant: 'secondary', icon: CheckCircle },
       DRAFT: { variant: 'outline', icon: Clock }, PENDING: { variant: 'outline', icon: Clock },
       APPROVED: { variant: 'default', icon: CheckCircle }, REJECTED: { variant: 'destructive', icon: XCircle },
+      WITHDRAWN: { variant: 'secondary', icon: XCircle },
       TESTING: { variant: 'default', icon: Clock }, FAILED: { variant: 'destructive', icon: XCircle },
       ESCROWED: { variant: 'outline', icon: Clock }, PROCESSING: { variant: 'default', icon: Clock },
       CANCELLED: { variant: 'destructive', icon: XCircle }, IN_PROGRESS: { variant: 'default', icon: Clock },
@@ -1379,6 +1414,7 @@ export default function AdminDashboard() {
         <div className="overflow-x-auto pb-1">
           <TabsList className="flex w-max gap-1">
             <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="operations">Testing Ops</TabsTrigger>
             <TabsTrigger value="users">Users <Badge variant="secondary" className="ml-1">{stats?.totalUsers || 0}</Badge></TabsTrigger>
             <TabsTrigger value="jobs">Jobs <Badge variant="secondary" className="ml-1">{stats?.totalJobs || 0}</Badge></TabsTrigger>
             <TabsTrigger value="applications">Apps <Badge variant="secondary" className="ml-1">{stats?.totalApplications || 0}</Badge></TabsTrigger>
@@ -1395,6 +1431,10 @@ export default function AdminDashboard() {
             </TabsTrigger>
           </TabsList>
         </div>
+
+        <TabsContent value="operations">
+          <JobOperations />
+        </TabsContent>
 
         <TabsContent value="application-issues">
           <Card>
@@ -2188,6 +2228,15 @@ export default function AdminDashboard() {
                                 onClick={() => requestTestingPauseAction(a, a.testingPausedAt ? 'resume' : 'pause')}
                               >
                                 {a.testingPausedAt ? 'Resume' : 'Pause'}
+                              </Button>
+                            ) : ['PENDING', 'APPROVED', 'OPTED_IN', 'VERIFIED', 'SCHEDULED'].includes(a.status) ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                disabled={actionLoading === a.id}
+                                onClick={() => requestApplicationWithdrawal(a)}
+                              >
+                                Withdraw
                               </Button>
                             ) : '—'}
                           </td>

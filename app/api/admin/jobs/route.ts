@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { loadJobOperations, readPageParam } from '@/lib/admin-job-operations'
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const currentUser = await getCurrentUser()
 
@@ -11,6 +12,19 @@ export async function GET() {
         { error: 'Not authorized' },
         { status: 403 }
       )
+    }
+
+    // ?operationsJobId=<id> returns the full oversight view for one job.
+    const { searchParams } = new URL(request.url)
+    const operationsJobId = searchParams.get('operationsJobId')
+    if (operationsJobId) {
+      const operations = await loadJobOperations(operationsJobId, {
+        applications: readPageParam(searchParams.get('applicationsPage')),
+        submissions: readPageParam(searchParams.get('submissionsPage')),
+        reports: readPageParam(searchParams.get('reportsPage')),
+      })
+      if (!operations) return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+      return NextResponse.json(operations)
     }
 
     const jobs = await prisma.testingJob.findMany({

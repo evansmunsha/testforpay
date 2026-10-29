@@ -6,6 +6,8 @@ import { processPaymentById } from '@/lib/payouts'
 import { formatEurFromCents } from '@/lib/currency'
 import { recordAdminAction } from '@/lib/admin-audit'
 import { passesDeclaredJobScreening } from '@/lib/tester-eligibility'
+import { allocateEscrowSlot, platformFeePerTester } from '@/lib/escrow-allocation'
+import { sendApplicationApprovedEmail } from '@/lib/email'
 
 // GET - Get single application
 export async function GET(
@@ -247,35 +249,104 @@ export async function PATCH(
         minimumAndroidVersion: application.job.minAndroidVersion,
       })
       const approvedAt = new Date()
-      const updatedApplication = await prisma.application.update({
-        where: { id },
-        data: {
-          status: 'APPROVED',
-          screeningPassedAt: eligibleAtApproval ? approvedAt : null,
-        },
-        include: {
-          tester: {
+      let updatedApplication
+      try {
+        updatedApplication = await prisma.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT id FROM "TestingJob" WHERE id = ${application.jobId} FOR UPDATE`
+          await tx.$executeRaw`SELECT id FROM "Application" WHERE id = ${id} FOR UPDATE`
+          const lockedJob = await tx.testingJob.findUnique({
+            where: { id: application.jobId },
             select: {
-              name: true,
+              status: true,
+              testersNeeded: true,
+              paymentPerTester: true,
+              platformFee: true,
+              applications: {
+                where: { status: 'TESTING', testingPausedAt: { not: null }, cohortSelected: true },
+                select: { id: true },
+                take: 1,
+              },
             },
+          })
+          const lockedApplication = await tx.application.findUnique({
+            where: { id },
+            select: { status: true },
+          })
+          if (!lockedJob || lockedApplication?.status !== 'PENDING') throw new Error('APPLICATION_STATE_CHANGED')
+          if (lockedJob.status !== 'ACTIVE' && !(lockedJob.status === 'IN_PROGRESS' && lockedJob.applications.length > 0)) {
+            throw new Error('JOB_NOT_RECRUITING')
+          }
+
+          // Each approved tester holds one paid slot; there are never more than testersNeeded.
+          await allocateEscrowSlot(tx, {
+            jobId: application.jobId,
+            applicationId: id,
+            actorId: currentUser.userId,
+            testersNeeded: lockedJob.testersNeeded,
+            paymentPerTester: lockedJob.paymentPerTester,
+            platformFee: platformFeePerTester(lockedJob.platformFee, lockedJob.testersNeeded),
+            reason: 'Reused an unused escrowed tester slot for a newly approved tester before testing started.',
+          })
+
+          return tx.application.update({
+            where: { id },
+            data: {
+              status: 'APPROVED',
+              screeningPassedAt: eligibleAtApproval ? approvedAt : null,
+              // The developer needs the tester's email now to add them in Play Console.
+              contactReleasedAt: approvedAt,
+              cohortSelected: true,
+            },
+            include: {
+              tester: {
+                select: {
+                  name: true,
+                  email: true,
+                },
+              },
+              job: true,
+            },
+          })
+        })
+      } catch (approvalError) {
+        const approvalErrors: Record<string, { status: number; message: string }> = {
+          APPLICATION_STATE_CHANGED: { status: 409, message: 'This application changed. Refresh and try again.' },
+          JOB_NOT_RECRUITING: { status: 409, message: 'This job is not recruiting testers right now.' },
+          NO_FREE_ESCROW_SLOT: {
+            status: 409,
+            message: 'All paid tester spots are already taken. Close an approved tester who cannot install the app first, then approve this one.',
           },
-          job: true,
-        },
-      })
+          ESCROW_SLOT_CHANGED: { status: 409, message: 'A paid spot changed while approving. Refresh and try again.' },
+          PAYMENT_NOT_ESCROWED: { status: 409, message: 'This tester has a payment that is not safely held. Contact support.' },
+        }
+        const mapped = approvalError instanceof Error ? approvalErrors[approvalError.message] : undefined
+        if (mapped) return NextResponse.json({ error: mapped.message }, { status: mapped.status })
+        throw approvalError
+      }
       if (currentUser.role === 'ADMIN') {
         await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'approve_application', targetType: 'application', targetId: id, reason: auditReason })
       }
-      // Send push notification to tester
+      // Tell the tester to open the Play Store link and upload a screenshot
       try {
         await sendNotification({
           userId: application.testerId,
           title: 'Application Approved! 🎉',
-          body: `Your application to test "${application.job.appName}" has been approved. Wait for the developer to release the selected tester group before joining the Play test.`,
+          body: `Your application to test "${application.job.appName}" has been approved. Open the Play Store link in your dashboard and upload a screenshot showing the Install button.`,
           url: '/dashboard/applications',
           type: 'application_approved',
         })
       } catch (notifyError) {
         console.error('Failed to send approval notification:', notifyError)
+      }
+      try {
+        await sendApplicationApprovedEmail(updatedApplication.tester.email, {
+          testerName: updatedApplication.tester.name || 'Tester',
+          appName: application.job.appName,
+          googlePlayLink: application.job.googlePlayLink,
+          paymentCents: application.job.paymentPerTester,
+        })
+      } catch (emailError) {
+        console.error('Failed to send approval email:', emailError)
       }
 
       return NextResponse.json({
@@ -285,44 +356,51 @@ export async function PATCH(
       })
     }
 
-    // Handle rejection
+    // Handle rejection (closing an application before testing starts)
     if (body.action === 'reject') {
-      if (!['PENDING', 'APPROVED'].includes(application.status)) {
+      if (!['PENDING', 'APPROVED', 'OPTED_IN', 'VERIFIED', 'SCHEDULED'].includes(application.status)) {
         return NextResponse.json(
-          { error: 'This application can no longer be rejected' },
+          { error: 'This application can no longer be closed' },
           { status: 409 }
         )
       }
 
-      const updatedApplication = await prisma.application.update({
-        where: { id },
-        data: {
-          status: 'REJECTED',
-        },
-        include: {
-          tester: {
-            select: {
-              name: true,
+      let updatedApplication
+      try {
+        updatedApplication = await prisma.$transaction(async (tx) => {
+          await tx.$executeRaw`SELECT id FROM "Application" WHERE id = ${id} FOR UPDATE`
+          const current = await tx.application.findUnique({
+            where: { id },
+            select: { status: true, payment: { select: { status: true, transferId: true } } },
+          })
+          if (!current || !['PENDING', 'APPROVED', 'OPTED_IN', 'VERIFIED', 'SCHEDULED'].includes(current.status)) {
+            throw new Error('APPLICATION_STATE_CHANGED')
+          }
+          // The escrowed payment stays on record so its paid slot can be reused for another tester.
+          if (current.payment && (current.payment.status !== 'ESCROWED' || current.payment.transferId)) {
+            throw new Error('PAYMENT_NOT_ESCROWED')
+          }
+          return tx.application.update({
+            where: { id },
+            data: { status: 'REJECTED', cohortSelected: false },
+            include: {
+              tester: { select: { name: true } },
+              job: true,
+              payment: true,
             },
-          },
-          job: true,
-          payment: true,
-        },
-      })
+          })
+        })
+      } catch (rejectError) {
+        if (rejectError instanceof Error && rejectError.message === 'APPLICATION_STATE_CHANGED') {
+          return NextResponse.json({ error: 'This application changed. Refresh and try again.' }, { status: 409 })
+        }
+        if (rejectError instanceof Error && rejectError.message === 'PAYMENT_NOT_ESCROWED') {
+          return NextResponse.json({ error: 'This tester has a payment that is not safely held. Contact support.' }, { status: 409 })
+        }
+        throw rejectError
+      }
       if (currentUser.role === 'ADMIN') {
         await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'reject_application', targetType: 'application', targetId: id, reason: auditReason })
-      }
-
-      // Delete payment record if it exists (refund the escrow by not marking it as PROCESSING)
-      if (updatedApplication.payment) {
-        try {
-          await prisma.payment.delete({
-            where: { id: updatedApplication.payment.id },
-          })
-          console.log('💰 Payment record deleted (refunded) for rejected application:', id)
-        } catch (paymentError) {
-          console.error('Failed to delete payment record on rejection:', paymentError)
-        }
       }
 
       // Send push notification to tester
@@ -330,7 +408,7 @@ export async function PATCH(
         await sendNotification({
           userId: application.testerId,
           title: 'Application Update',
-          body: `Your application to test "${application.job.appName}" was not approved this time.`,
+          body: `Your application to test "${application.job.appName}" was closed. If you could not install the app, this does not count against you.`,
           url: '/dashboard/applications',
           type: 'application_rejected',
         })
@@ -341,7 +419,7 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         application: updatedApplication,
-        message: 'Application rejected',
+        message: 'Application closed. The paid spot is free for another tester.',
       })
     }
 
@@ -377,12 +455,12 @@ export async function PATCH(
         await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'verify_application', targetType: 'application', targetId: id, reason: auditReason })
       }
 
-      // Verification is complete, but the testing clock waits for the job schedule.
+      // Verification is complete — tester joins the ready list; testing starts when the developer clicks Start.
       try {
         await sendNotification({
           userId: application.testerId,
-          title: 'Opt-in verified',
-          body: `Your screenshot for "${application.job.appName}" has been verified. The developer will schedule the testing start.`,
+          title: 'Opt-in verified ✅',
+          body: `Your screenshot for "${application.job.appName}" has been verified. You are on the ready list — the developer will start testing once enough testers are verified.`,
           url: '/dashboard/applications',
           type: 'verification_approved',
         })
@@ -390,12 +468,25 @@ export async function PATCH(
         console.error('Failed to send verification notification:', notifyError)
       }
 
-      // Send notification to developer that verification is done
+      // Tell the tester the group chat is open to them.
+      try {
+        await sendNotification({
+          userId: application.testerId,
+          title: 'Join the group chat 💬',
+          body: `You are verified for "${application.job.appName}". Tap to join the group chat with the developer and other testers.`,
+          url: `/dashboard/group/${application.job.id}`,
+          type: 'group_chat_invite',
+        })
+      } catch (notifyError) {
+        console.error('Failed to send group chat invite:', notifyError)
+      }
+
+      // Notify developer that one more tester is verified
       try {
         await sendNotification({
           userId: application.job.developerId,
           title: 'Tester Verified! 🎯',
-          body: `${application.tester.name || 'A tester'} completed opt-in verification for "${application.job.appName}".`,
+          body: `${application.tester.name || 'A tester'} is verified for "${application.job.appName}". Check if you have enough to start testing.`,
           url: `/dashboard/jobs/${application.job.id}`,
           type: 'tester_verified',
         })
@@ -406,7 +497,7 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         application: updatedApplication,
-        message: 'Opt-in verified. Testing will start at the scheduled time.',
+        message: 'Opt-in verified. The tester is on the ready list.',
       })
     }
 

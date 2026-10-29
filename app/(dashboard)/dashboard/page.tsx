@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { DailyMissionCard } from '@/components/tester/daily-mission-card'
+import { TesterNextSteps } from '@/components/tester/next-steps-card'
 
 export default function DashboardPage() {
   const { user, isDeveloper } = useAuth()
@@ -314,7 +315,8 @@ function TesterDashboard() {
     dayNumber: number
     totalDays: number
     isCompleted: boolean
-    submission: { content: string } | null
+    submission: { content: string; video: { id: string; deletedAt: string | null } | null } | null
+    videoDeleteAfter: string | null
     jobName: string
   } | null>(null)
   const [missionLoading, setMissionLoading] = useState(true)
@@ -357,12 +359,16 @@ function TesterDashboard() {
     }
   }
 
-  const handleMissionSubmit = async (content: string, screenshotUrl?: string) => {
+  const handleMissionSubmit = async (
+    content: string,
+    screenshotUrl?: string,
+    video?: { pathname: string; contentType: string; sizeBytes: number; durationSeconds: number }
+  ) => {
     if (!missionData) return
     const response = await fetch(`/api/tasks/${missionData.task.id}/submit`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, screenshotUrl }),
+      body: JSON.stringify({ content, screenshotUrl, video }),
     })
 
     if (!response.ok) {
@@ -420,14 +426,7 @@ function TesterDashboard() {
         </Link>
       </div>
 
-      <Card className="border-purple-200 bg-purple-50/70">
-        <CardContent className="py-4">
-          <p className="text-sm font-semibold text-purple-900">Getting started</p>
-          <p className="mt-1 text-sm text-purple-800">
-            Browse jobs, apply, and complete each step so your testing flow stays clear.
-          </p>
-        </CardContent>
-      </Card>
+      <TesterNextSteps />
 
       <Card className="border-blue-200 bg-blue-50/60">
         <CardHeader className="pb-3">
@@ -461,8 +460,11 @@ function TesterDashboard() {
             dayNumber={missionData.dayNumber}
             totalDays={missionData.totalDays}
             taskText={missionData.task.taskText}
+            taskId={missionData.task.id}
             isCompleted={missionData.isCompleted}
             existingContent={missionData.submission?.content ?? null}
+            existingVideoId={missionData.submission?.video?.deletedAt ? null : missionData.submission?.video?.id ?? null}
+            videoDeleteAfter={missionData.videoDeleteAfter}
             jobName={missionData.jobName}
             onSubmit={handleMissionSubmit}
           />

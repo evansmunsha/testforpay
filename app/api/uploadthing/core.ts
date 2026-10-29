@@ -20,6 +20,19 @@ export const ourFileRouter = {
       return { uploadedBy: metadata.userId, url: file.url }
     }),
 
+  // Screenshots attached to a private "Can't install this app?" report
+  issueReportImage: f({ image: { maxFileSize: "4MB", maxFileCount: 3 } })
+    .middleware(async () => {
+      const user = await getCurrentUser()
+
+      if (!user) throw new Error("Unauthorized")
+
+      return { userId: user.userId }
+    })
+    .onUploadComplete(async ({ metadata, file }) => {
+      return { uploadedBy: metadata.userId, url: file.url }
+    }),
+
   // Feedback attachment uploader for screenshots and recordings
   feedbackImage: f({ image: { maxFileSize: "4MB", maxFileCount: 3 } })
     .middleware(async () => {

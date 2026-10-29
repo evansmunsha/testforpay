@@ -2,6 +2,7 @@
 'use client'
 
 import { useState } from 'react'
+import { MissionVideoRecorder, type UploadedMissionVideo } from '@/components/tester/mission-video-recorder'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,19 +14,25 @@ import { Label } from '@/components/ui/label'
 interface DailyMissionCardProps {
   dayNumber: number
   totalDays: number
+  taskId: string
   taskText: string
   isCompleted: boolean
   existingContent?: string | null
+  existingVideoId?: string | null
+  videoDeleteAfter?: string | null
   jobName?: string
-  onSubmit: (content: string, screenshotUrl?: string) => Promise<void>
+  onSubmit: (content: string, screenshotUrl?: string, video?: UploadedMissionVideo) => Promise<void>
 }
 
 export function DailyMissionCard({
   dayNumber,
   totalDays,
+  taskId,
   taskText,
   isCompleted,
   existingContent,
+  existingVideoId,
+  videoDeleteAfter,
   jobName,
   onSubmit,
 }: DailyMissionCardProps) {
@@ -33,13 +40,15 @@ export function DailyMissionCard({
   const [screenshotUrl, setScreenshotUrl] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [uploadedVideo, setUploadedVideo] = useState<UploadedMissionVideo | null>(null)
+  const [videoUploading, setVideoUploading] = useState(false)
 
   const handleSubmit = async () => {
     if (content.trim().length < 10) return
     setError('')
     setLoading(true)
     try {
-      await onSubmit(content.trim(), screenshotUrl.trim() || undefined)
+      await onSubmit(content.trim(), screenshotUrl.trim() || undefined, uploadedVideo ?? undefined)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Submission failed. Please try again.')
     } finally {
@@ -58,6 +67,18 @@ export function DailyMissionCard({
             <div className="mt-4 text-left bg-white rounded-lg p-3 border border-green-200">
               <p className="text-xs text-gray-500 mb-1">Your feedback:</p>
               <p className="text-sm text-gray-700 leading-relaxed">{existingContent}</p>
+            </div>
+          )}
+          {existingVideoId && (
+            <div className="mt-4 rounded-lg border border-green-200 bg-white p-3 text-left">
+              <a className="text-sm font-medium text-blue-700 underline" href={`/api/videos/${existingVideoId}`}>
+                Download your screen recording
+              </a>
+              {videoDeleteAfter && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Earliest automatic deletion: {new Date(videoDeleteAfter).toLocaleString()}. It may be kept longer if the job is active or disputed.
+                </p>
+              )}
             </div>
           )}
         </CardContent>
@@ -121,6 +142,12 @@ export function DailyMissionCard({
           </div>
         </div>
 
+        <MissionVideoRecorder
+          taskId={taskId}
+          onUploaded={setUploadedVideo}
+          onUploadingChange={setVideoUploading}
+        />
+
         {/* Optional screenshot URL */}
         <div className="space-y-1.5">
           <Label htmlFor="screenshot-url" className="text-sm font-medium flex items-center gap-1.5">
@@ -143,7 +170,7 @@ export function DailyMissionCard({
 
         <Button
           onClick={handleSubmit}
-          disabled={content.trim().length < 10 || loading}
+          disabled={content.trim().length < 10 || loading || videoUploading}
           className="w-full"
         >
           {loading ? (

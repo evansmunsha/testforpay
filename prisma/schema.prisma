@@ -53,6 +53,7 @@ enum ApplicationStatus {
   COMPLETED
   INELIGIBLE
   REJECTED
+  WITHDRAWN
 }
 
 enum ApplicationIssueStatus {
@@ -138,6 +139,10 @@ model User {
   checkIns          DailyCheckIn[] @relation("TesterCheckIns")
   taskSubmissions   TaskSubmission[]
   issueReports      ApplicationIssueReport[]
+  conversationThreads ConversationThread[] @relation("ThreadTester")
+  threadMessages    ThreadMessage[]
+  jobGroupMemberships JobGroupMember[]
+  jobGroupMessages  JobGroupMessage[]
   applicationPausesInitiated  ApplicationPause[] @relation("ApplicationPauseInitiator")
   applicationResumesInitiated ApplicationPause[] @relation("ApplicationPauseResumeInitiator")
   paymentAllocationActions PaymentAllocationHistory[]
@@ -270,6 +275,9 @@ model TestingJob {
   questionnaire     ProductionQuestionnaire?
   dailyTasks        DailyTask[]
   issueReports      ApplicationIssueReport[]
+  conversationThreads ConversationThread[]
+  groupMembers      JobGroupMember[]
+  groupMessages     JobGroupMessage[]
   
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -325,6 +333,7 @@ model Application {
   feedbackReports   FeedbackReport[]
   feedbacks Feedback[]
   issueReports ApplicationIssueReport[]
+  submissionVideos SubmissionVideo[]
   pauseHistory ApplicationPause[]
   paymentAllocationsFrom PaymentAllocationHistory[] @relation("PaymentAllocationFrom")
   paymentAllocationsTo PaymentAllocationHistory[] @relation("PaymentAllocationTo")
@@ -368,6 +377,8 @@ model ApplicationIssueReport {
   tester        User                  @relation(fields: [testerId], references: [id], onDelete: Cascade)
   category      String
   details       String                @db.Text
+  attachmentUrls String[]             @default([])
+  conversationThread ConversationThread?
   status        ApplicationIssueStatus @default(OPEN)
   adminNote     String?               @db.Text
   resolvedAt    DateTime?
@@ -658,10 +669,103 @@ model TaskSubmission {
   content       String    @db.Text
   screenshotUrl String?
   completedAt   DateTime  @default(now())
+  conversationThread ConversationThread?
+  video         SubmissionVideo?
 
   @@unique([taskId, testerId])
   @@index([taskId])
   @@index([testerId])
+}
+
+// Optional screen recording attached to a daily mission upload. The file is deleted 14 days after testing ends;
+// this row stays (with deletedAt set) so the text record of the upload is never lost.
+model SubmissionVideo {
+  id               String         @id @default(cuid())
+  taskSubmissionId String?        @unique
+  taskSubmission   TaskSubmission? @relation(fields: [taskSubmissionId], references: [id], onDelete: Cascade)
+  applicationId    String
+  application      Application    @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  blobUrl          String
+  blobPathname     String         @unique
+  contentType      String
+  sizeBytes        Int
+  durationSeconds  Int
+  createdAt        DateTime       @default(now())
+  deletedAt        DateTime?
+
+  @@index([applicationId])
+  @@index([deletedAt])
+}
+
+enum ThreadKind {
+  ISSUE_REPORT
+  MISSION_SUBMISSION
+  ADMIN_MESSAGE
+}
+
+// One conversation per issue report, per mission submission, or per private tester-to-admin message.
+model ConversationThread {
+  id               String                  @id @default(cuid())
+  kind             ThreadKind
+  testerId         String
+  tester           User                    @relation("ThreadTester", fields: [testerId], references: [id], onDelete: Cascade)
+  // Null for private tester-to-admin messages, which no developer can see.
+  jobId            String?
+  job              TestingJob?             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  issueReportId    String?                 @unique
+  issueReport      ApplicationIssueReport? @relation(fields: [issueReportId], references: [id], onDelete: Cascade)
+  taskSubmissionId String?                 @unique
+  taskSubmission   TaskSubmission?         @relation(fields: [taskSubmissionId], references: [id], onDelete: Cascade)
+  subject          String
+  lastMessageAt    DateTime                @default(now())
+  createdAt        DateTime                @default(now())
+  messages         ThreadMessage[]
+
+  @@index([testerId, lastMessageAt])
+  @@index([jobId, lastMessageAt])
+  @@index([kind, lastMessageAt])
+}
+
+model ThreadMessage {
+  id         String             @id @default(cuid())
+  threadId   String
+  thread     ConversationThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User               @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorRole String
+  body       String             @db.Text
+  createdAt  DateTime           @default(now())
+
+  @@index([threadId, createdAt])
+  @@index([authorId])
+}
+
+// Group chat for one job. Separate from the private ConversationThread tables.
+// Testers get a row only when they press Join; the developer and admins are members by rule, not by row.
+model JobGroupMember {
+  id       String     @id @default(cuid())
+  jobId    String
+  job      TestingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  joinedAt DateTime   @default(now())
+
+  @@unique([jobId, userId])
+  @@index([userId])
+}
+
+model JobGroupMessage {
+  id         String     @id @default(cuid())
+  jobId      String
+  job        TestingJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorRole String
+  body       String     @db.Text
+  createdAt  DateTime   @default(now())
+
+  @@index([jobId, createdAt])
+  @@index([authorId])
 }
 
 model AdminAuditLog {

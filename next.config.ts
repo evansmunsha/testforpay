@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  outputFileTracingIncludes: {
+    '/api/videos/upload': ['./node_modules/ffprobe-static/bin/**/*'],
+  },
 };
 
 export default nextConfig;

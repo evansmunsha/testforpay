@@ -4,10 +4,14 @@ import { getCurrentUser } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 import { z } from 'zod'
 import { getMissionDay } from '@/lib/mission-clock'
+import { isAllowedVideoPath } from '@/lib/video-rules'
 
 const submitSchema = z.object({
   content: z.string().min(10, 'Please write at least 10 characters'),
   screenshotUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
+  video: z.object({
+    pathname: z.string().min(1),
+  }).optional(),
 })
 
 export async function POST(
@@ -29,7 +33,7 @@ export async function POST(
       )
     }
 
-    const { content, screenshotUrl } = parsed.data
+    const { content, screenshotUrl, video } = parsed.data
     const { taskId } = await params
 
     // Verify the task exists and the tester has an active application for its job
@@ -96,6 +100,25 @@ export async function POST(
       )
     }
 
+    let stagedVideo: { id: string } | null = null
+    if (video) {
+      if (!isAllowedVideoPath(video.pathname, currentUser.userId, taskId)) {
+        return NextResponse.json({ error: 'This video does not belong to your mission' }, { status: 400 })
+      }
+      stagedVideo = await prisma.submissionVideo.findFirst({
+        where: {
+          applicationId: application.id,
+          blobPathname: video.pathname,
+          taskSubmissionId: null,
+          deletedAt: null,
+        },
+        select: { id: true },
+      })
+      if (!stagedVideo) {
+        return NextResponse.json({ error: 'Upload a valid video before submitting this mission' }, { status: 400 })
+      }
+    }
+
     let submission
     try {
       submission = await prisma.$transaction(async (tx) => {
@@ -141,7 +164,7 @@ export async function POST(
         })
         if (existing) throw new Error('DUPLICATE_SUBMISSION')
 
-        return tx.taskSubmission.create({
+        const created = await tx.taskSubmission.create({
           data: {
             taskId,
             testerId: currentUser.userId,
@@ -149,6 +172,19 @@ export async function POST(
             screenshotUrl: screenshotUrl || null,
           },
         })
+        if (stagedVideo) {
+          const attached = await tx.submissionVideo.updateMany({
+            where: {
+              id: stagedVideo.id,
+              applicationId: application.id,
+              taskSubmissionId: null,
+              deletedAt: null,
+            },
+            data: { taskSubmissionId: created.id },
+          })
+          if (attached.count !== 1) throw new Error('VIDEO_ALREADY_ATTACHED')
+        }
+        return created
       })
     } catch (stateError) {
       if (stateError instanceof Error) {
@@ -158,6 +194,7 @@ export async function POST(
           TESTING_NOT_STARTED: { status: 409, message: 'Testing has not started for this application' },
           MISSION_NOT_CURRENT: { status: 400, message: 'Only the mission for the current testing day can be submitted' },
           DUPLICATE_SUBMISSION: { status: 409, message: 'You have already submitted this task' },
+          VIDEO_ALREADY_ATTACHED: { status: 409, message: 'This video is already attached to another submission' },
         }
         if (errors[stateError.message]) {
           return NextResponse.json(

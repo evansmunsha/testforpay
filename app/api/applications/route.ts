@@ -226,16 +226,49 @@ export async function POST(request: Request) {
             testerId: currentUser.userId,
           },
         },
+        include: {
+          payment: { select: { id: true } },
+        },
       })
 
       if (existingApplication) {
-        throw new Error('ALREADY_APPLIED')
+        if (existingApplication.status !== 'WITHDRAWN' || existingApplication.cohortSelected) {
+          throw new Error('ALREADY_APPLIED')
+        }
+
+        return tx.application.update({
+          where: { id: existingApplication.id },
+          data: {
+            status: 'PENDING',
+            contactReleasedAt: null,
+            optInVerified: false,
+            verificationImage: null,
+            verificationImage2: null,
+            verifiedAt: null,
+            screeningPassedAt: null,
+            ipAddress,
+            userAgent,
+          },
+          include: {
+            job: {
+              include: {
+                developer: {
+                  select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+          },
+        })
       }
 
       const currentCount = await tx.application.count({
         where: {
           jobId,
-          status: { notIn: ['REJECTED', 'INELIGIBLE'] },
+          status: { notIn: ['REJECTED', 'INELIGIBLE', 'WITHDRAWN'] },
         },
       })
 

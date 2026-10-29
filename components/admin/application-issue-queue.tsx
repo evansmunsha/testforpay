@@ -9,6 +9,7 @@ interface IssueReport {
   jobId: string
   category: string
   details: string
+  attachmentUrls: string[]
   status: string
   createdAt: string
   tester: { name: string | null; email: string }
@@ -97,6 +98,16 @@ export function ApplicationIssueQueue() {
             </a>
           </header>
           <p className="whitespace-pre-wrap text-sm">{report.details}</p>
+          {report.attachmentUrls?.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {report.attachmentUrls.map((url) => (
+                <a key={url} href={url} target="_blank" rel="noopener noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={url} alt="Tester screenshot" loading="lazy" className="h-24 rounded border object-cover" />
+                </a>
+              ))}
+            </div>
+          )}
           <textarea
             value={notes[report.id] || ''}
             onChange={(event) => setNotes((previous) => ({ ...previous, [report.id]: event.target.value }))}

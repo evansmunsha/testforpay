@@ -4,6 +4,7 @@ import { getCurrentUser } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
 import { toCents } from '@/lib/currency'
 import { normalizeCountryCodes, passesDeclaredJobScreening } from '@/lib/tester-eligibility'
+import { COHORT_BLOCKER_MESSAGES, evaluateCohortReadiness } from '@/lib/cohort-readiness'
 
 // GET - Get single job
 export async function GET(
@@ -88,12 +89,13 @@ export async function GET(
         minimumAndroidVersion: job.minAndroidVersion,
       })
     )
+    // A developer sees a tester's email once that tester is approved, so they can add them in Play Console.
+    // Applications approved before this rule existed have no selection flags, so the status decides.
+    const EMAIL_VISIBLE_STATUSES = ['APPROVED', 'OPTED_IN', 'VERIFIED', 'SCHEDULED', 'TESTING', 'COMPLETED']
     const canSeeTesterEmail = (application: typeof job.applications[number]) =>
       currentUser.role === 'ADMIN' ||
       (job.developerId === currentUser.userId &&
-        application.cohortSelected &&
-        application.contactReleasedAt !== null &&
-        !['REJECTED', 'INELIGIBLE'].includes(application.status) &&
+        EMAIL_VISIBLE_STATUSES.includes(application.status) &&
         application.issueReports.length === 0)
     const safeJob = {
       ...job,
@@ -109,6 +111,30 @@ export async function GET(
         }
       }),
     }
+    const readiness = evaluateCohortReadiness({
+      testersNeeded: job.testersNeeded,
+      supportedCountries: job.supportedCountries,
+      minAndroidVersion: job.minAndroidVersion,
+      activeTestingCount: job.applications.filter((application) =>
+        application.status === 'TESTING' && application.testingPausedAt === null
+      ).length,
+      completedSelectedCount: job.applications.filter((application) =>
+        application.cohortSelected && application.status === 'COMPLETED'
+      ).length,
+      applications: job.applications.map((application) => ({
+        id: application.id,
+        status: application.status,
+        cohortSelected: application.cohortSelected,
+        optInVerified: application.optInVerified,
+        testingPausedAt: application.testingPausedAt,
+        openIssueCount: application.issueReports.length,
+        payment: application.payment,
+        tester: {
+          countryCode: application.tester.countryCode,
+          androidVersion: application.tester.deviceInfo?.androidVersion,
+        },
+      })),
+    })
     return NextResponse.json({
       success: true,
       job: safeJob,
@@ -118,6 +144,10 @@ export async function GET(
         selected: eligibleApplications.filter((application) => application.cohortSelected).length,
         paused: eligibleApplications.filter((application) => application.status === 'TESTING' && application.testingPausedAt !== null).length,
         contactReleased: eligibleApplications.some((application) => application.contactReleasedAt !== null),
+        verifiedCount: readiness.verifiedCount,
+        canStart: readiness.canStart,
+        pausedToResume: readiness.pausedIds.length,
+        blockers: readiness.blockers.map((blocker) => ({ code: blocker, message: COHORT_BLOCKER_MESSAGES[blocker] })),
       },
     })
   } catch (error) {
