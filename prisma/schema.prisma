@@ -143,6 +143,13 @@ model User {
   threadMessages    ThreadMessage[]
   jobGroupMemberships JobGroupMember[]
   jobGroupMessages  JobGroupMessage[]
+  communityPosts    CommunityPost[]
+  communityComments CommunityComment[]
+  communityLikes    CommunityLike[]
+  communityReports  CommunityReport[]
+  communityMute     CommunityMute?
+  communityBlocksMade     CommunityBlock[] @relation("CommunityBlocker")
+  communityBlocksReceived CommunityBlock[] @relation("CommunityBlocked")
   applicationPausesInitiated  ApplicationPause[] @relation("ApplicationPauseInitiator")
   applicationResumesInitiated ApplicationPause[] @relation("ApplicationPauseResumeInitiator")
   paymentAllocationActions PaymentAllocationHistory[]
@@ -278,6 +285,7 @@ model TestingJob {
   conversationThreads ConversationThread[]
   groupMembers      JobGroupMember[]
   groupMessages     JobGroupMessage[]
+  communityPost     CommunityPost?
   
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
@@ -766,6 +774,141 @@ model JobGroupMessage {
 
   @@index([jobId, createdAt])
   @@index([authorId])
+}
+
+enum CommunityPostKind {
+  POST
+  ANNOUNCEMENT
+  JOB
+}
+
+enum CommunityContentStatus {
+  VISIBLE
+  HIDDEN
+  DELETED
+}
+
+enum CommunityReportStatus {
+  OPEN
+  DISMISSED
+  ACTIONED
+}
+
+// In-app community feed. Counts are stored on the post so the feed never has to count rows.
+model CommunityPost {
+  id             String                 @id @default(cuid())
+  authorId       String
+  author         User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  kind           CommunityPostKind      @default(POST)
+  title          String?
+  body           String                 @db.Text
+  // Set only for automatic job posts; unique so a job can never be posted twice.
+  jobId          String?                @unique
+  job            TestingJob?            @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  pinned         Boolean                @default(false)
+  status         CommunityContentStatus @default(VISIBLE)
+  likeCount      Int                    @default(0)
+  commentCount   Int                    @default(0)
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  comments       CommunityComment[]
+  likes          CommunityLike[]
+  reports        CommunityReport[]
+
+  @@index([status, pinned, createdAt])
+  @@index([kind, status, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model CommunityComment {
+  id        String                 @id @default(cuid())
+  postId    String
+  post      CommunityPost          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User                   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  body      String                 @db.Text
+  status    CommunityContentStatus @default(VISIBLE)
+  createdAt DateTime               @default(now())
+  reports   CommunityReport[]
+
+  @@index([postId, createdAt])
+  @@index([authorId, createdAt])
+}
+
+model CommunityLike {
+  id        String        @id @default(cuid())
+  postId    String
+  post      CommunityPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime      @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId])
+}
+
+// A report is about one post or one comment. Each person can report the same item only once.
+model CommunityReport {
+  id          String                @id @default(cuid())
+  reporterId  String
+  reporter    User                  @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  postId      String?
+  post        CommunityPost?        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  commentId   String?
+  comment     CommunityComment?     @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reason      String
+  status      CommunityReportStatus @default(OPEN)
+  handledById String?
+  handledAt   DateTime?
+  createdAt   DateTime              @default(now())
+
+  @@unique([reporterId, postId])
+  @@unique([reporterId, commentId])
+  @@index([status, createdAt])
+}
+
+// A muted person can read the community but not write. Null mutedUntil means until an admin lifts it.
+model CommunityMute {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mutedById  String
+  reason     String
+  mutedUntil DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+// The blocker no longer sees the blocked person's posts and comments.
+model CommunityBlock {
+  id        String   @id @default(cuid())
+  blockerId String
+  blocker   User     @relation("CommunityBlocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User     @relation("CommunityBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+model CommunityModerationLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  targetType String
+  targetId   String
+  reason     String
+  createdAt  DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetType, targetId])
+}
+
+// Small cache table, for example the member count, so busy pages do not recount users.
+model CommunityStat {
+  key       String   @id
+  value     Int
+  updatedAt DateTime @default(now())
 }
 
 model AdminAuditLog {

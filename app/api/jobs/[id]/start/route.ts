@@ -295,6 +295,22 @@ export async function POST(
       }
     })
 
+    try {
+      const groupMessage = result.scheduled
+        ? `📅 Testing is scheduled for ${dateLabel} (${TESTING_DAY_TIMEZONE}).`
+        : `🚀 Testing has started today (${dateLabel}).`
+      await prisma.jobGroupMessage.create({
+        data: {
+          jobId: id,
+          authorId: user.userId,
+          authorRole: user.role,
+          body: groupMessage,
+        },
+      })
+    } catch (groupError) {
+      console.error('Failed to post start update to group chat:', groupError)
+    }
+
     return NextResponse.json({
       success: true,
       scheduled: result.scheduled,

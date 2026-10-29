@@ -14,7 +14,8 @@ import {
   Shield,
   X,
   Trophy,
-  MessageSquare
+  MessageSquare,
+  Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -113,7 +114,8 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
     : testerLinks
 
   const messagesLink = { href: '/dashboard/messages', label: 'Messages', icon: MessageSquare }
-  const allLinks = [...links.slice(0, -1), messagesLink, ...links.slice(-1)]
+  const communityLink = { href: '/dashboard/community', label: 'Community', icon: Users }
+  const allLinks = [...links.slice(0, -1), communityLink, messagesLink, ...links.slice(-1)]
 
   return (
     <>

@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ videoId: string }> }
 ) {
   try {
@@ -40,12 +40,15 @@ export async function GET(
     if (!result || result.statusCode !== 200) {
       return NextResponse.json({ error: 'Video file not found' }, { status: 404 })
     }
+    const shouldDownload = new URL(request.url).searchParams.get('download') === '1'
 
     return new NextResponse(result.stream, {
       headers: {
         'Content-Type': video.contentType,
         'Content-Length': String(result.blob.size),
-        'Content-Disposition': `attachment; filename="mission-recording.${video.contentType === 'video/quicktime' ? 'mov' : 'mp4'}"`,
+        'Content-Disposition': shouldDownload
+          ? `attachment; filename="mission-recording.${video.contentType === 'video/quicktime' ? 'mov' : 'mp4'}"`
+          : 'inline',
         'Cache-Control': 'private, no-store',
         'X-Content-Type-Options': 'nosniff',
       },
