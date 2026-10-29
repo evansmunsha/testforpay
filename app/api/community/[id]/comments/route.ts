@@ -9,7 +9,8 @@ import {
   isRateLimited,
   validateCommentBody,
 } from '@/lib/community-rules'
-import { countRecent, displayAuthor, loadMute } from '@/lib/community'
+import { communityPostPath, countRecent, displayAuthor, loadMute } from '@/lib/community'
+import { sendNotification } from '@/lib/notifications'
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -57,6 +58,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       }),
       prisma.communityPost.update({ where: { id }, data: { commentCount: { increment: 1 } } }),
     ])
+
+    if (post.authorId !== user.userId) {
+      try {
+        const who = displayAuthor(comment.author).name
+        await sendNotification({
+          userId: post.authorId,
+          title: 'New comment on your post',
+          body: `${who}: ${text.value.slice(0, 100)}`,
+          url: communityPostPath(id),
+          type: 'community_comment',
+        })
+      } catch (notifyError) {
+        console.error('Community comment notification failed:', notifyError)
+      }
+    }
 
     return NextResponse.json(
       {

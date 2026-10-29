@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Heart, MessageCircle, Pin, Users, Megaphone, Briefcase } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -56,7 +56,10 @@ export function CommunityFeed() {
   const [busy, setBusy] = useState(false)
   const [postError, setPostError] = useState('')
 
+  const cursorLoaded = useRef(false)
+
   const load = useCallback(async (nextTab: string, after?: string | null) => {
+    cursorLoaded.current = !!after
     setLoading(true)
     try {
       const query = new URLSearchParams({ tab: nextTab })
@@ -81,6 +84,14 @@ export function CommunityFeed() {
   }, [])
 
   useEffect(() => { void load(tab) }, [load, tab])
+
+  // Refresh counts quietly while the first page is showing and nobody is typing.
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible' && !cursorLoaded.current && !body.trim()) void load(tab)
+    }, 20000)
+    return () => clearInterval(timer)
+  }, [load, tab, body])
 
   const publish = async () => {
     setBusy(true)

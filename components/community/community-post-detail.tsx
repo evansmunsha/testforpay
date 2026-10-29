@@ -47,7 +47,11 @@ export function CommunityPostDetail({ postId }: { postId: string }) {
     }
   }, [postId])
 
-  useEffect(() => { void load() }, [load])
+  useEffect(() => {
+    void load()
+    const timer = setInterval(() => { if (document.visibilityState === 'visible') void load() }, 15000)
+    return () => clearInterval(timer)
+  }, [load])
 
   const comment = async () => {
     setBusy(true)
