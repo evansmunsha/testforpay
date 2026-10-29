@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import type { Prisma } from '@/generated/prisma/client'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
@@ -15,6 +15,10 @@ import {
 import {
   FEED_PAGE_SIZE,
   countRecent,
+  displayAuthor,
+  communityPostPath,
+  everyoneToNotify,
+  notifyUsers,
   getMemberCount,
   likedPostIds,
   loadBlockedIds,
@@ -104,6 +108,23 @@ export async function POST(request: Request) {
     const created = await prisma.communityPost.create({
       data: { authorId: user.userId, kind, title: title.value, body: text.value },
       select: postSelect,
+    })
+
+    const post = created
+    after(async () => {
+      try {
+        const ids = await everyoneToNotify(user.userId)
+        const isAnnouncement = kind === 'ANNOUNCEMENT'
+        const who = displayAuthor(post.author).name
+        await notifyUsers(ids, {
+          title: isAnnouncement ? '📣 New announcement' : 'New post in Community',
+          body: isAnnouncement && post.title ? post.title : `${who}: ${text.value.slice(0, 100)}`,
+          url: communityPostPath(post.id),
+          type: isAnnouncement ? 'community_announcement' : 'community_post',
+        })
+      } catch (notifyError) {
+        console.error('Community post notification failed:', notifyError)
+      }
     })
 
     return NextResponse.json({ success: true, post: serializePost(created, viewer, new Set()) }, { status: 201 })

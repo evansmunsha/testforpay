@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import {
@@ -9,8 +9,7 @@ import {
   isRateLimited,
   validateCommentBody,
 } from '@/lib/community-rules'
-import { communityPostPath, countRecent, displayAuthor, loadMute } from '@/lib/community'
-import { sendNotification } from '@/lib/notifications'
+import { communityPostPath, countRecent, displayAuthor, loadMute, notifyUsers } from '@/lib/community'
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -59,12 +58,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       prisma.communityPost.update({ where: { id }, data: { commentCount: { increment: 1 } } }),
     ])
 
-    if (post.authorId !== user.userId) {
+    after(async () => {
       try {
+        const earlier = await prisma.communityComment.findMany({
+          where: { postId: id, status: 'VISIBLE' },
+          select: { authorId: true },
+          distinct: ['authorId'],
+          take: 200,
+        })
+        const blockers = await prisma.communityBlock.findMany({
+          where: { blockedId: user.userId },
+          select: { blockerId: true },
+        })
+        const blockedBy = new Set(blockers.map((row) => row.blockerId))
+        const recipients = [...new Set([post.authorId, ...earlier.map((row) => row.authorId)])].filter(
+          (recipient) => recipient !== user.userId && !blockedBy.has(recipient)
+        )
         const who = displayAuthor(comment.author).name
-        await sendNotification({
-          userId: post.authorId,
-          title: 'New comment on your post',
+        await notifyUsers(recipients, {
+          title: 'New comment in Community',
           body: `${who}: ${text.value.slice(0, 100)}`,
           url: communityPostPath(id),
           type: 'community_comment',
@@ -72,7 +84,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       } catch (notifyError) {
         console.error('Community comment notification failed:', notifyError)
       }
-    }
+    })
 
     return NextResponse.json(
       {

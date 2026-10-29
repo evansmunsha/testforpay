@@ -6,9 +6,32 @@ import {
   windowStart,
   type CommunityViewer,
 } from '@/lib/community-rules'
+import { sendNotification } from '@/lib/notifications'
 
 export const MEMBER_COUNT_KEY = 'members'
 export const FEED_PAGE_SIZE = 20
+const NOTIFY_BATCH_SIZE = 10
+
+/** Sends one notification to many people in small batches. One failure never stops the rest. */
+export async function notifyUsers(
+  userIds: string[],
+  content: { title: string; body: string; url: string; type: string }
+) {
+  for (let i = 0; i < userIds.length; i += NOTIFY_BATCH_SIZE) {
+    const batch = userIds.slice(i, i + NOTIFY_BATCH_SIZE)
+    await Promise.allSettled(batch.map((userId) => sendNotification({ userId, ...content })))
+  }
+}
+
+/** Everyone active, except the author and anyone who blocked the author. */
+export async function everyoneToNotify(authorId: string): Promise<string[]> {
+  const [users, blockers] = await Promise.all([
+    prisma.user.findMany({ where: { suspended: false, id: { not: authorId } }, select: { id: true } }),
+    prisma.communityBlock.findMany({ where: { blockedId: authorId }, select: { blockerId: true } }),
+  ])
+  const blockedBy = new Set(blockers.map((row) => row.blockerId))
+  return users.map((user) => user.id).filter((id) => !blockedBy.has(id))
+}
 
 export function communityPostPath(postId: string) {
   return `/dashboard/community/${postId}`
