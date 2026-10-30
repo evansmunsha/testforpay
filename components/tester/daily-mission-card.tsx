@@ -21,6 +21,7 @@ interface DailyMissionCardProps {
   existingVideoId?: string | null
   videoDeleteAfter?: string | null
   jobName?: string
+  isCatchUp?: boolean
   onSubmit: (content: string, screenshotUrl?: string, video?: UploadedMissionVideo) => Promise<void>
 }
 
@@ -34,6 +35,7 @@ export function DailyMissionCard({
   existingVideoId,
   videoDeleteAfter,
   jobName,
+  isCatchUp,
   onSubmit,
 }: DailyMissionCardProps) {
   const [content, setContent] = useState('')
@@ -101,7 +103,7 @@ export function DailyMissionCard({
               </span>
             )}
             <Badge variant="secondary" className="bg-white text-xs">
-              Today
+              {isCatchUp ? 'Catching up' : 'Today'}
             </Badge>
           </div>
         </div>

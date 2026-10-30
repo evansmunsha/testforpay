@@ -8,8 +8,7 @@ import { recordAdminAction } from '@/lib/admin-audit'
 import { passesDeclaredJobScreening } from '@/lib/tester-eligibility'
 import { allocateEscrowSlot, platformFeePerTester } from '@/lib/escrow-allocation'
 import { sendApplicationApprovedEmail } from '@/lib/email'
-import { awardTrainingPoints } from '@/lib/training-points'
-import { getTestingEndForStartDay, startOfTestingDay } from '@/lib/mission-clock'
+import { awardTrainingPoints, submittedAllMissions } from '@/lib/training-points'
 
 // GET - Get single application
 export async function GET(
@@ -468,13 +467,13 @@ export async function PATCH(
         })
         if (updated.job.isTraining) {
           // Training testers start on their own, no cohort and no waiting.
-          const startDay = startOfTestingDay(now)
+          const startAt = now
           const started = await tx.application.update({
             where: { id },
             data: {
               status: 'TESTING',
-              testingStartDate: startDay,
-              testingEndDate: getTestingEndForStartDay(startDay, updated.job.testDuration),
+              testingStartDate: startAt,
+              testingEndDate: new Date(startAt.getTime() + updated.job.testDuration * 24 * 60 * 60 * 1000),
               testingPausedAt: null,
               cohortSelected: true,
             },
@@ -587,11 +586,19 @@ export async function PATCH(
       let completedTrainingPoints = 0
       if (updatedApplication.job.isTraining) {
         try {
-          const award = await prisma.$transaction((tx) => awardTrainingPoints(tx, {
-            userId: updatedApplication.testerId,
-            applicationId: updatedApplication.id,
-            kind: 'COMPLETED',
-          }))
+          const award = await prisma.$transaction(async (tx) => {
+            const allDone = await submittedAllMissions(tx, {
+              jobId: updatedApplication.jobId,
+              testerId: updatedApplication.testerId,
+              testDuration: updatedApplication.job.testDuration,
+            })
+            if (!allDone) return { awarded: false, points: 0 }
+            return awardTrainingPoints(tx, {
+              userId: updatedApplication.testerId,
+              applicationId: updatedApplication.id,
+              kind: 'COMPLETED',
+            })
+          })
           completedTrainingPoints = award.points
         } catch (trainingError) {
           console.error('⚠️ Failed to award training points on completion:', trainingError)
@@ -677,7 +684,7 @@ export async function PATCH(
         message: updatedApplication.job.isTraining
           ? completedTrainingPoints > 0
             ? `Training completed. ${completedTrainingPoints} training points awarded.`
-            : 'Training completed.'
+            : 'Training completed. No completion points because some daily missions were not submitted.'
           : 'Application marked as completed. Payment will be processed soon.',
       })
     }

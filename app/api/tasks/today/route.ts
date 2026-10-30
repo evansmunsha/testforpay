@@ -56,9 +56,22 @@ export async function GET() {
       )
     }
 
-    const todayTask = application.job.dailyTasks.find(
-      (t) => t.dayNumber === dayNumber
+    const currentDay = dayNumber
+    let todayTask = application.job.dailyTasks.find(
+      (t) => t.dayNumber === currentDay
     )
+
+    // Training testers can catch up: show the oldest unfinished mission first.
+    if (application.job.isTraining) {
+      const openTasks = application.job.dailyTasks.filter((t) => t.dayNumber <= currentDay)
+      const done = await prisma.taskSubmission.findMany({
+        where: { testerId: currentUser.userId, taskId: { in: openTasks.map((t) => t.id) } },
+        select: { taskId: true },
+      })
+      const doneIds = new Set(done.map((s) => s.taskId))
+      const firstMissed = openTasks.find((t) => !doneIds.has(t.id))
+      if (firstMissed) todayTask = firstMissed
+    }
 
     if (!todayTask) {
       return NextResponse.json(
@@ -80,7 +93,9 @@ export async function GET() {
 
     return NextResponse.json({
       task: todayTask,
-      dayNumber,
+      dayNumber: todayTask.dayNumber,
+      currentDay,
+      isCatchUp: todayTask.dayNumber < currentDay,
       totalDays: application.job.testDuration,
       isCompleted: !!submission,
       submission: submission ?? null,

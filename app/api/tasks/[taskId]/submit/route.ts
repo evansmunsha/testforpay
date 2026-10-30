@@ -43,6 +43,7 @@ export async function POST(
         job: {
           select: {
             testDuration: true,
+            isTraining: true,
             applications: {
               where: {
                 testerId: currentUser.userId,
@@ -92,10 +93,10 @@ export async function POST(
     if (
       missionDay === null ||
       missionDay > task.job.testDuration ||
-      task.dayNumber !== missionDay
+      !(task.job.isTraining ? task.dayNumber <= missionDay : task.dayNumber === missionDay)
     ) {
       return NextResponse.json(
-        { error: 'Only the mission for the current testing day can be submitted' },
+        { error: 'This mission is not open yet, or the testing period has ended' },
         { status: 400 }
       )
     }
@@ -149,7 +150,7 @@ export async function POST(
         if (
           currentMissionDay === null ||
           currentMissionDay > task.job.testDuration ||
-          task.dayNumber !== currentMissionDay
+          !(task.job.isTraining ? task.dayNumber <= currentMissionDay : task.dayNumber === currentMissionDay)
         ) {
           throw new Error('MISSION_NOT_CURRENT')
         }

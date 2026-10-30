@@ -3,7 +3,7 @@ import prisma from '@/lib/prisma'
 import { processPaymentById } from '@/lib/payouts'
 import { sendJobCompletedEmail, sendTestimonialRequestEmail } from '@/lib/email'
 import { finishCronExecution, startCronExecution } from '@/lib/cron-monitor'
-import { awardTrainingPoints } from '@/lib/training-points'
+import { awardTrainingPoints, submittedAllMissions } from '@/lib/training-points'
 
 // This endpoint should be called by a cron service (e.g., Vercel Cron)
 // Runs daily to auto-complete testing applications after testing period expires
@@ -129,13 +129,23 @@ export async function GET(request: Request) {
         }
 
         if (application.job.isTraining) {
-          const award = await prisma.$transaction((tx) => awardTrainingPoints(tx, {
-            userId: application.testerId,
-            applicationId: application.id,
-            kind: 'COMPLETED',
-          }))
+          const award = await prisma.$transaction(async (tx) => {
+            const allDone = await submittedAllMissions(tx, {
+              jobId: application.jobId,
+              testerId: application.testerId,
+              testDuration: application.job.testDuration,
+            })
+            if (!allDone) return { awarded: false, points: 0 }
+            return awardTrainingPoints(tx, {
+              userId: application.testerId,
+              applicationId: application.id,
+              kind: 'COMPLETED',
+            })
+          })
           if (award.awarded) {
             console.log(`✅ Training points awarded on auto-complete: ${application.id} (+${award.points})`)
+          } else {
+            console.log(`ℹ️ No completion points (missions missing): ${application.id}`)
           }
         } else {
           // Ensure Payment record exists and is in PROCESSING status (ready for payout)

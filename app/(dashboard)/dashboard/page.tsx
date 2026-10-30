@@ -319,6 +319,7 @@ function TesterDashboard() {
     task: { id: string; taskText: string }
     dayNumber: number
     totalDays: number
+    isCatchUp?: boolean
     isCompleted: boolean
     submission: { content: string; video: { id: string; deletedAt: string | null } | null } | null
     videoDeleteAfter: string | null
@@ -491,6 +492,7 @@ function TesterDashboard() {
             existingVideoId={missionData.submission?.video?.deletedAt ? null : missionData.submission?.video?.id ?? null}
             videoDeleteAfter={missionData.videoDeleteAfter}
             jobName={missionData.jobName}
+            isCatchUp={missionData.isCatchUp}
             onSubmit={handleMissionSubmit}
           />
         </div>
