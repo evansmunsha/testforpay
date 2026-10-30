@@ -103,7 +103,7 @@ export async function POST(
 
     // Calculate payouts for each category
     for (const app of completedTesters) {
-      const amount = Math.round(paymentPerTester * 1.0) // 100% in cents
+      const amount = job.isTraining ? 0 : Math.round(paymentPerTester * 1.0) // 100% in cents
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
@@ -114,7 +114,7 @@ export async function POST(
     }
 
     for (const app of testingTesters) {
-      const amount = Math.round(paymentPerTester * 0.75) // 75% in cents
+      const amount = job.isTraining ? 0 : Math.round(paymentPerTester * 0.75) // 75% in cents
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
@@ -125,7 +125,7 @@ export async function POST(
     }
 
     for (const app of verifiedTesters) {
-      const amount = Math.round(paymentPerTester * 0.50) // 50% in cents
+      const amount = job.isTraining ? 0 : Math.round(paymentPerTester * 0.50) // 50% in cents
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
@@ -136,7 +136,7 @@ export async function POST(
     }
 
     for (const app of optedInTesters) {
-      const amount = Math.round(paymentPerTester * 0.25) // 25% in cents
+      const amount = job.isTraining ? 0 : Math.round(paymentPerTester * 0.25) // 25% in cents
       totalPayoutToTesters += amount
       testerPayouts.push({
         testerId: app.testerId,
@@ -158,15 +158,15 @@ export async function POST(
 
     // Calculate developer refund
     const totalJobBudget = job.totalBudget + job.platformFee
-    const platformFeeOnPayouts = Math.round(totalPayoutToTesters * 0.15) // Platform keeps 15% of payouts
-    const developerRefund = totalJobBudget - totalPayoutToTesters - platformFeeOnPayouts
+    const platformFeeOnPayouts = job.isTraining ? 0 : Math.round(totalPayoutToTesters * 0.15) // Platform keeps 15% of payouts
+    const developerRefund = job.isTraining ? 0 : totalJobBudget - totalPayoutToTesters - platformFeeOnPayouts
 
     // Process payments and refunds
     let refundIssued = false
     let refundId: string | null = null
     const payoutResults: Array<{ testerId: string; success: boolean; error?: string }> = []
 
-    if (job.status === 'ACTIVE') {
+    if (job.status === 'ACTIVE' && !job.isTraining) {
       const paymentIntentId = job.stripePaymentIntent
 
       // First, process payouts to testers who earned money
@@ -354,6 +354,8 @@ export async function POST(
         refundId: refundId,
         message: refundIssued
           ? `Partial refund of €${(developerRefund / 100).toFixed(2)} has been processed.`
+          : job.isTraining
+            ? 'Training job cancelled. No payments or refunds are involved.'
           : developerRefund <= 0
             ? 'No refund - all budget used for tester compensation'
             : job.status === 'DRAFT'
@@ -362,7 +364,9 @@ export async function POST(
       },
       payoutResults,
       message: activeTestersCount > 0
-        ? `Job cancelled. ${testerPayouts.filter(p => p.amount > 0).length} testers compensated based on progress.`
+        ? job.isTraining
+          ? `Training job cancelled. ${activeTestersCount} tester applications were closed with no payouts.`
+          : `Job cancelled. ${testerPayouts.filter(p => p.amount > 0).length} testers compensated based on progress.`
         : 'Job cancelled successfully',
     })
   } catch (error) {

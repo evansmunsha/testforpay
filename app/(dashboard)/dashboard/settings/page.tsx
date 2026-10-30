@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/hooks/use-auth'
+import { trainingLevel } from '@/lib/training-rules'
 import { DollarSign, CheckCircle, Loader2, AlertTriangle } from 'lucide-react'
 
 export default function SettingsPage() {
@@ -50,6 +51,7 @@ export default function SettingsPage() {
   const [muteReplies, setMuteReplies] = useState(false)
   const [prefLoading, setPrefLoading] = useState(false)
   const [prefMessage, setPrefMessage] = useState('')
+  const training = trainingLevel(user?.trainingPoints || 0)
 
   useEffect(() => {
     if (user) {
@@ -375,6 +377,19 @@ export default function SettingsPage() {
               </span>
             </div>
           </div>
+
+          {user?.role === 'TESTER' && (
+            <div className="space-y-2">
+              <Label>Training Progress</Label>
+              <div className="rounded-md border bg-amber-50 p-3 text-sm text-amber-900">
+                <p className="font-medium">Badge: {training.name}</p>
+                <p className="mt-1">
+                  Points: {user?.trainingPoints || 0}
+                  {training.nextLevel ? ` · ${training.pointsToNext} to ${training.nextLevel}` : ' · Top level reached'}
+                </p>
+              </div>
+            </div>
+          )}
 
           <Button onClick={handleSaveProfile} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}

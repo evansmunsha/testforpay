@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { getCurrentUser } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { trainingLevel } from '@/lib/training-rules'
 
 export async function GET() {
   try {
@@ -52,11 +53,22 @@ export async function GET() {
       }
     })
 
+    const tester = await prisma.user.findUnique({
+      where: { id: currentUser.userId },
+      select: { trainingPoints: true },
+    })
+    const points = tester?.trainingPoints ?? 0
+    const level = trainingLevel(points)
+
     return NextResponse.json({
       activeTests,
       completedTests,
       pendingApplications,
-      totalEarned: payments._sum.amount || 0
+      totalEarned: payments._sum.amount || 0,
+      trainingPoints: points,
+      trainingBadge: level.name,
+      trainingPointsToNext: level.pointsToNext,
+      trainingNextLevel: level.nextLevel,
     })
 
   } catch (error) {

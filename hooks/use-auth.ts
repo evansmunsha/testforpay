@@ -16,6 +16,7 @@ interface User {
   createdAt: string
   stripeAccountId: string | null
   muteDeveloperReplies?: boolean
+  trainingPoints?: number
 }
 
 const HEARTBEAT_INTERVAL_MS = 30 * 1000

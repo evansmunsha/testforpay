@@ -23,6 +23,7 @@ interface JobCardProps {
     appName: string
     appDescription: string
     appCategory: string | null
+    isTraining?: boolean
     testersNeeded: number
     testDuration: number
     minAndroidVersion: string | null
@@ -65,6 +66,11 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
                     {job.appCategory}
                   </Badge>
                 )}
+                {job.isTraining && (
+                  <Badge className="shrink-0 bg-amber-100 text-amber-900 hover:bg-amber-100">
+                    Training
+                  </Badge>
+                )}
               </div>
               <CardDescription className={expanded ? '' : 'line-clamp-2'}>
                 {job.appDescription}
@@ -91,7 +97,9 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             </div>
             <div>
               <p className="text-sm text-gray-600">Payment</p>
-              <p className="font-bold text-green-600">{formatEurFromCents(job.paymentPerTester)}</p>
+              <p className="font-bold text-green-600">
+                {job.isTraining ? 'No cash payout' : formatEurFromCents(job.paymentPerTester)}
+              </p>
             </div>
           </div>
 
@@ -162,7 +170,9 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              Get paid {formatEurFromCents(job.paymentPerTester)}
+              {job.isTraining
+                ? 'Africa only. Start on your own and earn training points'
+                : `Get paid ${formatEurFromCents(job.paymentPerTester)}`}
             </li>
           </ul>
         </div>
@@ -184,7 +194,11 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
             disabled={loading}
             className="flex-1"
           >
-            {loading ? 'Applying...' : `Apply Now • ${formatEurFromCents(job.paymentPerTester)}`}
+            {loading
+              ? 'Applying...'
+              : job.isTraining
+                ? 'Request to Join Training'
+                : `Apply Now • ${formatEurFromCents(job.paymentPerTester)}`}
           </Button>
         )}
         <Button variant="outline" size="icon" asChild>
@@ -217,4 +231,3 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
     </Card>
   )
 }
-

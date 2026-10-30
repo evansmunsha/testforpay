@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Star, TrendingUp, Briefcase, DollarSign, Calendar } from 'lucide-react'
+import { ArrowLeft, Star, TrendingUp, Briefcase, DollarSign, Calendar, Trophy } from 'lucide-react'
 import Link from 'next/link'
 import { TesterActions } from '@/components/applications/tester-actions'
 import { formatEurFromCents } from '@/lib/currency'
@@ -21,6 +21,13 @@ interface TesterProfile {
   /** Total earnings in integer cents (EUR). */
   totalEarnings: Cents | null
   averageRating: number | null
+  trainingPoints: number | null
+  trainingLevel: {
+    name: string
+    points: number
+    nextLevel: string | null
+    pointsToNext: number
+  }
   createdAt: string
 }
 
@@ -188,6 +195,19 @@ export default function TesterProfilePage() {
                       )}
                 </p>
               </div>
+            </div>
+
+            <div className="rounded-lg border bg-amber-50/80 p-4">
+              <div className="flex items-center gap-2 text-amber-900">
+                <Trophy className="h-4 w-4" />
+                <p className="text-sm font-semibold">Training Badge: {profile.trainingLevel?.name || 'Rookie'}</p>
+              </div>
+              <p className="mt-2 text-sm text-amber-800">
+                {profile.trainingPoints || 0} training points
+                {profile.trainingLevel?.nextLevel
+                  ? ` · ${profile.trainingLevel.pointsToNext} to ${profile.trainingLevel.nextLevel}`
+                  : ' · Top level reached'}
+              </p>
             </div>
 
             {/* Developer-only actions */}

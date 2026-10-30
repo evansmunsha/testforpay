@@ -8,6 +8,8 @@ import { recordAdminAction } from '@/lib/admin-audit'
 import { passesDeclaredJobScreening } from '@/lib/tester-eligibility'
 import { allocateEscrowSlot, platformFeePerTester } from '@/lib/escrow-allocation'
 import { sendApplicationApprovedEmail } from '@/lib/email'
+import { awardTrainingPoints } from '@/lib/training-points'
+import { getTestingEndForStartDay, startOfTestingDay } from '@/lib/mission-clock'
 
 // GET - Get single application
 export async function GET(
@@ -258,6 +260,7 @@ export async function PATCH(
             where: { id: application.jobId },
             select: {
               status: true,
+              isTraining: true,
               testersNeeded: true,
               paymentPerTester: true,
               platformFee: true,
@@ -277,16 +280,18 @@ export async function PATCH(
             throw new Error('JOB_NOT_RECRUITING')
           }
 
-          // Each approved tester holds one paid slot; there are never more than testersNeeded.
-          await allocateEscrowSlot(tx, {
-            jobId: application.jobId,
-            applicationId: id,
-            actorId: currentUser.userId,
-            testersNeeded: lockedJob.testersNeeded,
-            paymentPerTester: lockedJob.paymentPerTester,
-            platformFee: platformFeePerTester(lockedJob.platformFee, lockedJob.testersNeeded),
-            reason: 'Reused an unused escrowed tester slot for a newly approved tester before testing started.',
-          })
+          if (!lockedJob.isTraining) {
+            // Each approved tester holds one paid slot; there are never more than testersNeeded.
+            await allocateEscrowSlot(tx, {
+              jobId: application.jobId,
+              applicationId: id,
+              actorId: currentUser.userId,
+              testersNeeded: lockedJob.testersNeeded,
+              paymentPerTester: lockedJob.paymentPerTester,
+              platformFee: platformFeePerTester(lockedJob.platformFee, lockedJob.testersNeeded),
+              reason: 'Reused an unused escrowed tester slot for a newly approved tester before testing started.',
+            })
+          }
 
           return tx.application.update({
             where: { id },
@@ -314,7 +319,9 @@ export async function PATCH(
           JOB_NOT_RECRUITING: { status: 409, message: 'This job is not recruiting testers right now.' },
           NO_FREE_ESCROW_SLOT: {
             status: 409,
-            message: 'All paid tester spots are already taken. Close an approved tester who cannot install the app first, then approve this one.',
+            message: application.job.isTraining
+              ? 'All training tester spots are already taken. Close a blocked tester first, then approve this one.'
+              : 'All paid tester spots are already taken. Close an approved tester who cannot install the app first, then approve this one.',
           },
           ESCROW_SLOT_CHANGED: { status: 409, message: 'A paid spot changed while approving. Refresh and try again.' },
           PAYMENT_NOT_ESCROWED: { status: 409, message: 'This tester has a payment that is not safely held. Contact support.' },
@@ -330,23 +337,27 @@ export async function PATCH(
       try {
         await sendNotification({
           userId: application.testerId,
-          title: 'Application Approved! 🎉',
-          body: `Your application to test "${application.job.appName}" has been approved. Open the Play Store link in your dashboard and upload a screenshot showing the Install button.`,
+          title: application.job.isTraining ? 'Training Request Approved! 🎉' : 'Application Approved! 🎉',
+          body: application.job.isTraining
+            ? `Your request to join training for "${application.job.appName}" is approved. Open the Play Store link in your dashboard and upload a screenshot showing the Install button.`
+            : `Your application to test "${application.job.appName}" has been approved. Open the Play Store link in your dashboard and upload a screenshot showing the Install button.`,
           url: '/dashboard/applications',
           type: 'application_approved',
         })
       } catch (notifyError) {
         console.error('Failed to send approval notification:', notifyError)
       }
-      try {
-        await sendApplicationApprovedEmail(updatedApplication.tester.email, {
-          testerName: updatedApplication.tester.name || 'Tester',
-          appName: application.job.appName,
-          googlePlayLink: application.job.googlePlayLink,
-          paymentCents: application.job.paymentPerTester,
-        })
-      } catch (emailError) {
-        console.error('Failed to send approval email:', emailError)
+      if (!application.job.isTraining) {
+        try {
+          await sendApplicationApprovedEmail(updatedApplication.tester.email, {
+            testerName: updatedApplication.tester.name || 'Tester',
+            appName: application.job.appName,
+            googlePlayLink: application.job.googlePlayLink,
+            paymentCents: application.job.paymentPerTester,
+          })
+        } catch (emailError) {
+          console.error('Failed to send approval email:', emailError)
+        }
       }
 
       return NextResponse.json({
@@ -419,7 +430,9 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         application: updatedApplication,
-        message: 'Application closed. The paid spot is free for another tester.',
+        message: application.job.isTraining
+          ? 'Training request closed. The training spot is free for another tester.'
+          : 'Application closed. The paid spot is free for another tester.',
       })
     }
 
@@ -434,22 +447,48 @@ export async function PATCH(
 
       const now = new Date()
 
-      const updatedApplication = await prisma.application.update({
-        where: { id },
-        data: {
-          status: 'VERIFIED',
-          optInVerified: true,
-          verifiedAt: now,
-        },
-        include: {
-          tester: {
-            select: {
-              name: true,
-            },
+      let verifiedPointsAwarded = 0
+      const updatedApplication = await prisma.$transaction(async (tx) => {
+        const updated = await tx.application.update({
+          where: { id },
+          data: {
+            status: 'VERIFIED',
+            optInVerified: true,
+            verifiedAt: now,
           },
-          job: true,
-          payment: true,
-        },
+          include: {
+            tester: {
+              select: {
+                name: true,
+              },
+            },
+            job: true,
+            payment: true,
+          },
+        })
+        if (updated.job.isTraining) {
+          // Training testers start on their own, no cohort and no waiting.
+          const startDay = startOfTestingDay(now)
+          const started = await tx.application.update({
+            where: { id },
+            data: {
+              status: 'TESTING',
+              testingStartDate: startDay,
+              testingEndDate: getTestingEndForStartDay(startDay, updated.job.testDuration),
+              testingPausedAt: null,
+              cohortSelected: true,
+            },
+            include: { tester: { select: { name: true } }, job: true, payment: true },
+          })
+          const award = await awardTrainingPoints(tx, {
+            userId: application.testerId,
+            applicationId: application.id,
+            kind: 'VERIFIED',
+          })
+          verifiedPointsAwarded = award.points
+          return started
+        }
+        return updated
       })
       if (currentUser.role === 'ADMIN') {
         await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'verify_application', targetType: 'application', targetId: id, reason: auditReason })
@@ -459,9 +498,11 @@ export async function PATCH(
       try {
         await sendNotification({
           userId: application.testerId,
-          title: 'Opt-in verified ✅',
-          body: `Your screenshot for "${application.job.appName}" has been verified. You are on the ready list — the developer will start testing once enough testers are verified.`,
-          url: '/dashboard/applications',
+          title: updatedApplication.job.isTraining ? 'Training started 🚀' : 'Opt-in verified ✅',
+          body: updatedApplication.job.isTraining
+            ? `You are verified for "${application.job.appName}". Your training starts now. Open your daily mission.`
+            : `Your screenshot for "${application.job.appName}" has been verified. You are on the ready list — the developer will start testing once enough testers are verified.`,
+          url: updatedApplication.job.isTraining ? '/dashboard/tasks' : '/dashboard/applications',
           type: 'verification_approved',
         })
       } catch (notifyError) {
@@ -497,7 +538,9 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         application: updatedApplication,
-        message: 'Opt-in verified. The tester is on the ready list.',
+        message: updatedApplication.job.isTraining && verifiedPointsAwarded > 0
+          ? `Opt-in verified. Training started right away and the tester earned ${verifiedPointsAwarded} training points.`
+          : 'Opt-in verified. The tester is on the ready list.',
       })
     }
 
@@ -541,10 +584,22 @@ export async function PATCH(
         await recordAdminAction({ actorId: currentUser.userId, actorEmail: currentUser.email, action: 'complete_application', targetType: 'application', targetId: id, reason: auditReason })
       }
 
-      // Move escrowed payment into PROCESSING (ready for payout)
-      if (!updatedApplication.payment) {
+      let completedTrainingPoints = 0
+      if (updatedApplication.job.isTraining) {
+        try {
+          const award = await prisma.$transaction((tx) => awardTrainingPoints(tx, {
+            userId: updatedApplication.testerId,
+            applicationId: updatedApplication.id,
+            kind: 'COMPLETED',
+          }))
+          completedTrainingPoints = award.points
+        } catch (trainingError) {
+          console.error('⚠️ Failed to award training points on completion:', trainingError)
+        }
+      } else if (!updatedApplication.payment) {
         console.warn('⚠️ No payment record found for completed application:', id)
       } else {
+        // Move escrowed payment into PROCESSING (ready for payout)
         try {
           const moved = await prisma.payment.updateMany({
             where: {
@@ -619,7 +674,11 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         application: updatedApplication,
-        message: 'Application marked as completed. Payment will be processed soon.',
+        message: updatedApplication.job.isTraining
+          ? completedTrainingPoints > 0
+            ? `Training completed. ${completedTrainingPoints} training points awarded.`
+            : 'Training completed.'
+          : 'Application marked as completed. Payment will be processed soon.',
       })
     }
     return NextResponse.json(

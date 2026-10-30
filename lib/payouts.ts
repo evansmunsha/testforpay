@@ -35,6 +35,22 @@ function getErrorMessage(error: unknown): string {
 async function processPaymentForPayout(payment: NonNullable<PaymentWithContext>): Promise<PayoutResult> {
   const { application } = payment
   const tester = application.tester
+  if (application.job.isTraining) {
+    await prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'REFUNDED',
+        failedAt: new Date(),
+      },
+    })
+    return {
+      applicationId: application.id,
+      testerId: tester.id,
+      amount: payment.amount,
+      status: 'failed',
+      error: 'Training jobs do not pay out money',
+    }
+  }
 
   // Skip if tester doesn't have a Stripe account
   if (!tester.stripeAccountId) {
@@ -244,6 +260,7 @@ export async function processCompletedTests(): Promise<PayoutResult[]> {
       application: {
         status: 'COMPLETED',
         testingPausedAt: null,
+        job: { isTraining: false },
       },
     },
     include: {
@@ -340,6 +357,7 @@ export async function getPendingPayoutsSummary() {
       application: {
         status: 'COMPLETED',
         testingPausedAt: null,
+        job: { isTraining: false },
       },
     },
     include: {

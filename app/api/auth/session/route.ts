@@ -25,6 +25,7 @@ export async function GET() {
         createdAt: true,
         stripeAccountId: true,
         muteDeveloperReplies: true,
+        trainingPoints: true,
       },
     })
     

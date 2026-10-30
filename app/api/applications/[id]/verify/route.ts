@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { sendNotification } from '@/lib/notifications'
+import { awardTrainingPoints } from '@/lib/training-points'
 
 export async function POST(
   request: Request,
@@ -32,7 +33,7 @@ export async function POST(
     // Get the application
     const application = await prisma.application.findUnique({
       where: { id },
-      include: { job: { select: { appName: true, developerId: true, id: true } } },
+      include: { job: { select: { appName: true, developerId: true, id: true, isTraining: true } } },
     })
 
     if (!application) {
@@ -59,15 +60,27 @@ export async function POST(
     }
 
     // Update application with verification images and advance to OPTED_IN
-    const updatedApplication = await prisma.application.update({
-      where: { id },
-      data: {
-        status: 'OPTED_IN',
-        verificationImage: verificationImageUrl,
-        verificationImage2: typeof verificationImageUrl2 === 'string' && verificationImageUrl2.trim()
-          ? verificationImageUrl2
-          : null,
-      },
+    let trainingPointsAwarded = 0
+    const updatedApplication = await prisma.$transaction(async (tx) => {
+      const updated = await tx.application.update({
+        where: { id },
+        data: {
+          status: 'OPTED_IN',
+          verificationImage: verificationImageUrl,
+          verificationImage2: typeof verificationImageUrl2 === 'string' && verificationImageUrl2.trim()
+            ? verificationImageUrl2
+            : null,
+        },
+      })
+      if (application.job.isTraining) {
+        const award = await awardTrainingPoints(tx, {
+          userId: application.testerId,
+          applicationId: application.id,
+          kind: 'OPTED_IN',
+        })
+        trainingPointsAwarded = award.points
+      }
+      return updated
     })
 
     // Notify the developer so they can review the screenshot
@@ -86,7 +99,9 @@ export async function POST(
     return NextResponse.json({
       success: true,
       application: updatedApplication,
-      message: 'Screenshots submitted successfully. The developer will review them shortly.',
+      message: application.job.isTraining && trainingPointsAwarded > 0
+        ? `Screenshots submitted successfully. You earned ${trainingPointsAwarded} training points.`
+        : 'Screenshots submitted successfully. The developer will review them shortly.',
     })
   } catch (error) {
     console.error('Upload verification error:', error)

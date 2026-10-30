@@ -21,6 +21,7 @@ interface Job {
   appName: string
   appDescription: string
   appCategory: string | null
+  isTraining?: boolean
   testersNeeded: number
   testDuration: number
   minAndroidVersion: string | null

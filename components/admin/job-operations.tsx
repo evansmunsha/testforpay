@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/toast-provider'
 
-interface JobOption { id: string; appName: string; status: string }
+interface JobOption { id: string; appName: string; status: string; isTraining?: boolean }
 
 interface Person { id: string; name: string | null; email: string }
 
@@ -39,6 +39,7 @@ interface Operations {
     id: string
     appName: string
     status: string
+    isTraining?: boolean
     testersNeeded: number
     testDuration: number
     supportedCountries: string[]
@@ -100,19 +101,84 @@ export function JobOperations() {
   const [loading, setLoading] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [creatingTraining, setCreatingTraining] = useState(false)
+  const [trainingForm, setTrainingForm] = useState({
+    appName: '',
+    appDescription: '',
+    googlePlayLink: '',
+    packageName: '',
+    appCategory: '',
+    minAndroidVersion: '',
+    supportedCountries: 'ZM',
+    testersNeeded: 12,
+    testDuration: 14,
+    taskTemplate: 'generic',
+  })
 
   useEffect(() => {
     const loadJobs = async () => {
       try {
         const response = await fetch('/api/admin/jobs')
         const body = await response.json()
-        if (response.ok) setJobs((body.jobs || []).map((job: JobOption) => ({ id: job.id, appName: job.appName, status: job.status })))
+        if (response.ok) {
+          setJobs((body.jobs || []).map((job: JobOption) => ({
+            id: job.id,
+            appName: job.appName,
+            status: job.status,
+            isTraining: Boolean(job.isTraining),
+          })))
+        }
       } catch (cause) {
         console.error('Failed to load jobs for operations:', cause)
       }
     }
     void loadJobs()
   }, [])
+
+  const createTrainingJob = async () => {
+    if (!reasonOk) {
+      toast({ title: 'Reason needed', description: 'Write a reason of at least 10 characters first.', variant: 'destructive' })
+      return
+    }
+    setCreatingTraining(true)
+    try {
+      const supportedCountries = trainingForm.supportedCountries
+        .split(',')
+        .map((value) => value.trim().toUpperCase())
+        .filter(Boolean)
+      const response = await fetch('/api/admin/jobs/training', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...trainingForm,
+          supportedCountries,
+          reason: reason.trim(),
+        }),
+      })
+      const body = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        toast({ title: 'Error', description: body.error || 'Training job was not created', variant: 'destructive' })
+        return
+      }
+      toast({ title: 'Training job published', description: body.message || '', variant: 'success' })
+      setTrainingForm((current) => ({ ...current, appName: '', appDescription: '', googlePlayLink: '' }))
+      const jobsResponse = await fetch('/api/admin/jobs')
+      const jobsBody = await jobsResponse.json().catch(() => ({}))
+      if (jobsResponse.ok) {
+        setJobs((jobsBody.jobs || []).map((job: JobOption) => ({
+          id: job.id,
+          appName: job.appName,
+          status: job.status,
+          isTraining: Boolean(job.isTraining),
+        })))
+      }
+    } catch (cause) {
+      console.error('Failed to create training job:', cause)
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
+    } finally {
+      setCreatingTraining(false)
+    }
+  }
 
   const load = useCallback(async () => {
     if (!jobId) return
@@ -206,7 +272,9 @@ export function JobOperations() {
             >
               <option value="">Choose a job…</option>
               {jobs.map((job) => (
-                <option key={job.id} value={job.id}>{job.appName} ({job.status})</option>
+                <option key={job.id} value={job.id}>
+                  {job.appName} ({job.status}{job.isTraining ? ' · TRAINING' : ''})
+                </option>
               ))}
             </select>
           </div>
@@ -221,6 +289,85 @@ export function JobOperations() {
               className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
+            <p className="text-sm font-medium text-amber-900">Publish training job (no payment, points only)</p>
+                        <p className="mt-1 text-xs text-amber-800">
+                          Training jobs are restricted to African testers only. Use African country codes (for example ZM, KE, NG).
+                        </p>            <div className="mt-3 grid gap-3 md:grid-cols-2">
+              <input
+                value={trainingForm.appName}
+                onChange={(event) => setTrainingForm((current) => ({ ...current, appName: event.target.value }))}
+                placeholder="App name"
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+              <input
+                value={trainingForm.googlePlayLink}
+                onChange={(event) => setTrainingForm((current) => ({ ...current, googlePlayLink: event.target.value }))}
+                placeholder="Google Play closed test link"
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+              <textarea
+                value={trainingForm.appDescription}
+                onChange={(event) => setTrainingForm((current) => ({ ...current, appDescription: event.target.value }))}
+                placeholder="What should testers do in this training?"
+                rows={3}
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm md:col-span-2"
+              />
+              <input
+                value={trainingForm.supportedCountries}
+                onChange={(event) => setTrainingForm((current) => ({ ...current, supportedCountries: event.target.value }))}
+                placeholder="Supported countries, comma separated (e.g. MA, US)"
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm md:col-span-2"
+              />
+              <input
+                value={trainingForm.minAndroidVersion}
+                onChange={(event) => setTrainingForm((current) => ({ ...current, minAndroidVersion: event.target.value }))}
+                placeholder="Min Android version (optional)"
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+              <input
+                value={trainingForm.appCategory}
+                onChange={(event) => setTrainingForm((current) => ({ ...current, appCategory: event.target.value }))}
+                placeholder="Category (optional)"
+                className="rounded-md border border-gray-300 px-3 py-2 text-sm"
+              />
+              <label className="flex items-center gap-2 text-sm">
+                <span>Testers needed</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={500}
+                  value={trainingForm.testersNeeded}
+                  onChange={(event) => setTrainingForm((current) => ({ ...current, testersNeeded: Number(event.target.value || 1) }))}
+                  className="w-24 rounded-md border border-gray-300 px-2 py-1"
+                />
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <span>Duration (days)</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={trainingForm.testDuration}
+                  onChange={(event) => setTrainingForm((current) => ({ ...current, testDuration: Number(event.target.value || 1) }))}
+                  className="w-24 rounded-md border border-gray-300 px-2 py-1"
+                />
+              </label>
+            </div>
+            <Button
+              className="mt-3"
+              disabled={
+                creatingTraining ||
+                !reasonOk ||
+                trainingForm.appName.trim().length < 3 ||
+                trainingForm.appDescription.trim().length < 40 ||
+                !trainingForm.googlePlayLink.trim()
+              }
+              onClick={createTrainingJob}
+            >
+              {creatingTraining ? 'Publishing…' : 'Publish Training Job'}
+            </Button>
+          </div>
           {error && <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         </CardContent>
       </Card>
@@ -234,6 +381,7 @@ export function JobOperations() {
               <CardTitle>{data.job.appName}</CardTitle>
               <CardDescription>
                 Developer: {data.job.developer.name || data.job.developer.email} ({data.job.developer.email}) · {data.job.status} · {data.job.testDuration}-day test
+                {data.job.isTraining ? ' · TRAINING (points only)' : ''}
                 {' · '}Countries: {data.job.supportedCountries.join(', ') || 'none declared'}
                 {data.job.minAndroidVersion ? ` · Android ${data.job.minAndroidVersion}+` : ''}
               </CardDescription>

@@ -5,6 +5,7 @@ import { sendNotification, NotificationTemplates } from '@/lib/notifications'
 import { sendApplicationReceivedEmail } from '@/lib/email'
 import { checkApplicationFraud } from '@/lib/fraud-detection'
 import { passesDeclaredJobScreening } from '@/lib/tester-eligibility'
+import { isAfricanCountry } from '@/lib/training-rules'
 
 // GET - List user's applications
 export async function GET(request: Request) {
@@ -165,6 +166,12 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { error: 'Add your country and Android device details in Settings before applying' },
         { status: 400 }
+      )
+    }
+    if (job.isTraining && !isAfricanCountry(tester.countryCode)) {
+      return NextResponse.json(
+        { error: 'Training is only available to testers in African countries.' },
+        { status: 403 }
       )
     }
     if (!passesDeclaredJobScreening({

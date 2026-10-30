@@ -123,7 +123,9 @@ model User {
   // Tester fields
   stripeAccountId  String?  @unique
   muteDeveloperReplies Boolean @default(false)
-  paypalEmail      String?
+  trainingPoints   Int      @default(0)
+  trainingAwards   TrainingAward[]
+  paypalEmail       String?
   phoneNumber      String?
   countryCode      String?
   applications     Application[]
@@ -241,7 +243,10 @@ model TestingJob {
   developerId       String
   developer         User        @relation(fields: [developerId], references: [id])
 
-  planType String? // 'STARTER' | 'GROWTH' | 'PRO'
+  planType String? // 'STARTER' | 'GROWTH' | 'PRO' | 'TRAINING'
+
+  // Admin-run training job: no payment, no payout, awards training points instead
+  isTraining        Boolean     @default(false)
   
   // App Details
   appName           String
@@ -342,6 +347,7 @@ model Application {
   feedbacks Feedback[]
   issueReports ApplicationIssueReport[]
   submissionVideos SubmissionVideo[]
+  trainingAwards TrainingAward[]
   pauseHistory ApplicationPause[]
   paymentAllocationsFrom PaymentAllocationHistory[] @relation("PaymentAllocationFrom")
   paymentAllocationsTo PaymentAllocationHistory[] @relation("PaymentAllocationTo")
@@ -355,6 +361,20 @@ model Application {
   @@index([status])
   @@index([ipAddress])
   
+}
+
+model TrainingAward {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  applicationId String
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  kind          String      // 'OPTED_IN' | 'VERIFIED' | 'COMPLETED'
+  points        Int
+  createdAt     DateTime    @default(now())
+
+  @@unique([applicationId, kind])
+  @@index([userId])
 }
 
 model ApplicationPause {

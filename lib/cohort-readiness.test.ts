@@ -67,6 +67,16 @@ describe('evaluateCohortReadiness', () => {
     }
   })
 
+  it('allows verified training testers without escrow when escrow checks are disabled', () => {
+    const result = evaluateCohortReadiness({
+      ...baseInput,
+      requireEscrow: false,
+      applications: [application('a', { payment: null }), application('b', { payment: null })],
+    })
+    expect(result.canStart).toBe(true)
+    expect(result.blockers).toEqual([])
+  })
+
   it('blocks when a tester fails country screening', () => {
     const result = evaluateCohortReadiness({
       ...baseInput,

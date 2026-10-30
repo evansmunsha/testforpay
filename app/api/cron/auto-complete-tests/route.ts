@@ -3,6 +3,7 @@ import prisma from '@/lib/prisma'
 import { processPaymentById } from '@/lib/payouts'
 import { sendJobCompletedEmail, sendTestimonialRequestEmail } from '@/lib/email'
 import { finishCronExecution, startCronExecution } from '@/lib/cron-monitor'
+import { awardTrainingPoints } from '@/lib/training-points'
 
 // This endpoint should be called by a cron service (e.g., Vercel Cron)
 // Runs daily to auto-complete testing applications after testing period expires
@@ -127,74 +128,85 @@ export async function GET(request: Request) {
           continue
         }
 
-        // Ensure Payment record exists and is in PROCESSING status (ready for payout)
-        let payment = await prisma.payment.findUnique({
-          where: { applicationId: application.id },
-        })
-
-        if (payment && payment.status === 'ESCROWED' && !payment.transferId) {
-          const moved = await prisma.payment.updateMany({
-            where: {
-              id: payment.id,
-              status: 'ESCROWED',
-              transferId: null,
-            },
-            data: { status: 'PROCESSING' },
-          })
-          if (moved.count === 0) {
-            const fresh = await prisma.payment.findUnique({
-              where: { id: payment.id },
-              select: { status: true, transferId: true },
-            })
-            console.warn('⚠️ Payment not moved to PROCESSING:', {
-              paymentId: payment.id,
-              status: fresh?.status,
-              transferId: fresh?.transferId,
-            })
+        if (application.job.isTraining) {
+          const award = await prisma.$transaction((tx) => awardTrainingPoints(tx, {
+            userId: application.testerId,
+            applicationId: application.id,
+            kind: 'COMPLETED',
+          }))
+          if (award.awarded) {
+            console.log(`✅ Training points awarded on auto-complete: ${application.id} (+${award.points})`)
           }
-          payment = await prisma.payment.findUnique({
+        } else {
+          // Ensure Payment record exists and is in PROCESSING status (ready for payout)
+          let payment = await prisma.payment.findUnique({
             where: { applicationId: application.id },
           })
-        }
 
-        if (payment && payment.status === 'PROCESSING' && !payment.transferId) {
-          // Payment now in correct status, ready for cron/process-payouts
-          console.log(`✅ Application auto-completed and payment ready for payout: ${application.id}`)
-        } else if (!payment) {
-          // Create payment record if it doesn't exist (shouldn't happen normally)
-          const job = application.job
-          const platformFeePerTester = Math.round(job.platformFee / job.testersNeeded)
-          const totalPaymentAmount = job.paymentPerTester + platformFeePerTester
-
-          payment = await prisma.payment.create({
-            data: {
-              applicationId: application.id,
-              jobId: application.jobId,
-              amount: job.paymentPerTester,
-              platformFee: platformFeePerTester,
-              totalAmount: totalPaymentAmount,
-              status: 'PROCESSING', // Ready for payout
-            },
-          })
-          console.log(`✅ Auto-completed and created payment: ${application.id}`)
-        }
-
-        if (payment?.status === 'PROCESSING' && !payment.transferId) {
-          try {
-            const payoutResult = await processPaymentById(payment.id)
-            if (payoutResult?.status === 'failed') {
-              console.warn('⚠️ Auto-complete payout failed:', payoutResult.error)
+          if (payment && payment.status === 'ESCROWED' && !payment.transferId) {
+            const moved = await prisma.payment.updateMany({
+              where: {
+                id: payment.id,
+                status: 'ESCROWED',
+                transferId: null,
+              },
+              data: { status: 'PROCESSING' },
+            })
+            if (moved.count === 0) {
+              const fresh = await prisma.payment.findUnique({
+                where: { id: payment.id },
+                select: { status: true, transferId: true },
+              })
+              console.warn('⚠️ Payment not moved to PROCESSING:', {
+                paymentId: payment.id,
+                status: fresh?.status,
+                transferId: fresh?.transferId,
+              })
             }
-          } catch (payoutError) {
-            console.error('⚠️ Auto-complete payout threw an error:', payoutError)
+            payment = await prisma.payment.findUnique({
+              where: { applicationId: application.id },
+            })
           }
-        } else if (payment) {
-          console.log('ℹ️ Skipping payout - payment not payout-ready:', {
-            applicationId: application.id,
-            paymentId: payment.id,
-            status: payment.status,
-            transferId: payment.transferId,
-          })
+
+          if (payment && payment.status === 'PROCESSING' && !payment.transferId) {
+            // Payment now in correct status, ready for cron/process-payouts
+            console.log(`✅ Application auto-completed and payment ready for payout: ${application.id}`)
+          } else if (!payment) {
+            // Create payment record if it doesn't exist (shouldn't happen normally)
+            const job = application.job
+            const platformFeePerTester = Math.round(job.platformFee / job.testersNeeded)
+            const totalPaymentAmount = job.paymentPerTester + platformFeePerTester
+
+            payment = await prisma.payment.create({
+              data: {
+                applicationId: application.id,
+                jobId: application.jobId,
+                amount: job.paymentPerTester,
+                platformFee: platformFeePerTester,
+                totalAmount: totalPaymentAmount,
+                status: 'PROCESSING', // Ready for payout
+              },
+            })
+            console.log(`✅ Auto-completed and created payment: ${application.id}`)
+          }
+
+          if (payment?.status === 'PROCESSING' && !payment.transferId) {
+            try {
+              const payoutResult = await processPaymentById(payment.id)
+              if (payoutResult?.status === 'failed') {
+                console.warn('⚠️ Auto-complete payout failed:', payoutResult.error)
+              }
+            } catch (payoutError) {
+              console.error('⚠️ Auto-complete payout threw an error:', payoutError)
+            }
+          } else if (payment) {
+            console.log('ℹ️ Skipping payout - payment not payout-ready:', {
+              applicationId: application.id,
+              paymentId: payment.id,
+              status: payment.status,
+              transferId: payment.transferId,
+            })
+          }
         }
 
         // Update tester reputation stats based on their completed applications
@@ -248,7 +260,7 @@ export async function GET(request: Request) {
           const remainingTesting = await prisma.application.count({
             where: { jobId: application.jobId, status: 'TESTING' },
           })
-          if (remainingTesting === 0) {
+          if (remainingTesting === 0 && !application.job.isTraining) {
             const completedCount = await prisma.application.count({
               where: { jobId: application.jobId, status: 'COMPLETED' },
             })

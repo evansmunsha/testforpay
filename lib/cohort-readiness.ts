@@ -27,6 +27,7 @@ export interface CohortReadinessInput {
   applications: ReadinessApplication[]
   activeTestingCount: number
   completedSelectedCount: number
+  requireEscrow?: boolean
 }
 
 export interface CohortReadiness {
@@ -43,6 +44,7 @@ export interface CohortReadiness {
  * Approving, opening the Play Store link, uploading proof, or verifying never starts anyone.
  */
 export function evaluateCohortReadiness(input: CohortReadinessInput): CohortReadiness {
+  const requireEscrow = input.requireEscrow ?? true
   const blockers = new Set<CohortBlocker>()
   if (input.supportedCountries.length === 0) blockers.add('COUNTRIES_REQUIRED')
   if (input.activeTestingCount > 0) blockers.add('ACTIVE_TESTERS_RUNNING')
@@ -61,7 +63,10 @@ export function evaluateCohortReadiness(input: CohortReadinessInput): CohortRead
       blockers.add('OPEN_ISSUES')
       return false
     }
-    if (application.payment?.status !== 'ESCROWED' || application.payment.transferId !== null) {
+    if (
+      requireEscrow &&
+      (application.payment?.status !== 'ESCROWED' || application.payment.transferId !== null)
+    ) {
       blockers.add('PAYMENT_NOT_ESCROWED')
       return false
     }

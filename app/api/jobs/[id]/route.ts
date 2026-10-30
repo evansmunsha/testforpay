@@ -80,7 +80,10 @@ export async function GET(
         ['APPROVED', 'OPTED_IN', 'VERIFIED', 'SCHEDULED'].includes(application.status) ||
         (application.status === 'TESTING' && application.testingPausedAt !== null && application.cohortSelected)
       ) &&
-      (!application.payment || (application.payment.status === 'ESCROWED' && !application.payment.transferId)) &&
+      (
+        job.isTraining ||
+        (!application.payment || (application.payment.status === 'ESCROWED' && !application.payment.transferId))
+      ) &&
       application.issueReports.length === 0 &&
       passesDeclaredJobScreening({
         testerCountryCode: application.tester.countryCode,
@@ -115,6 +118,7 @@ export async function GET(
       testersNeeded: job.testersNeeded,
       supportedCountries: job.supportedCountries,
       minAndroidVersion: job.minAndroidVersion,
+      requireEscrow: !job.isTraining,
       activeTestingCount: job.applications.filter((application) =>
         application.status === 'TESTING' && application.testingPausedAt === null
       ).length,
@@ -313,7 +317,7 @@ export async function PATCH(
     }
 
     // SECURITY: Prevent activating unpaid jobs in production.
-    if (body.status === 'ACTIVE' && existingJob.status === 'DRAFT') {
+    if (body.status === 'ACTIVE' && existingJob.status === 'DRAFT' && !existingJob.isTraining) {
       if (process.env.NODE_ENV === 'production') {
         if (!existingJob.stripePaymentIntent) {
           return NextResponse.json(

@@ -2,6 +2,7 @@
 
 import { useAuth } from '@/hooks/use-auth'
 import { formatEurFromCents } from '@/lib/currency'
+import { trainingLevel } from '@/lib/training-rules'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -306,6 +307,10 @@ function TesterDashboard() {
     completedTests: 0,
     pendingApplications: 0,
     totalEarned: 0,
+    trainingPoints: 0,
+    trainingBadge: 'Rookie',
+    trainingPointsToNext: 100,
+    trainingNextLevel: 'Tester' as string | null,
   })
   const [loading, setLoading] = useState(true)
 
@@ -332,7 +337,16 @@ function TesterDashboard() {
       const response = await fetch('/api/tester/stats')
       if (response.ok) {
         const data = await response.json()
-        setStats(data)
+        setStats({
+          activeTests: data.activeTests || 0,
+          completedTests: data.completedTests || 0,
+          pendingApplications: data.pendingApplications || 0,
+          totalEarned: data.totalEarned || 0,
+          trainingPoints: data.trainingPoints || 0,
+          trainingBadge: data.trainingBadge || trainingLevel(data.trainingPoints || 0).name,
+          trainingPointsToNext: data.trainingPointsToNext ?? trainingLevel(data.trainingPoints || 0).pointsToNext,
+          trainingNextLevel: data.trainingNextLevel ?? trainingLevel(data.trainingPoints || 0).nextLevel,
+        })
       }
     } catch (error) {
       console.error('Failed to fetch stats:', error)
@@ -409,6 +423,17 @@ function TesterDashboard() {
       description: 'All time',
       color: 'bg-purple-500',
     },
+    {
+      title: 'Training Badge',
+      value: loading ? '...' : stats.trainingBadge,
+      icon: Target,
+      description: loading
+        ? '...'
+        : stats.trainingNextLevel
+          ? `${stats.trainingPointsToNext} pts to ${stats.trainingNextLevel}`
+          : 'Top level',
+      color: 'bg-amber-500',
+    },
   ]
 
   return (
@@ -472,7 +497,7 @@ function TesterDashboard() {
       )}
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-6">
         {statsConfig.map((stat) => {
           const Icon = stat.icon
           return (

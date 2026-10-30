@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { trainingLevel } from '@/lib/training-rules'
 
 /**
  * GET /api/testers/[id]/profile
@@ -37,6 +38,7 @@ export async function GET(
         totalTestsCompleted: true,
         totalEarnings: true,
         averageRating: true,
+        trainingPoints: true,
         createdAt: true,
         deviceInfo: {
           select: {
@@ -68,6 +70,7 @@ export async function GET(
         email: canSeeEmail ? tester.email : null,
         totalEarnings: canSeeEarnings ? tester.totalEarnings : null,
         deviceInfo: canSeeDeviceInfo ? tester.deviceInfo : null,
+        trainingLevel: trainingLevel(tester.trainingPoints ?? 0),
       },
     })
   } catch (error) {

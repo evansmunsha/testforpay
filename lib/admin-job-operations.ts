@@ -24,6 +24,7 @@ export async function loadJobOperations(
       id: true,
       appName: true,
       status: true,
+      isTraining: true,
       testersNeeded: true,
       testDuration: true,
       supportedCountries: true,
@@ -69,6 +70,7 @@ export async function loadJobOperations(
     testersNeeded: job.testersNeeded,
     supportedCountries: job.supportedCountries,
     minAndroidVersion: job.minAndroidVersion,
+    requireEscrow: !job.isTraining,
     activeTestingCount: job.applications.filter((application) =>
       application.status === 'TESTING' && application.testingPausedAt === null
     ).length,
@@ -153,6 +155,7 @@ export async function loadJobOperations(
       id: job.id,
       appName: job.appName,
       status: job.status,
+      isTraining: job.isTraining,
       testersNeeded: job.testersNeeded,
       testDuration: job.testDuration,
       supportedCountries: job.supportedCountries,

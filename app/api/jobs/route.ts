@@ -6,6 +6,7 @@ import { toCents } from '@/lib/currency'
 import { TASK_TEMPLATES, type TaskTemplateKey } from '@/lib/constants'
 import type { Prisma } from '@/generated/prisma/client'
 import { normalizeCountryCodes } from '@/lib/tester-eligibility'
+import { isAfricanCountry } from '@/lib/training-rules'
 
 type PlanType = 'STARTER' | 'GROWTH' | 'PRO'
 
@@ -251,6 +252,13 @@ export async function GET(request: Request) {
           ],
         },
       ]
+      const testerRow = await prisma.user.findUnique({
+        where: { id: currentUser.userId },
+        select: { countryCode: true },
+      })
+      if (!isAfricanCountry(testerRow?.countryCode)) {
+        where.isTraining = false
+      }
     }
 
     // Apply status filter if provided (for developers filtering their own jobs)

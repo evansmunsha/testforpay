@@ -20,7 +20,8 @@ export async function GET() {
         countryCode: true,
         role: true,
         stripeAccountId: true,
-        createdAt: true
+        createdAt: true,
+        trainingPoints: true,
       }
     })
 

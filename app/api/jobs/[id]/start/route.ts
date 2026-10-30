@@ -87,6 +87,7 @@ export async function POST(
           id: true,
           developerId: true,
           appName: true,
+          isTraining: true,
           testersNeeded: true,
           testDuration: true,
           status: true,
@@ -149,6 +150,7 @@ export async function POST(
         testersNeeded: job.testersNeeded,
         supportedCountries: job.supportedCountries,
         minAndroidVersion: job.minAndroidVersion,
+        requireEscrow: !job.isTraining,
         activeTestingCount,
         completedSelectedCount,
         applications: job.applications.map((application) => ({
