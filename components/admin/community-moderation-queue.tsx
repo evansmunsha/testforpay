@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { useAskDialog } from '@/components/community/ask-dialog'
 
 interface ReportView {
   id: string
@@ -23,6 +24,7 @@ export function CommunityModerationQueue() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
+  const { ask, dialog } = useAskDialog()
 
   const load = useCallback(async () => {
     try {
@@ -45,7 +47,11 @@ export function CommunityModerationQueue() {
 
   // Every action needs a written reason of 10+ characters, which is saved in the moderation log.
   const act = async (report: ReportView, action: string, extra: Record<string, unknown> = {}, resolve?: 'DISMISS_REPORT' | 'ACTION_REPORT') => {
-    const reason = window.prompt('Reason (at least 10 characters)')
+    const reason = await ask({
+      title: 'Reason',
+      description: 'This is saved in the moderation log.',
+      field: { label: 'Reason', minLength: 10 },
+    })
     if (!reason) return
     setBusyId(report.id)
     setError('')
@@ -95,8 +101,14 @@ export function CommunityModerationQueue() {
               <Button size="sm" variant="outline" disabled={busyId === report.id} onClick={() => act(report, 'HIDE_COMMENT', { commentId: report.commentId }, 'ACTION_REPORT')}>Hide comment</Button>
             )}
             {report.authorId && (
-              <Button size="sm" variant="outline" disabled={busyId === report.id} onClick={() => {
-                const days = window.prompt('Mute for how many days? (leave empty for until lifted)')
+              <Button size="sm" variant="outline" disabled={busyId === report.id} onClick={async () => {
+                const days = await ask({
+                  title: 'Mute this person',
+                  description: 'They can still read the community but cannot post or comment.',
+                  confirmLabel: 'Next',
+                  field: { label: 'Number of days (leave empty to mute until you lift it)', optional: true, numeric: true },
+                })
+                if (days === null) return
                 void act(report, 'MUTE_USER', { userId: report.authorId, days: days ? Number(days) : undefined }, 'ACTION_REPORT')
               }}>Mute author</Button>
             )}
@@ -104,6 +116,7 @@ export function CommunityModerationQueue() {
           </div>
         </div>
       ))}
+      {dialog}
     </div>
   )
 }

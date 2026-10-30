@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { CommunityItemMenu } from '@/components/community/item-menu'
+import { useAskDialog } from '@/components/community/ask-dialog'
 import { timeAgo, type CommunityPostView } from '@/components/community/community-feed'
 
 interface CommentView {
@@ -31,6 +32,7 @@ export function CommunityPostDetail({ postId }: { postId: string }) {
   const [body, setBody] = useState('')
   const [busy, setBusy] = useState(false)
   const [sendError, setSendError] = useState('')
+  const { ask, dialog } = useAskDialog()
 
   const load = useCallback(async () => {
     try {
@@ -86,11 +88,19 @@ export function CommunityPostDetail({ postId }: { postId: string }) {
   }
 
   const remove = async () => {
-    if (!post || !window.confirm('Delete this post?')) return
+    if (!post) return
     let reason: string | undefined
     if (isAdmin && !post.mine) {
-      reason = window.prompt('Reason for deleting (at least 10 characters)') ?? undefined
-      if (!reason) return
+      const typed = await ask({
+        title: 'Delete this post?',
+        description: 'This is saved in the moderation log.',
+        confirmLabel: 'Delete',
+        field: { label: 'Reason', minLength: 10 },
+      })
+      if (!typed) return
+      reason = typed
+    } else if ((await ask({ title: 'Delete this post?', confirmLabel: 'Delete' })) === null) {
+      return
     }
     const response = await fetch(`/api/community/${postId}`, {
       method: 'DELETE',
@@ -152,6 +162,7 @@ export function CommunityPostDetail({ postId }: { postId: string }) {
           )}
         </>
       )}
+      {dialog}
     </div>
   )
 }

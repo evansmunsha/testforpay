@@ -10,6 +10,7 @@ const ACTIONS = [
   'PIN_POST',
   'UNPIN_POST',
   'HIDE_COMMENT',
+  'UNHIDE_COMMENT',
   'MUTE_USER',
   'UNMUTE_USER',
   'DISMISS_REPORT',
@@ -132,6 +133,20 @@ export async function POST(request: Request) {
         await prisma.$transaction([
           prisma.communityComment.update({ where: { id: commentId }, data: { status: 'HIDDEN' } }),
           prisma.communityPost.update({ where: { id: comment.postId }, data: { commentCount: { decrement: 1 } } }),
+          log('COMMENT', commentId),
+        ])
+        break
+      }
+      case 'UNHIDE_COMMENT': {
+        if (!commentId) return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+        const comment = await prisma.communityComment.findUnique({
+          where: { id: commentId },
+          select: { status: true, postId: true },
+        })
+        if (!comment || comment.status !== 'HIDDEN') return NextResponse.json({ error: 'Not found' }, { status: 404 })
+        await prisma.$transaction([
+          prisma.communityComment.update({ where: { id: commentId }, data: { status: 'VISIBLE' } }),
+          prisma.communityPost.update({ where: { id: comment.postId }, data: { commentCount: { increment: 1 } } }),
           log('COMMENT', commentId),
         ])
         break

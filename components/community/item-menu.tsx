@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useAskDialog } from '@/components/community/ask-dialog'
 
 interface MenuProps {
   postId: string
@@ -22,6 +23,7 @@ const itemClass = 'flex min-h-11 w-full items-center px-3 text-left text-sm hove
 export function CommunityItemMenu({ postId, commentId, authorId, authorRole, mine, isAdmin, pinned, status, isPost, onChanged }: MenuProps) {
   const [open, setOpen] = useState(false)
   const [message, setMessage] = useState('')
+  const { ask, dialog } = useAskDialog()
 
   const call = async (url: string, init: RequestInit) => {
     setOpen(false)
@@ -36,7 +38,12 @@ export function CommunityItemMenu({ postId, commentId, authorId, authorRole, min
   }
 
   const report = async () => {
-    const reason = window.prompt('Why are you reporting this? (at least 5 characters)')
+    const reason = await ask({
+      title: 'Report this',
+      description: 'Tell the admins what is wrong. Only admins will see your report.',
+      confirmLabel: 'Send report',
+      field: { label: 'Reason', minLength: 5 },
+    })
     if (!reason) return
     if (await call(`/api/community/${postId}/report`, { method: 'POST', body: JSON.stringify({ reason, commentId }) })) {
       setMessage('Thank you. An admin will review it.')
@@ -44,12 +51,22 @@ export function CommunityItemMenu({ postId, commentId, authorId, authorRole, min
   }
 
   const block = async () => {
-    if (!authorId || !window.confirm('Block this person? You will no longer see their posts or comments.')) return
+    if (!authorId) return
+    const accepted = await ask({
+      title: 'Block this person?',
+      description: 'You will no longer see their posts or comments.',
+      confirmLabel: 'Block',
+    })
+    if (accepted === null) return
     if (await call('/api/community/block', { method: 'POST', body: JSON.stringify({ userId: authorId }) })) onChanged()
   }
 
   const moderate = async (action: string) => {
-    const reason = window.prompt('Reason (at least 10 characters)')
+    const reason = await ask({
+      title: 'Reason',
+      description: 'This is saved in the moderation log.',
+      field: { label: 'Reason', minLength: 10 },
+    })
     if (!reason) return
     if (await call('/api/admin/community', { method: 'POST', body: JSON.stringify({ action, reason, postId, commentId }) })) onChanged()
   }
@@ -71,13 +88,16 @@ export function CommunityItemMenu({ postId, commentId, authorId, authorRole, min
           {isAdmin && isPost && (
             <button role="menuitem" className={itemClass} onClick={() => moderate(status === 'HIDDEN' ? 'UNHIDE_POST' : 'HIDE_POST')}>{status === 'HIDDEN' ? 'Unhide' : 'Hide'}</button>
           )}
-          {isAdmin && !isPost && commentId && status !== 'HIDDEN' && (
-            <button role="menuitem" className={itemClass} onClick={() => moderate('HIDE_COMMENT')}>Hide comment</button>
+          {isAdmin && !isPost && commentId && (
+            <button role="menuitem" className={itemClass} onClick={() => moderate(status === 'HIDDEN' ? 'UNHIDE_COMMENT' : 'HIDE_COMMENT')}>
+              {status === 'HIDDEN' ? 'Unhide comment' : 'Hide comment'}
+            </button>
           )}
           {mine && !isAdmin && <p className="px-3 py-2 text-xs text-muted-foreground">No actions for your own content.</p>}
         </div>
       )}
       {message && <p role="status" className="absolute right-0 z-10 mt-1 w-56 rounded-md border bg-card p-2 text-xs shadow-md">{message}</p>}
+      {dialog}
     </div>
   )
 }
