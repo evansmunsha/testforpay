@@ -6,8 +6,52 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/toast-provider'
+import { isAfricanCountry } from '@/lib/training-rules'
+import { TASK_TEMPLATES, type TaskTemplateKey } from '@/lib/constants'
 
-interface JobOption { id: string; appName: string; status: string; isTraining?: boolean }
+interface JobOption {
+  id: string
+  appName: string
+  status: string
+  isTraining?: boolean
+  appDescription?: string | null
+  googlePlayLink?: string | null
+  packageName?: string | null
+  appCategory?: string | null
+  minAndroidVersion?: string | null
+  supportedCountries?: string[]
+  testersNeeded?: number
+  testDuration?: number
+  dailyTasks?: { dayNumber: number; taskText: string }[]
+}
+
+const FALLBACK_MISSION = 'Use the app normally, explore its features, and note any problems.'
+
+// Keeps exactly one mission per day: reuses what exists, then the template, then a fallback.
+const resizeMissions = (existing: string[], days: number, templateKey: string): string[] => {
+  const template: readonly string[] = templateKey in TASK_TEMPLATES
+    ? TASK_TEMPLATES[templateKey as TaskTemplateKey]
+    : TASK_TEMPLATES.generic
+  return Array.from({ length: days }, (_, index) =>
+    existing[index]?.trim() || template[index] || FALLBACK_MISSION
+  )
+}
+
+const toJobOption = (job: JobOption): JobOption => ({
+  id: job.id,
+  appName: job.appName,
+  status: job.status,
+  isTraining: Boolean(job.isTraining),
+  appDescription: job.appDescription,
+  googlePlayLink: job.googlePlayLink,
+  packageName: job.packageName,
+  appCategory: job.appCategory,
+  minAndroidVersion: job.minAndroidVersion,
+  supportedCountries: job.supportedCountries,
+  testersNeeded: job.testersNeeded,
+  testDuration: job.testDuration,
+  dailyTasks: job.dailyTasks,
+})
 
 interface Person { id: string; name: string | null; email: string }
 
@@ -114,6 +158,7 @@ export function JobOperations() {
     testDuration: 14,
     taskTemplate: 'generic',
   })
+  const [missions, setMissions] = useState<string[]>(() => resizeMissions([], 14, 'generic'))
 
   useEffect(() => {
     const loadJobs = async () => {
@@ -121,12 +166,7 @@ export function JobOperations() {
         const response = await fetch('/api/admin/jobs')
         const body = await response.json()
         if (response.ok) {
-          setJobs((body.jobs || []).map((job: JobOption) => ({
-            id: job.id,
-            appName: job.appName,
-            status: job.status,
-            isTraining: Boolean(job.isTraining),
-          })))
+          setJobs((body.jobs || []).map(toJobOption))
         }
       } catch (cause) {
         console.error('Failed to load jobs for operations:', cause)
@@ -134,6 +174,29 @@ export function JobOperations() {
     }
     void loadJobs()
   }, [])
+
+  const fillFromExistingJob = (id: string) => {
+    const source = jobs.find((job) => job.id === id)
+    if (!source) return
+    const african = (source.supportedCountries || []).filter((code) => isAfricanCountry(code))
+    const days = source.testDuration || trainingForm.testDuration
+    const copiedTasks = [...(source.dailyTasks || [])]
+      .sort((a, b) => a.dayNumber - b.dayNumber)
+      .map((task) => task.taskText)
+    setMissions(resizeMissions(copiedTasks, days, trainingForm.taskTemplate))
+    setTrainingForm((current) => ({
+      ...current,
+      appName: source.appName,
+      appDescription: source.appDescription || '',
+      googlePlayLink: source.googlePlayLink || '',
+      packageName: source.packageName || '',
+      appCategory: source.appCategory || '',
+      minAndroidVersion: source.minAndroidVersion || '',
+      supportedCountries: african.length > 0 ? african.join(', ') : 'ZM',
+      testersNeeded: source.testersNeeded || current.testersNeeded,
+      testDuration: source.testDuration || current.testDuration,
+    }))
+  }
 
   const createTrainingJob = async () => {
     if (!reasonOk) {
@@ -152,6 +215,7 @@ export function JobOperations() {
         body: JSON.stringify({
           ...trainingForm,
           supportedCountries,
+          customTasks: resizeMissions(missions, trainingForm.testDuration, trainingForm.taskTemplate),
           reason: reason.trim(),
         }),
       })
@@ -165,12 +229,7 @@ export function JobOperations() {
       const jobsResponse = await fetch('/api/admin/jobs')
       const jobsBody = await jobsResponse.json().catch(() => ({}))
       if (jobsResponse.ok) {
-        setJobs((jobsBody.jobs || []).map((job: JobOption) => ({
-          id: job.id,
-          appName: job.appName,
-          status: job.status,
-          isTraining: Boolean(job.isTraining),
-        })))
+        setJobs((jobsBody.jobs || []).map(toJobOption))
       }
     } catch (cause) {
       console.error('Failed to create training job:', cause)
@@ -291,9 +350,29 @@ export function JobOperations() {
           </div>
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
             <p className="text-sm font-medium text-amber-900">Publish training job (no payment, points only)</p>
-                        <p className="mt-1 text-xs text-amber-800">
-                          Training jobs are restricted to African testers only. Use African country codes (for example ZM, KE, NG).
-                        </p>            <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <p className="mt-1 text-xs text-amber-800">
+              Training jobs are restricted to African testers only. Use African country codes (for example ZM, KE, NG).
+            </p>
+            <div className="mt-3">
+              <label htmlFor="training-copy-job" className="text-sm font-medium text-amber-900">
+                Fill from an existing job (optional)
+              </label>
+              <select
+                id="training-copy-job"
+                defaultValue=""
+                onChange={(event) => fillFromExistingJob(event.target.value)}
+                className="mt-1 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+              >
+                <option value="">Choose a job to copy its details…</option>
+                {jobs.filter((job) => !job.isTraining).map((job) => (
+                  <option key={job.id} value={job.id}>{job.appName} ({job.status})</option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-amber-800">
+                This only copies the details into the form. Publishing creates a separate free training job, and the original job is not changed.
+              </p>
+            </div>
+            <div className="mt-3 grid gap-3 md:grid-cols-2">
               <input
                 value={trainingForm.appName}
                 onChange={(event) => setTrainingForm((current) => ({ ...current, appName: event.target.value }))}
@@ -316,7 +395,7 @@ export function JobOperations() {
               <input
                 value={trainingForm.supportedCountries}
                 onChange={(event) => setTrainingForm((current) => ({ ...current, supportedCountries: event.target.value }))}
-                placeholder="Supported countries, comma separated (e.g. MA, US)"
+                placeholder="Supported countries, comma separated (e.g. ZM, KE, NG)"
                 className="rounded-md border border-gray-300 px-3 py-2 text-sm md:col-span-2"
               />
               <input
@@ -349,10 +428,48 @@ export function JobOperations() {
                   min={1}
                   max={30}
                   value={trainingForm.testDuration}
-                  onChange={(event) => setTrainingForm((current) => ({ ...current, testDuration: Number(event.target.value || 1) }))}
+                  onChange={(event) => {
+                    const days = Math.min(30, Math.max(1, Number(event.target.value || 1)))
+                    setTrainingForm((current) => ({ ...current, testDuration: days }))
+                    setMissions((current) => resizeMissions(current, days, trainingForm.taskTemplate))
+                  }}
                   className="w-24 rounded-md border border-gray-300 px-2 py-1"
                 />
               </label>
+              <label className="flex items-center gap-2 text-sm md:col-span-2">
+                <span>Mission template</span>
+                <select
+                  value={trainingForm.taskTemplate}
+                  onChange={(event) => {
+                    const key = event.target.value
+                    setTrainingForm((current) => ({ ...current, taskTemplate: key }))
+                    setMissions(resizeMissions([], trainingForm.testDuration, key))
+                  }}
+                  className="rounded-md border border-gray-300 bg-white px-2 py-1"
+                >
+                  {Object.keys(TASK_TEMPLATES).map((key) => (
+                    <option key={key} value={key}>{key}</option>
+                  ))}
+                </select>
+                <span className="text-xs text-amber-800">Picking a template refills all daily missions below.</span>
+              </label>
+              <div className="space-y-2 md:col-span-2">
+                <p className="text-sm font-medium text-amber-900">Daily missions (one per day, you can edit each)</p>
+                {missions.map((mission, index) => (
+                  <label key={index} className="flex items-start gap-2 text-sm">
+                    <span className="mt-2 w-14 shrink-0 text-gray-600">Day {index + 1}</span>
+                    <textarea
+                      value={mission}
+                      rows={2}
+                      maxLength={1000}
+                      onChange={(event) => setMissions((current) =>
+                        current.map((text, i) => (i === index ? event.target.value : text))
+                      )}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                    />
+                  </label>
+                ))}
+              </div>
             </div>
             <Button
               className="mt-3"
