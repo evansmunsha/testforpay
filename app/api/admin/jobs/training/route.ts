@@ -36,9 +36,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid training job data' }, { status: 400 })
     }
 
-    if (!parsed.data.googlePlayLink.includes('play.google.com/apps/testing/')) {
+    let playHost = ''
+    try {
+      const url = new URL(parsed.data.googlePlayLink)
+      playHost = url.protocol === 'https:' ? url.hostname : ''
+    } catch {
+      playHost = ''
+    }
+    if (playHost !== 'play.google.com') {
       return NextResponse.json(
-        { error: 'Invalid Google Play closed test link. It should look like: https://play.google.com/apps/testing/com.example.app' },
+        { error: 'The link must be a Google Play link starting with https://play.google.com/ (for example the opt-in link for your closed test).' },
         { status: 400 }
       )
     }
