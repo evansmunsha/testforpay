@@ -200,8 +200,9 @@ export async function PATCH(
     let auditReason = ''
     if (currentUser.role === 'ADMIN' && auditedAdminActions.includes(body.action)) {
       auditReason = typeof body.reason === 'string' ? body.reason.trim() : ''
+      // The reason is optional; the action is still logged with a default note.
       if (auditReason.length < 10) {
-        return NextResponse.json({ error: 'Provide an admin reason of at least 10 characters' }, { status: 400 })
+        auditReason = `Admin ${body.action} (no reason given)`
       }
     }
 
