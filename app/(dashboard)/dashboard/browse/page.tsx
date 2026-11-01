@@ -47,9 +47,30 @@ export default function BrowsePage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [applyingJobId, setApplyingJobId] = useState<string | null>(null)
-  const [applyWarning, setApplyWarning] = useState<string | null>(null)
+  const [applyWarning, setApplyWarning] = useState<{ message: string; needsSettings: boolean } | null>(null)
   const { toast } = useToast()
-  
+  const [missingProfile, setMissingProfile] = useState<string[]>([])
+
+  // Tell testers up front what is missing, before they tap Apply
+  useEffect(() => {
+    if (!user || user.role !== 'TESTER') return
+    let cancelled = false
+    Promise.all([
+      fetch('/api/user/profile').then((r) => (r.ok ? r.json() : null)),
+      fetch('/api/user/device-info').then((r) => (r.ok ? r.json() : null)),
+    ])
+      .then(([profile, device]) => {
+        if (cancelled || !profile) return
+        const missing: string[] = []
+        if (!profile.countryCode) missing.push('your country')
+        if (!device?.androidVersion) missing.push('your Android version')
+        setMissingProfile(missing)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [user])
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
@@ -161,15 +182,15 @@ export default function BrowsePage() {
         toast({ title: 'Applied!', description: 'Check your applications page for next steps', variant: 'success' })
         router.push('/dashboard/applications')
       } else {
-        if (response.status === 403) {
-          const errorMessage = typeof data?.error === 'string' ? data.error : ''
-          if (errorMessage.toLowerCase().includes('verify')) {
-            setApplyWarning('Please verify your email to apply for jobs.')
-          } else {
-            setApplyWarning(errorMessage || 'You are not allowed to apply for this job.')
-          }
-        }
-        toast({ title: 'Error', description: data.error || 'Failed to apply', variant: 'destructive' })
+        const errorMessage = typeof data?.error === 'string' && data.error ? data.error : 'Failed to apply'
+        const lower = errorMessage.toLowerCase()
+        const needsSettings = lower.includes('settings') || lower.includes('country') || lower.includes('android') || lower.includes('verify')
+        setApplyWarning({
+          message: lower.includes('verify') ? 'Please verify your email to apply for jobs.' : errorMessage,
+          needsSettings,
+        })
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        toast({ title: 'Could not apply', description: errorMessage, variant: 'destructive' })
       }
     } catch (error) {
       toast({ title: 'Error', description: 'Something went wrong. Please try again.', variant: 'destructive' })
@@ -280,16 +301,35 @@ export default function BrowsePage() {
         </Button>
       </div>
 
+      {missingProfile.length > 0 && (
+        <Card className="border-yellow-200 bg-yellow-50">
+          <CardContent className="pt-6 text-sm text-yellow-800">
+            <p className="font-medium">Finish your profile to apply</p>
+            <p>You need to add {missingProfile.join(' and ')} in Settings before you can apply to any job.</p>
+            <Link href="/dashboard/settings" className="mt-2 inline-block rounded-md bg-yellow-600 px-3 py-1.5 font-medium text-white">
+              Go to Settings
+            </Link>
+          </CardContent>
+        </Card>
+      )}
+
       {applyWarning && (
         <Card className="border-yellow-200 bg-yellow-50">
           <CardContent className="pt-6 text-sm text-yellow-800">
-            <p className="font-medium">Action required</p>
-            <p>
-              {applyWarning}{' '}
-              <Link href="/dashboard/settings" className="underline">
-                Go to settings
+            <p className="font-medium">You can&apos;t apply yet</p>
+            <p>{applyWarning.message}</p>
+            {applyWarning.needsSettings && (
+              <Link href="/dashboard/settings" className="mt-2 inline-block rounded-md bg-yellow-600 px-3 py-1.5 font-medium text-white">
+                Fix it in Settings
               </Link>
-            </p>
+            )}
+            <button
+              type="button"
+              onClick={() => setApplyWarning(null)}
+              className="ml-3 text-xs underline"
+            >
+              Dismiss
+            </button>
           </CardContent>
         </Card>
       )}

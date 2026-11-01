@@ -164,13 +164,13 @@ export async function POST(request: Request) {
     })
     if (!tester?.countryCode || !tester.deviceInfo?.androidVersion) {
       return NextResponse.json(
-        { error: 'Add your country and Android device details in Settings before applying' },
+        { error: 'Before you can apply, go to Settings and add your country and your Android version. Then come back and tap Apply again.' },
         { status: 400 }
       )
     }
     if (job.isTraining && !isAfricanCountry(tester.countryCode)) {
       return NextResponse.json(
-        { error: 'Training is only available to testers in African countries.' },
+        { error: 'Training is only for testers in African countries. Check that the country in your Settings is correct, or choose a paid job instead.' },
         { status: 403 }
       )
     }
@@ -181,7 +181,7 @@ export async function POST(request: Request) {
       minimumAndroidVersion: job.minAndroidVersion,
     })) {
       return NextResponse.json(
-        { error: 'Your declared country or Android version does not meet this job’s stated requirements. Google Play availability may still vary by account or device.' },
+        { error: 'Your country or Android version in Settings does not match what this job needs. If they are wrong, fix them in Settings. If they are right, please choose another job. Google Play availability may still vary by account or device.' },
         { status: 400 }
       )
     }
