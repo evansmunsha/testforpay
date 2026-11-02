@@ -73,7 +73,14 @@ export function DailyMissionCard({
           )}
           {existingVideoId && (
             <div className="mt-4 rounded-lg border border-green-200 bg-white p-3 text-left">
-              <a className="text-sm font-medium text-blue-700 underline" href={`/api/videos/${existingVideoId}`}>
+              <video
+                controls
+                preload="metadata"
+                playsInline
+                src={`/api/videos/${existingVideoId}`}
+                className="mx-auto aspect-[9/16] w-full max-w-[260px] rounded-lg bg-black object-cover"
+              />
+              <a className="mt-2 inline-block text-sm font-medium text-blue-700 underline" href={`/api/videos/${existingVideoId}?download=1`}>
                 Download your screen recording
               </a>
               {videoDeleteAfter && (

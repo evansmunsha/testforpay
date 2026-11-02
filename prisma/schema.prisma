@@ -432,6 +432,32 @@ model FeedbackReport {
   @@index([reporterId])
 }
 
+model PaymentTransaction {
+  id                String    @id @default(cuid())
+  provider          String
+  reference         String    @unique
+  providerReference String?
+  jobId             String
+  developerId       String
+  amount            Decimal   @db.Decimal(12, 2)
+  currency          String
+  status            String    @default("PENDING")
+  checkoutUrl       String?
+  paidAt            DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([jobId])
+  @@index([developerId])
+  @@index([status])
+}
+
+model ProcessedWebhook {
+  id         String   @id
+  provider   String
+  receivedAt DateTime @default(now())
+}
+
 model Payment {
   id                String        @id @default(cuid())
   applicationId     String        @unique

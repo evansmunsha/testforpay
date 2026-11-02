@@ -247,7 +247,11 @@ export function MissionVideoRecorder({ taskId, onUploaded, onUploadingChange }: 
       )}
 
       {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
-      {uploaded && <p className="text-sm text-green-700">Video uploaded. It will be attached when you submit your mission.</p>}
+      {uploaded && (
+        <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-sm font-medium text-amber-900">
+          Video uploaded, but NOT sent to the developer yet. Write your feedback below and tap Complete Mission to send it.
+        </p>
+      )}
     </section>
   )
 }

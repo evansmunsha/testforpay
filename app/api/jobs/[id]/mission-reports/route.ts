@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { getVideoDeleteAfter } from '@/lib/video-rules'
+import { getTesterJobMissions } from '@/lib/tester-job-missions'
 
-// Lists mission uploads and issue reports for one job. Only that job's developer or an admin may read it.
+// Developers/admins: mission uploads and issue reports for one job. Testers: their own missions and reports for that job.
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -13,6 +14,13 @@ export async function GET(
     if (!currentUser) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { id } = await params
+
+    if (currentUser.role === 'TESTER') {
+      const own = await getTesterJobMissions(id, currentUser.userId)
+      if (!own) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      return NextResponse.json(own)
+    }
+
     const job = await prisma.testingJob.findUnique({
       where: { id },
       select: { id: true, developerId: true },

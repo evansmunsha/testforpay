@@ -29,7 +29,18 @@ export function DeveloperReports({ jobId }: { jobId: string }) {
       .catch(() => setData(null))
   }, [jobId])
 
-  if (!data || (data.submissions.length === 0 && data.issueReports.length === 0)) return null
+  if (!data || (data.submissions.length === 0 && data.issueReports.length === 0)) {
+    return (
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Tester reports</CardTitle>
+          <CardDescription>
+            No reports yet. A tester&apos;s screen recording appears here only after they tap Complete Mission.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    )
+  }
 
   const feedVideos = data.submissions
     .filter((s) => s.video && !s.video.deletedAt)
