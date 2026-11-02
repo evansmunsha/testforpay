@@ -6,12 +6,13 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { VerificationUploader } from '@/components/applications/verification-uploader'
-import { FileText, DollarSign, Clock, Calendar, ExternalLink, Upload, MessageSquare, RefreshCw } from 'lucide-react'
+import { FileText, DollarSign, Clock, Calendar, ExternalLink, Upload, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { FeedbackForm } from '@/components/applications/feedback-form'
 import { DailyCheckInPanel } from '@/components/applications/daily-checkin-panel'
 import { ApplicationIssueReportForm } from '@/components/applications/application-issue-report-form'
 import { formatEurFromCents } from '@/lib/currency'
+import { getTesterNextStep } from '@/lib/application-next-step'
 import type { Cents } from '@/types/money'
 
 interface Application {
@@ -149,7 +150,7 @@ export default function ApplicationsPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold text-gray-900">My Applications</h2>
+          <h2 className="text-3xl font-bold text-gray-900">My Jobs</h2>
           <p className="text-gray-600 mt-1">Track your testing applications and earnings</p>
         </div>
         <Button
@@ -260,6 +261,30 @@ export default function ApplicationsPage() {
               </CardHeader>
 
               <CardContent className="space-y-4">
+                {(() => {
+                  const step = getTesterNextStep({
+                    status: app.status,
+                    hasVerificationImage: Boolean(app.verificationImage),
+                    paused: Boolean(app.testingPausedAt),
+                    hasFeedback: Boolean(app.feedback),
+                  })
+                  return (
+                    <div
+                      className={`flex flex-col gap-3 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between ${
+                        step.actionNeeded ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-gray-50'
+                      }`}
+                    >
+                      <p className="text-sm text-gray-900">
+                        <span className="font-semibold">{step.actionNeeded ? 'Your next step: ' : 'Next: '}</span>
+                        {step.text}
+                      </p>
+                      <Link href={`/dashboard/applications/${app.id}`}>
+                        <Button className="min-h-11 w-full sm:w-auto">Open job</Button>
+                      </Link>
+                    </div>
+                  )
+                })()}
+
                 {/* Application Info */}
                 <div className="grid md:grid-cols-3 gap-4 text-sm">
                   <div className="flex items-center gap-2 text-gray-600">
@@ -353,15 +378,6 @@ export default function ApplicationsPage() {
                       </Button>
                     </div>
                   </div>
-                )}
-
-                {['VERIFIED', 'SCHEDULED', 'TESTING', 'COMPLETED'].includes(app.status) && (
-                  <Link href={`/dashboard/group/${app.job.id}`}>
-                    <Button variant="outline" className="min-h-11 w-full">
-                      <MessageSquare className="h-4 w-4 mr-2" />
-                      Group chat
-                    </Button>
-                  </Link>
                 )}
 
                 {!['REJECTED', 'INELIGIBLE', 'COMPLETED'].includes(app.status) && (

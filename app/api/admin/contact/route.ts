@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { markSectionSeen } from '@/lib/nav-badges'
 
 export async function GET() {
   try {
@@ -13,6 +14,11 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
       take: 200,
     })
+
+    // Opening the contact list clears the admin menu badge for contact messages.
+    await markSectionSeen(currentUser.userId, 'contacts').catch((error) =>
+      console.error('Failed to mark contacts seen:', error)
+    )
 
     return NextResponse.json({ messages })
   } catch (error) {

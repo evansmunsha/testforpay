@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
+import { useCallback, useEffect, useState } from 'react'
 import { 
   LayoutDashboard, 
   Briefcase, 
@@ -18,6 +19,7 @@ import {
   Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { formatBadgeCount, type NavBadges } from '@/lib/nav-badges-format'
 
 interface SidebarProps {
   userRole: 'DEVELOPER' | 'TESTER' | 'ADMIN'
@@ -27,6 +29,44 @@ interface SidebarProps {
 
 export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
   const pathname = usePathname()
+  const [badges, setBadges] = useState<NavBadges>({})
+
+  const refreshBadges = useCallback(async () => {
+    try {
+      // Opening Messages or Feedback marks it as seen before the counts are read.
+      const section = pathname.startsWith('/dashboard/messages')
+        ? 'messages'
+        : pathname.startsWith('/dashboard/feedback')
+          ? 'feedback'
+          : null
+      if (section) {
+        await fetch('/api/notifications', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section }),
+        })
+      }
+      const response = await fetch('/api/notifications?badges=1', { cache: 'no-store' })
+      if (response.ok) setBadges((await response.json()).badges ?? {})
+    } catch {
+      // Badges are optional; ignore network errors.
+    }
+  }, [pathname])
+
+  useEffect(() => {
+    refreshBadges()
+    const interval = setInterval(refreshBadges, 30000)
+    return () => clearInterval(interval)
+  }, [refreshBadges])
+
+  const badgeKeyByHref: Record<string, keyof NavBadges> = {
+    '/dashboard/jobs': 'jobs',
+    '/dashboard/applications': 'applications',
+    '/dashboard/messages': 'messages',
+    '/dashboard/feedback': 'feedback',
+    '/dashboard/community': 'community',
+    '/dashboard/admin': 'admin',
+  }
 
   const developerLinks = [
     {
@@ -63,13 +103,18 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
 
   const testerLinks = [
     {
+      href: '/dashboard',
+      label: 'Today',
+      icon: LayoutDashboard,
+    },
+    {
       href: '/dashboard/browse',
       label: 'Browse Jobs',
       icon: Search,
     },
     {
       href: '/dashboard/applications',
-      label: 'My Applications',
+      label: 'My Jobs',
       icon: FileText,
     },
     {
@@ -158,6 +203,8 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
           {allLinks.map((link) => {
             const Icon = link.icon
             const isActive = pathname === link.href
+            const badgeKey = badgeKeyByHref[link.href]
+            const badgeText = badgeKey ? formatBadgeCount(badges[badgeKey] ?? 0) : null
 
             return (
               <Link
@@ -173,6 +220,14 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
               >
                 <Icon className="h-5 w-5 shrink-0" />
                 <span className="truncate">{link.label}</span>
+                {badgeText && (
+                  <span
+                    aria-label={`${badgeText} waiting`}
+                    className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold leading-5 text-white"
+                  >
+                    {badgeText}
+                  </span>
+                )}
               </Link>
             )
           })}

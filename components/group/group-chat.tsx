@@ -27,7 +27,7 @@ interface GroupData {
 
 const roleLabel: Record<string, string> = { ADMIN: 'Admin', DEVELOPER: 'Developer', TESTER: 'Tester' }
 
-export function GroupChat({ jobId }: { jobId: string }) {
+export function GroupChat({ jobId, hideBack = false }: { jobId: string; hideBack?: boolean }) {
   const [data, setData] = useState<GroupData | null>(null)
   const [error, setError] = useState('')
   const [body, setBody] = useState('')
@@ -97,9 +97,11 @@ export function GroupChat({ jobId }: { jobId: string }) {
 
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-4">
-      <Link href="/dashboard" className="inline-flex min-h-11 items-center gap-1 text-sm text-blue-700">
-        <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back
-      </Link>
+      {!hideBack && (
+        <Link href="/dashboard" className="inline-flex min-h-11 items-center gap-1 text-sm text-blue-700">
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Back
+        </Link>
+      )}
 
       {error && <p role="alert" className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</p>}
       {!data && !error && <p className="text-sm text-gray-500">Loading…</p>}

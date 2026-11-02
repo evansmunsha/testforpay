@@ -156,7 +156,7 @@ export async function POST(
         userId: result.application.testerId,
         title: result.action === 'pause' ? 'Testing paused' : 'Testing resumed',
         body: `${result.application.job.appName}: ${notificationText}`,
-        url: '/dashboard/applications',
+        url: `/dashboard/applications/${id}`,
         type: result.action === 'pause' ? 'testing_paused' : 'testing_resumed',
       }),
       sendNotification({

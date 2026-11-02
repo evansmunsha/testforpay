@@ -32,7 +32,7 @@ type MissionData = {
 }
 
 /** One place for a tester's job: today's mission, the report form, past reports with videos. */
-export function TesterJobMissions({ jobId }: { jobId: string }) {
+export function TesterJobMissions({ jobId, hideBack = false }: { jobId: string; hideBack?: boolean }) {
   const { user } = useAuth()
   const [data, setData] = useState<MissionData | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -74,9 +74,11 @@ export function TesterJobMissions({ jobId }: { jobId: string }) {
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <Link href="/dashboard/applications" className="inline-flex items-center gap-1 text-sm text-blue-700 underline">
-        <ArrowLeft className="h-4 w-4" /> Back to My Applications
-      </Link>
+      {!hideBack && (
+        <Link href="/dashboard/applications" className="inline-flex items-center gap-1 text-sm text-blue-700 underline">
+          <ArrowLeft className="h-4 w-4" /> Back to My Jobs
+        </Link>
+      )}
 
       <div>
         <div className="mb-3 flex items-center gap-2">

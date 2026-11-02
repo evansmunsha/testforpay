@@ -157,7 +157,7 @@ export async function PATCH(request: Request) {
         body: parsed.data.status === 'INCOMPATIBLE'
           ? `Your report for "${report.job.appName}" was confirmed. This will not count against your tester record.`
           : `Your report for "${report.job.appName}" has been updated by support.`,
-        url: '/dashboard/applications',
+        url: `/dashboard/applications/${report.applicationId}`,
         type: 'application_issue_update',
       }),
       sendNotification({

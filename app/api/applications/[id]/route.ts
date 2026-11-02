@@ -341,7 +341,7 @@ export async function PATCH(
           body: application.job.isTraining
             ? `Your request to join training for "${application.job.appName}" is approved. Open the Play Store link in your dashboard and upload a screenshot showing the Install button.`
             : `Your application to test "${application.job.appName}" has been approved. Open the Play Store link in your dashboard and upload a screenshot showing the Install button.`,
-          url: '/dashboard/applications',
+          url: `/dashboard/applications/${id}`,
           type: 'application_approved',
         })
       } catch (notifyError) {
@@ -420,7 +420,7 @@ export async function PATCH(
           userId: application.testerId,
           title: 'Application Update',
           body: `Your application to test "${application.job.appName}" was closed. If you could not install the app, this does not count against you.`,
-          url: '/dashboard/applications',
+          url: `/dashboard/applications/${id}`,
           type: 'application_rejected',
         })
       } catch (notifyError) {
@@ -502,7 +502,7 @@ export async function PATCH(
           body: updatedApplication.job.isTraining
             ? `You are verified for "${application.job.appName}". Your training starts now. Open your daily mission.`
             : `Your screenshot for "${application.job.appName}" has been verified. You are on the ready list — the developer will start testing once enough testers are verified.`,
-          url: updatedApplication.job.isTraining ? '/dashboard/tasks' : '/dashboard/applications',
+          url: updatedApplication.job.isTraining ? '/dashboard/tasks' : `/dashboard/applications/${id}`,
           type: 'verification_approved',
         })
       } catch (notifyError) {
@@ -515,7 +515,7 @@ export async function PATCH(
           userId: application.testerId,
           title: 'Join the group chat 💬',
           body: `You are verified for "${application.job.appName}". Tap to join the group chat with the developer and other testers.`,
-          url: `/dashboard/group/${application.job.id}`,
+          url: `/dashboard/applications/${id}`,
           type: 'group_chat_invite',
         })
       } catch (notifyError) {

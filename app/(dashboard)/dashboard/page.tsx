@@ -590,20 +590,11 @@ function TesterDashboard() {
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Applications</CardTitle>
-          <CardDescription>Your latest testing applications</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-12 text-gray-500">
-            <Briefcase className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p className="font-medium">No applications yet</p>
-            <p className="text-sm mt-1">Apply to testing jobs to start earning</p>
-          </div>
-        </CardContent>
-      </Card>
+      <Link href="/dashboard/applications">
+        <Button variant="outline" className="min-h-11 w-full">
+          See all my applications
+        </Button>
+      </Link>
     </div>
   )
 }

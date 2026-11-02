@@ -155,6 +155,7 @@ model User {
   applicationPausesInitiated  ApplicationPause[] @relation("ApplicationPauseInitiator")
   applicationResumesInitiated ApplicationPause[] @relation("ApplicationPauseResumeInitiator")
   paymentAllocationActions PaymentAllocationHistory[]
+  navSeen NavSeen[]
   
   // Ratings
   averageRating    Float?   @default(0)
@@ -955,6 +956,17 @@ model CommunityStat {
   key       String   @id
   value     Int
   updatedAt DateTime @default(now())
+}
+
+// Remembers when a person last opened a menu section, so menu badges can count only what is new.
+model NavSeen {
+  id      String   @id @default(cuid())
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  section String
+  seenAt  DateTime @default(now())
+
+  @@unique([userId, section])
 }
 
 model AdminAuditLog {

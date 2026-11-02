@@ -16,6 +16,9 @@ import { useToast } from '@/components/ui/toast-provider'
 import { TestingReportViewer } from '@/components/jobs/testing-report-viewer'
 import { DeveloperReports } from '@/components/jobs/developer-reports'
 import { TaskSubmissionGrid } from '@/components/jobs/task-submission-grid'
+import { GroupChat } from '@/components/group/group-chat'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { getDeveloperActions } from '@/lib/developer-actions'
 import { 
   ArrowLeft, 
   Calendar, 
@@ -32,6 +35,7 @@ import {
   RefreshCw,
   MessageSquare,
   Package,
+  MoreHorizontal,
 } from 'lucide-react'
 import Link from 'next/link'
 import { formatEurFromCents, formatUsdFromEurCents } from '@/lib/currency'
@@ -131,6 +135,8 @@ export default function JobDetailPage() {
     contactReleased: boolean
   } | null>(null)
   const [countryCodes, setCountryCodes] = useState('')
+  const [mainTab, setMainTab] = useState('testers')
+  const [testerFilter, setTesterFilter] = useState<'all' | 'pending' | 'active' | 'completed' | 'rejected'>('all')
   const [resumePausedApplications, setResumePausedApplications] = useState(false)
   const [resumeReason, setResumeReason] = useState('')
   const [loading, setLoading] = useState(true)
@@ -587,7 +593,7 @@ You will receive a partial refund for unused budget.`
                 {planLabel}
               </Badge>
             </div>
-            <p className="text-gray-600 mt-1">Job ID: {job.id}</p>
+            <p className="text-gray-600 mt-1">{job.appName} · {job.testDuration}-day test</p>
           </div>
         </div>
         <div className="flex gap-2">
@@ -614,23 +620,71 @@ You will receive a partial refund for unused budget.`
               Edit
             </Button>
           </Link>
-          {job.status !== 'CANCELLED' && job.status !== 'COMPLETED' && (
-            <Button 
-              variant="outline" 
-              onClick={handleCancel}
-              disabled={actionLoading}
-              className="border-orange-300 text-orange-600 hover:bg-orange-50"
-            >
-              <XCircle className="h-4 w-4 mr-2" />
-              Cancel Job
-            </Button>
-          )}
-          <Button variant="destructive" onClick={handleDelete}>
-            <Trash2 className="h-4 w-4 mr-2" />
-            Delete
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" aria-label="More actions">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {job.status !== 'CANCELLED' && job.status !== 'COMPLETED' && (
+                <DropdownMenuItem onSelect={handleCancel} disabled={actionLoading} className="text-orange-600">
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Cancel Job
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onSelect={handleDelete} className="text-red-600">
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      {/* Needs your action */}
+      {(() => {
+        const actions = getDeveloperActions({
+          isDraft,
+          pendingApprovals: pendingApplications.length,
+          screenshotsToVerify: awaitingVerification.length,
+          readyToStart: isReadyToStart && (recruitment?.pausedToResume ?? 0) === 0,
+          scheduledStartDate: job.scheduledStartAt ? job.scheduledStartAt.slice(0, 10) : null,
+        })
+        const goTo = (id: string) => {
+          if (id === 'approve') {
+            setMainTab('testers')
+            setTesterFilter('pending')
+          } else if (id === 'verify') {
+            setMainTab('testers')
+            setTesterFilter('active')
+          }
+          const anchor = id === 'start' ? 'start-banner' : id === 'publish' ? 'payment-status' : 'job-tabs'
+          document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+        }
+        return (
+          <Card className={actions.length > 0 ? 'border-2 border-blue-300 bg-blue-50' : 'border-green-200 bg-green-50'}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">
+                {actions.length > 0 ? 'Needs your action' : 'Nothing needs your action right now'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {actions.length === 0 && (
+                <p className="text-sm text-green-900">New applications, screenshots and reports will show here.</p>
+              )}
+              {actions.map((action) => (
+                <div key={action.id} className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-sm text-gray-900">{action.text}</p>
+                  <Button size="sm" className="min-h-11 sm:min-h-9" onClick={() => goTo(action.id)}>
+                    {action.buttonLabel}
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Stats Overview */}
       <div className="grid md:grid-cols-4 gap-6">
@@ -697,7 +751,7 @@ You will receive a partial refund for unused budget.`
       {/* Step banners — guide dev through the correct sequence */}
       {/* Ready-to-start banner */}
       {isReadyToStart && (recruitment?.pausedToResume ?? 0) === 0 && (
-        <div className="rounded-xl border-2 border-green-400 bg-green-50 p-5 flex flex-col sm:flex-row sm:items-start gap-4">
+        <div id="start-banner" className="rounded-xl border-2 border-green-400 bg-green-50 p-5 flex flex-col sm:flex-row sm:items-start gap-4">
           <CheckCircle className="h-6 w-6 text-green-600 mt-0.5 shrink-0" />
           <div className="flex-1">
             <p className="font-bold text-green-900 text-base">
@@ -825,7 +879,7 @@ You will receive a partial refund for unused budget.`
         </Card>
       )}
 
-      <Card>
+      <Card id="payment-status">
         <CardHeader>
           <CardTitle>Payment Status</CardTitle>
           <CardDescription>Clear view of escrow and payouts</CardDescription>
@@ -862,194 +916,121 @@ You will receive a partial refund for unused budget.`
         </CardContent>
       </Card>
 
-      <div className="mb-6">
-        <Link href={`/dashboard/group/${job.id}`}>
-          <Button variant="outline" className="min-h-11 w-full sm:w-auto">Open group chat</Button>
-        </Link>
-      </div>
-
-      <DeveloperReports jobId={job.id} />
+      <div id="job-tabs" />
 
       {/* Main Content */}
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <Tabs defaultValue="applications" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-8">
-              <TabsTrigger value="applications">
-                All ({job.applications.length})
+          <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="testers">
+                Testers ({job.applications.length})
               </TabsTrigger>
-              <TabsTrigger value="pending">
-                Pending ({pendingApplications.length})
+              <TabsTrigger value="reports">
+                Reports &amp; videos
               </TabsTrigger>
-              <TabsTrigger value="active">
-                Active ({activeApplications.length})
-              </TabsTrigger>
-              <TabsTrigger value="completed">
-                Done ({completedApplications.length})
-              </TabsTrigger>
-              <TabsTrigger value="rejected">
-                Rejected ({rejectedApplications.length})
-              </TabsTrigger>
-              <TabsTrigger value="checkins">
-                Check-ins
-              </TabsTrigger>
-              <TabsTrigger value="missions">
-                Missions
-              </TabsTrigger>
-              <TabsTrigger value="report">
-                Report
+              <TabsTrigger value="chat">
+                Chat
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="applications" className="space-y-4">
-              {job.applications.length === 0 ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-12 text-gray-500">
-                      <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-                      <p className="font-medium">No applications yet</p>
-                      <p className="text-sm mt-1">
-                        {job.status === 'DRAFT' 
-                          ? 'Publish your job to start receiving applications'
-                          : 'Testers will appear here once they apply'}
+            <TabsContent value="testers" className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {([
+                  ['all', 'All', job.applications.length],
+                  ['pending', 'To approve', pendingApplications.length],
+                  ['active', 'Active', activeApplications.length],
+                  ['completed', 'Done', completedApplications.length],
+                  ['rejected', 'Rejected', rejectedApplications.length],
+                ] as const).map(([key, label, count]) => (
+                  <Button
+                    key={key}
+                    size="sm"
+                    variant={testerFilter === key ? 'default' : 'outline'}
+                    className="min-h-11 sm:min-h-9"
+                    onClick={() => setTesterFilter(key)}
+                  >
+                    {label} ({count})
+                  </Button>
+                ))}
+              </div>
+              {(() => {
+                const filtered =
+                  testerFilter === 'pending' ? pendingApplications
+                  : testerFilter === 'active' ? activeApplications
+                  : testerFilter === 'completed' ? completedApplications
+                  : testerFilter === 'rejected' ? rejectedApplications
+                  : job.applications
+                if (filtered.length === 0) {
+                  return (
+                    <Card>
+                      <CardContent className="pt-6">
+                        <div className="text-center py-12 text-gray-500">
+                          <Users className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+                          <p className="font-medium">
+                            {job.applications.length === 0 ? 'No applications yet' : 'No testers in this list'}
+                          </p>
+                          {job.applications.length === 0 && (
+                            <p className="text-sm mt-1">
+                              {job.status === 'DRAFT'
+                                ? 'Publish your job to start receiving applications'
+                                : 'Testers will appear here once they apply'}
+                            </p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                }
+                return filtered.map((application) => (
+                  <ApplicationCard
+                    key={application.id}
+                    application={application}
+                    onApprove={application.status === 'PENDING' ? handleApprove : undefined}
+                    onReject={application.status === 'PENDING' ? handleReject : undefined}
+                    onVerify={['OPTED_IN', 'VERIFIED', 'SCHEDULED', 'TESTING'].includes(application.status) ? handleVerify : undefined}
+                    loading={actionLoading}
+                  />
+                ))
+              })()}
+            </TabsContent>
+
+            <TabsContent value="reports" className="space-y-8">
+              <DeveloperReports jobId={job.id} />
+              <section className="space-y-3">
+                <h3 className="font-semibold text-gray-900">Daily mission submissions</h3>
+                <TaskSubmissionGrid jobId={job.id} />
+              </section>
+              <section className="space-y-3">
+                <h3 className="font-semibold text-gray-900">Daily check-ins</h3>
+                {activeApplications.length === 0 && completedApplications.length === 0 ? (
+                  <p className="text-sm text-gray-500">Check-ins appear here once testers start testing.</p>
+                ) : (
+                  [...activeApplications, ...completedApplications].map(application => (
+                    <div key={application.id}>
+                      <p className="text-sm font-medium text-gray-600 mb-2">
+                        {application.tester.name || 'Tester'}
                       </p>
+                      <DailyCheckInPanel
+                        applicationId={application.id}
+                        applicationStatus={application.status}
+                        testingStartDate={application.testingStartDate}
+                        isDeveloperView={true}
+                      />
                     </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                job.applications.map((application) => (
-                  <ApplicationCard
-                    key={application.id}
-                    application={application}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
-                    onVerify={handleVerify}
-                    loading={actionLoading}
-                  />
-                ))
-              )}
+                  ))
+                )}
+              </section>
+              <section className="space-y-3">
+                <h3 className="font-semibold text-gray-900">Testing report</h3>
+                <TestingReportViewer jobId={job.id} />
+              </section>
             </TabsContent>
 
-            <TabsContent value="pending" className="space-y-4">
-              {pendingApplications.length === 0 ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-8 text-gray-500">
-                      <AlertCircle className="h-10 w-10 mx-auto mb-3 text-gray-400" />
-                      <p className="font-medium">No pending applications</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                pendingApplications.map((application) => (
-                  <ApplicationCard
-                    key={application.id}
-                    application={application}
-                    onApprove={handleApprove}
-                    onReject={handleReject}
-                    loading={actionLoading}
-                  />
-                ))
-              )}
+            <TabsContent value="chat">
+              <GroupChat jobId={job.id} hideBack />
             </TabsContent>
-
-            <TabsContent value="active" className="space-y-4">
-              {activeApplications.length === 0 ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-8 text-gray-500">
-                      <Clock className="h-10 w-10 mx-auto mb-3 text-gray-400" />
-                      <p className="font-medium">No active tests</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                activeApplications.map((application) => (
-                  <ApplicationCard
-                    key={application.id}
-                    application={application}
-                    onVerify={handleVerify}
-                    loading={actionLoading}
-                  />
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="completed" className="space-y-4">
-              {completedApplications.length === 0 ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-8 text-gray-500">
-                      <CheckCircle className="h-10 w-10 mx-auto mb-3 text-gray-400" />
-                      <p className="font-medium">No completed tests</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                completedApplications.map((application) => (
-                  <ApplicationCard
-                    key={application.id}
-                    application={application}
-                  />
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="rejected" className="space-y-4">
-              {rejectedApplications.length === 0 ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-8 text-gray-500">
-                      <XCircle className="h-10 w-10 mx-auto mb-3 text-gray-400" />
-                      <p className="font-medium">No rejected applications</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                rejectedApplications.map((application) => (
-                  <ApplicationCard
-                    key={application.id}
-                    application={application}
-                  />
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="checkins" className="space-y-4">
-              {activeApplications.length === 0 && completedApplications.length === 0 ? (
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="text-center py-8 text-gray-500">
-                      <MessageSquare className="h-10 w-10 mx-auto mb-3 text-gray-400" />
-                      <p className="font-medium">No active testers yet</p>
-                      <p className="text-sm mt-1">Check-ins appear here once testers start their 14-day testing period.</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              ) : (
-                [...activeApplications, ...completedApplications].map(application => (
-                  <div key={application.id}>
-                    <p className="text-sm font-medium text-gray-600 mb-2">
-                      {application.tester.name || 'Tester'}
-                    </p>
-                    <DailyCheckInPanel
-                      applicationId={application.id}
-                      applicationStatus={application.status}
-                      testingStartDate={application.testingStartDate}
-                      isDeveloperView={true}
-                    />
-                  </div>
-                ))
-              )}
-            </TabsContent>
-
-            <TabsContent value="missions" className="space-y-4">
-              <TaskSubmissionGrid jobId={job.id} />
-            </TabsContent>
-
-            <TabsContent value="report" className="space-y-4">
-              <TestingReportViewer jobId={job.id} />
-            </TabsContent>          </Tabs>
+          </Tabs>
         </div>
 
         {/* Sidebar */}

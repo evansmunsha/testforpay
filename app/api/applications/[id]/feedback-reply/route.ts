@@ -106,7 +106,7 @@ export async function POST(
         userId: application.tester.id,
         title: 'Developer replied to your feedback',
         body: `A developer replied to your feedback on "${application.job.appName}".`,
-        url: '/dashboard/applications',
+        url: `/dashboard/applications/${id}`,
         type: 'feedback_reply',
       })
     } catch (notifyError) {

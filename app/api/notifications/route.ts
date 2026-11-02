@@ -1,6 +1,25 @@
 import { NextResponse } from 'next/server'
+import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { computeNavBadges, markSectionSeen } from '@/lib/nav-badges'
+
+const seenSchema = z.object({ section: z.enum(['messages', 'feedback']) })
+
+// POST { section } — the caller opened a menu section, so its badge should clear.
+export async function POST(request: Request) {
+  try {
+    const currentUser = await getCurrentUser()
+    if (!currentUser) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+    const parsed = seenSchema.safeParse(await request.json().catch(() => null))
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    await markSectionSeen(currentUser.userId, parsed.data.section)
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Mark section seen error:', error)
+    return NextResponse.json({ error: 'Failed to update' }, { status: 500 })
+  }
+}
 
 // Get user notifications
 export async function GET(request: Request) {
@@ -15,6 +34,13 @@ export async function GET(request: Request) {
     }
 
     const { searchParams } = new URL(request.url)
+
+    // ?badges=1 returns the menu badge counts for this user's own role only.
+    if (searchParams.get('badges') === '1') {
+      const badges = await computeNavBadges(currentUser.userId, currentUser.role)
+      return NextResponse.json({ badges }, { headers: { 'Cache-Control': 'no-store' } })
+    }
+
     const unreadOnly = searchParams.get('unreadOnly') === 'true'
     const limit = parseInt(searchParams.get('limit') || '50')
 

@@ -374,7 +374,7 @@ export async function POST(_: Request, { params }: RouteContext) {
           userId: tester.testerId,
           title: 'You are selected for the testing cohort',
           body: `You are selected to test "${result.appName}". Join the Google Play closed test and upload your opt-in proof from your dashboard.`,
-          url: '/dashboard/applications',
+          url: `/dashboard/applications/${tester.id}`,
           type: 'cohort_selected',
         })
       }))

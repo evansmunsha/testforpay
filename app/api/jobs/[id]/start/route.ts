@@ -287,7 +287,7 @@ export async function POST(
           : result.resumedIds.has(tester.id)
           ? `Testing for "${result.appName}" has resumed. Your earlier progress is kept and only your saved remaining time continues.`
           : `Testing for "${result.appName}" has started. Your ${result.testDuration}-day testing period begins now. Open your daily mission.`,
-        url: '/dashboard/applications',
+        url: `/dashboard/applications/${tester.id}`,
         type: result.scheduled ? 'testing_scheduled' : 'testing_started',
       })
     ))
