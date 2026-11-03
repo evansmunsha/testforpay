@@ -25,7 +25,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <p className="text-gray-700">
               TestForPay is operated by Evans Munsha. If you have questions about this policy, please contact us at{' '}
-              <a href="mailto:evansensteen@gmail.com" className="text-blue-600 hover:underline">evansensteen@gmail.com</a>.
+              <a href="mailto:testforpays@gmail.com" className="text-blue-600 hover:underline">testforpays@gmail.com</a>.
             </p>
           </section>
 
@@ -39,7 +39,7 @@ export default function PrivacyPolicyPage() {
               <li>Password (stored securely using bcrypt encryption)</li>
               <li>Phone number (optional, for testers)</li>
               <li>Device information (for testers: device model, Android version)</li>
-              <li>Payment information (processed securely through Stripe)</li>
+              <li>Payment information (processed securely by Dodo Payments and Stripe)</li>
             </ul>
 
             <h3 className="text-xl font-medium text-gray-800 mb-3">2.2 Usage Information</h3>
@@ -70,6 +70,7 @@ export default function PrivacyPolicyPage() {
             <p className="text-gray-700 mb-4">We share your information with:</p>
             <ul className="list-disc pl-6 text-gray-700 mb-4 space-y-2">
               <li><strong>Developers (for testers):</strong> Your email and device information are shared with developers when you apply to test their apps</li>
+              <li><strong>Dodo Payments:</strong> Developer card payments are processed by Dodo Payments, our payment provider</li>
               <li><strong>Stripe:</strong> Payment information is processed by Stripe for secure transactions</li>
               <li><strong>Service providers:</strong> We use trusted services for hosting, email, and file storage</li>
               <li><strong>Legal requirements:</strong> When required by law or to protect our rights</li>
@@ -143,7 +144,7 @@ export default function PrivacyPolicyPage() {
             </p>
             <div className="bg-gray-100 p-4 rounded-lg">
               <p className="text-gray-700"><strong>Evans Munsha</strong></p>
-              <p className="text-gray-700">Email: <a href="mailto:evansensteen@gmail.com" className="text-blue-600 hover:underline">evansensteen@gmail.com</a></p>
+              <p className="text-gray-700">Email: <a href="mailto:testforpays@gmail.com" className="text-blue-600 hover:underline">testforpays@gmail.com</a></p>
               <p className="text-gray-700">Phone: <a href="tel:+260963266937" className="text-blue-600 hover:underline">+260 963 266 937</a></p>
             </div>
           </section>

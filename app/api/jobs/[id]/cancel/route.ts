@@ -272,7 +272,11 @@ export async function POST(
       }
 
       // Then process partial refund to developer
-      if (developerRefund > 0 && paymentIntentId) {
+      if (developerRefund > 0 && paymentIntentId?.startsWith('dodo:')) {
+        // Paid through Dodo: the refund is made by hand in the Dodo dashboard.
+        refundIssued = false
+        console.warn(`Manual Dodo refund needed for job ${job.id}: €${(developerRefund / 100).toFixed(2)}`)
+      } else if (developerRefund > 0 && paymentIntentId) {
         try {
           const intent = await stripe.paymentIntents.retrieve(paymentIntentId)
           const totalEurCents =

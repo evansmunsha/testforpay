@@ -29,7 +29,7 @@ export default function RefundPolicyPage() {
             Refund Policy
           </h1>
           <p className="text-lg text-gray-600">
-            Last updated: July 24, 2026
+            Last updated: November 3, 2026
           </p>
         </div>
 
@@ -43,6 +43,11 @@ export default function RefundPolicyPage() {
               your app specifically due to tester compliance issues after you used
               TestForPay correctly, we will refund 100% of your payment. No
               questions asked.
+            </p>
+            <p className="text-gray-700 leading-relaxed mt-4">
+              Testing runs for 14 days after your group of testers is full.
+              You receive feedback, screenshots and screen recordings on your
+              job page.
             </p>
           </section>
 
@@ -148,7 +153,7 @@ export default function RefundPolicyPage() {
                 </ul>
               </li>
               <li>
-                <strong>We review within 48 hours.</strong> If your rejection
+              <strong>We review within 48 hours.</strong> If your rejection
                 falls under our covered reasons, we process the refund to your
                 original payment method within 5–7 business days.
               </li>
@@ -173,10 +178,10 @@ export default function RefundPolicyPage() {
             </h2>
             <p className="text-gray-700 leading-relaxed">
               Once testers have completed the full 14-day testing period and
-              been verified, their payment is released from escrow and is
+              been checked, their payment is sent to them and is
               non-refundable. This protects our testers, who rely on TestForPay
-              for income. Refunds to developers only apply to the platform
-              service fee or undelivered testing slots.
+              for income. Refunds to developers only apply to undelivered
+              testing places, or to rejections covered by the guarantee above.
             </p>
           </section>
 

@@ -10,6 +10,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { trainingLevel } from '@/lib/training-rules'
 import { DollarSign, CheckCircle, Loader2, AlertTriangle } from 'lucide-react'
 
+const SHOW_STRIPE_PAYOUT = false
+
 export default function SettingsPage() {
   const { user } = useAuth()
   const router = useRouter()
@@ -19,6 +21,10 @@ export default function SettingsPage() {
 
   const [name, setName] = useState('')
   const [countryCode, setCountryCode] = useState('')
+  const [payoneerEmail, setPayoneerEmail] = useState('')
+  const [mobileMoneyNumber, setMobileMoneyNumber] = useState('')
+  const [payoutSaving, setPayoutSaving] = useState(false)
+  const [payoutMessage, setPayoutMessage] = useState('')
   const [deviceModel, setDeviceModel] = useState('')
   const [androidVersion, setAndroidVersion] = useState('')
   const [screenSize, setScreenSize] = useState('')
@@ -60,6 +66,8 @@ export default function SettingsPage() {
         .then(async (response) => response.ok ? response.json() : null)
         .then((profile) => {
           if (profile?.countryCode) setCountryCode(profile.countryCode)
+          if (profile?.paypalEmail) setPayoneerEmail(profile.paypalEmail)
+          if (profile?.phoneNumber) setMobileMoneyNumber(profile.phoneNumber)
         })
         .catch((error) => console.error('Failed to load profile country:', error))
     }
@@ -118,6 +126,28 @@ export default function SettingsPage() {
       setMessage('Something went wrong')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleSavePayoutDetails = async () => {
+    setPayoutSaving(true)
+    setPayoutMessage('')
+    try {
+      const response = await fetch('/api/user/profile', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name || user?.name, payoneerEmail, mobileMoneyNumber }),
+      })
+      if (response.ok) {
+        setPayoutMessage('Saved. We will pay you with these details.')
+      } else {
+        const data = await response.json().catch(() => null)
+        setPayoutMessage(data?.error || 'Could not save. Check your details and click Save payout details again.')
+      }
+    } catch {
+      setPayoutMessage('Could not save. Check your internet and click Save payout details again.')
+    } finally {
+      setPayoutSaving(false)
     }
   }
 
@@ -455,7 +485,8 @@ export default function SettingsPage() {
 
       {user?.role === 'TESTER' && (
         <>
-          {/* Payout Setup Card */}
+          {/* Payout Setup Card (Stripe is hidden for now; set SHOW_STRIPE_PAYOUT to true to show it again) */}
+          {SHOW_STRIPE_PAYOUT && (
           <Card className={user?.stripeAccountId ? 'border-green-200 bg-green-50' : 'border-blue-200 bg-blue-50'}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
@@ -606,6 +637,53 @@ export default function SettingsPage() {
                   ? 'You can update your payout details on Stripe'
                   : 'You\'ll be redirected to Stripe to securely set up your payout details'}
               </p>
+            </CardContent>
+          </Card>
+          )}
+
+          {/* Manual payout details */}
+          <Card className="border-blue-200">
+            <CardHeader>
+              <CardTitle>How should we pay you?</CardTitle>
+              <CardDescription>
+                You must do this to get paid. We pay you after your 14 days of testing are checked.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <ol className="list-decimal pl-5 text-sm text-gray-700 space-y-1">
+                <li>Outside Zambia: type your Payoneer email below.</li>
+                <li>In Zambia: type your MTN or Airtel mobile money number below.</li>
+                <li>Click Save payout details.</li>
+              </ol>
+              {!payoneerEmail && !mobileMoneyNumber && (
+                <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                  You have not added payout details yet. Add one now, or we cannot pay you.
+                </p>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="payoneerEmail">Payoneer email (any country)</Label>
+                <Input
+                  id="payoneerEmail"
+                  type="email"
+                  value={payoneerEmail}
+                  onChange={(e) => setPayoneerEmail(e.target.value)}
+                  placeholder="the email of your Payoneer account"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mobileMoneyNumber">Mobile money number (Zambia: MTN or Airtel)</Label>
+                <Input
+                  id="mobileMoneyNumber"
+                  value={mobileMoneyNumber}
+                  onChange={(e) => setMobileMoneyNumber(e.target.value)}
+                  placeholder="0971234567"
+                />
+                <p className="text-xs text-gray-500">The name on this number must be your own name.</p>
+              </div>
+              <Button onClick={handleSavePayoutDetails} disabled={payoutSaving} className="w-full">
+                {payoutSaving ? 'Saving...' : 'Save payout details'}
+              </Button>
+              {payoutMessage && <p className="text-sm text-gray-700">{payoutMessage}</p>}
             </CardContent>
           </Card>
 

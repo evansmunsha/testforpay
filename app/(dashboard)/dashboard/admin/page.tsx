@@ -141,7 +141,7 @@ interface Application {
 
 interface Payment {
   id: string; amount: Cents; status: string; createdAt: string; failureReason?: string | null
-  application: { job: { id: string; appName: string }; tester: { id: string; email: string; name: string | null } }
+  application: { job: { id: string; appName: string }; tester: { id: string; email: string; name: string | null; paypalEmail?: string | null; phoneNumber?: string | null; countryCode?: string | null } }
   allocationHistory: Array<{
     id: string
     createdAt: string
@@ -1026,6 +1026,41 @@ export default function AdminDashboard() {
       try { const res = await fetch('/api/admin/fraud', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'clear-flags', userId, reason }) }); if (res.ok) { toast({ title: 'Cleared', description: 'Flags cleared', variant: 'success' }); fetchFraudData(); fetchAuditEntries() } else { const data = await res.json(); toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' }) } }
       catch { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) } finally { setActionLoading(null) }
     } })
+  }
+
+  const handleMarkPaid = (payment: Payment) => {
+    const tester = payment.application?.tester
+    openConfirm({
+      title: 'Did you already pay this tester?',
+      description: `Click this only after you sent ${formatEurFromCents(payment.amount)} to ${tester?.name || tester?.email} by Payoneer or mobile money. The payment is saved as paid and the tester is told. Write how you paid (for example: Payoneer, 12 Nov).`,
+      confirmLabel: 'Yes, I paid them',
+      reasonRequired: true,
+      onConfirm: async reason => {
+        setActionLoading(payment.id)
+        try {
+          const res = await fetch('/api/admin/payments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ paymentId: payment.id, reason }) })
+          if (res.ok) { await fetchPayments(); fetchAuditEntries(); toast({ title: 'Saved as paid', description: 'The tester was told they were paid.', variant: 'success' }) }
+          else { const data = await res.json(); toast({ title: 'Could not save', description: data.error || 'Refresh the page and try again.', variant: 'destructive' }) }
+        } catch { toast({ title: 'Error', description: 'Check your internet and try again.', variant: 'destructive' }) } finally { setActionLoading(null) }
+      },
+    })
+  }
+
+  const handleMarkJobPaid = (job: Job) => {
+    openConfirm({
+      title: 'Did the developer pay you?',
+      description: `Click this only after you got the money for "${job.appName}" (PayPal, Wise or bank). The job goes live and testers are told. Write how you got paid (for example: PayPal, 12 Nov, 28 EUR).`,
+      confirmLabel: 'Yes, make the job live',
+      reasonRequired: true,
+      onConfirm: async reason => {
+        setActionLoading(job.id)
+        try {
+          const res = await fetch('/api/admin/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jobId: job.id, reason }) })
+          if (res.ok) { await fetchJobs(); fetchAuditEntries(); toast({ title: 'Job is live', description: 'The developer and the testers were told.', variant: 'success' }) }
+          else { const data = await res.json(); toast({ title: 'Could not save', description: data.error || 'Refresh the page and try again.', variant: 'destructive' }) }
+        } catch { toast({ title: 'Error', description: 'Check your internet and try again.', variant: 'destructive' }) } finally { setActionLoading(null) }
+      },
+    })
   }
 
   const handleRetryPayout = async (paymentId: string) => {
@@ -2120,7 +2155,17 @@ export default function AdminDashboard() {
                 <>
                   <div className="space-y-4">
                     {paginatedJobs.map(j => (
-                      <JobDetailCard key={j.id} job={j} formatEurFromCents={formatEurFromCents} getStatusBadge={getStatusBadge} />
+                      <div key={j.id}>
+                        {j.status === 'DRAFT' && (
+                          <div className="mb-2 flex flex-wrap items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                            <span>This job is waiting for payment. If the developer paid you outside the site, click the button.</span>
+                            <Button size="sm" disabled={actionLoading === j.id} onClick={() => handleMarkJobPaid(j)}>
+                              I got the payment
+                            </Button>
+                          </div>
+                        )}
+                        <JobDetailCard job={j} formatEurFromCents={formatEurFromCents} getStatusBadge={getStatusBadge} />
+                      </div>
                     ))}
                   </div>
 
@@ -2383,6 +2428,13 @@ export default function AdminDashboard() {
                         <tr key={p.id} className={`border-b hover:bg-gray-50 transition-colors ${p.status === 'FAILED' ? 'bg-red-50' : ''}`}>
                           <td className="py-3 px-2">
                             <p>{p.application?.tester?.name || p.application?.tester?.email || '—'}</p>
+                            {(p.status === 'PROCESSING' || p.status === 'FAILED') && (
+                              <div className="mt-1 text-xs text-gray-600">
+                                {p.application?.tester?.paypalEmail && <p>Payoneer: {p.application.tester.paypalEmail}</p>}
+                                {p.application?.tester?.phoneNumber && <p>Mobile money: {p.application.tester.phoneNumber}</p>}
+                                {!p.application?.tester?.paypalEmail && !p.application?.tester?.phoneNumber && <p className="text-amber-600">No payout details yet. Ask the tester to add them in Settings.</p>}
+                              </div>
+                            )}
                             {p.allocationHistory.map(allocation => (
                               <p key={allocation.id} className="mt-1 text-xs text-blue-700">
                                 Moved from {allocation.fromApplication.tester.name || allocation.fromApplication.tester.email}
@@ -2400,6 +2452,11 @@ export default function AdminDashboard() {
                               {p.status === 'FAILED' && (
                                 <Button size="sm" variant="outline" className="w-fit text-xs" disabled={actionLoading === p.id} onClick={() => handleRetryPayout(p.id)}>
                                   {actionLoading === p.id ? 'Retrying...' : 'Retry'}
+                                </Button>
+                              )}
+                              {(p.status === 'PROCESSING' || p.status === 'FAILED') && (p.application?.tester?.paypalEmail || p.application?.tester?.phoneNumber) && (
+                                <Button size="sm" className="w-fit text-xs" disabled={actionLoading === p.id} onClick={() => handleMarkPaid(p)}>
+                                  I paid this tester
                                 </Button>
                               )}
                               {p.failureReason && <p className="text-xs text-red-500">{p.failureReason}</p>}

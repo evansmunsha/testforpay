@@ -2,6 +2,76 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { stripe } from '@/lib/stripe'
+import { recordAdminAction } from '@/lib/admin-audit'
+import { sendNotification, NotificationTemplates } from '@/lib/notifications'
+
+// Admin paid the tester by hand (Payoneer or mobile money) and records it here.
+export async function POST(request: Request) {
+  const currentUser = await getCurrentUser()
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  try {
+    let body: { paymentId?: unknown; reason?: unknown }
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Send the payment and how you paid, then try again.' }, { status: 400 })
+    }
+    const id = typeof body.paymentId === 'string' ? body.paymentId : ''
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+    if (!id) return NextResponse.json({ error: 'Payment not found' }, { status: 400 })
+    if (reason.length < 10) {
+      return NextResponse.json({ error: 'Write how you paid (at least 10 letters, for example: Payoneer, 12 Nov), then try again.' }, { status: 400 })
+    }
+
+    const payment = await prisma.payment.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        amount: true,
+        application: { select: { testerId: true, status: true, testingPausedAt: true } },
+      },
+    })
+    if (!payment) return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
+    if (payment.application.status !== 'COMPLETED' || payment.application.testingPausedAt) {
+      return NextResponse.json({ error: 'You can only mark a payment as paid after the tester finished and testing is not paused.' }, { status: 409 })
+    }
+
+    const updated = await prisma.payment.updateMany({
+      where: { id, transferId: null, status: { in: ['PROCESSING', 'FAILED'] } },
+      data: { status: 'COMPLETED', completedAt: new Date(), transferId: `manual:${id}` },
+    })
+    if (updated.count !== 1) {
+      return NextResponse.json({ error: 'This payment was already paid or changed. Refresh the page and look again.' }, { status: 409 })
+    }
+
+    await recordAdminAction({
+      actorId: currentUser.userId,
+      actorEmail: currentUser.email,
+      action: 'mark_payout_paid_manually',
+      targetType: 'payment',
+      targetId: id,
+      reason,
+    })
+
+    try {
+      await sendNotification({
+        userId: payment.application.testerId,
+        ...NotificationTemplates.paymentReceived(payment.amount),
+        url: '/dashboard/my-applications',
+      })
+    } catch (error) {
+      console.error('Manual payout notification failed:', error)
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Mark paid error:', error)
+    return NextResponse.json({ error: 'Could not save. Check your internet and try again.' }, { status: 500 })
+  }
+}
 
 export async function GET() {
   try {
@@ -30,6 +100,9 @@ export async function GET() {
                 email: true,
                 name: true,
                 stripeAccountId: true,
+                paypalEmail: true,
+                phoneNumber: true,
+                countryCode: true,
               },
             },
           },

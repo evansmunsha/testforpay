@@ -113,7 +113,7 @@ export default function RootLayout({
             name: 'When do developers pay for testing jobs?',
             acceptedAnswer: {
               '@type': 'Answer',
-              text: 'Payment is held in escrow and only released when testers complete the full 14-day testing period. Developers only pay for verified, completed tests.',
+              text: 'Your payment pays for a testing service. The money for each tester is only sent to them when they complete the full 14-day testing period. Developers only pay for verified, completed tests.',
             },
           },
           {

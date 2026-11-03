@@ -59,7 +59,7 @@ export default function SignupPage() {
         'Monitor progress with daily check-ins',
         'Meet Google\'s 14-day requirement and publish',
       ],
-      note: 'Payment is held in escrow. You only pay when testing is complete.',
+      note: 'You pay a fixed fee for the testing service. You are covered by our refund policy.',
     },
   }
 

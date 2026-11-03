@@ -2,6 +2,56 @@ import { NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { loadJobOperations, readPageParam } from '@/lib/admin-job-operations'
+import { activateJobAfterPayment } from '@/lib/job-activation'
+import { recordAdminAction } from '@/lib/admin-audit'
+
+// Admin got the developer's payment outside the site (PayPal, Wise, bank) and makes the job live.
+export async function POST(request: Request) {
+  const currentUser = await getCurrentUser()
+  if (!currentUser || currentUser.role !== 'ADMIN') {
+    return NextResponse.json({ error: 'Not authorized' }, { status: 403 })
+  }
+
+  try {
+    let body: { jobId?: unknown; reason?: unknown }
+    try {
+      body = await request.json()
+    } catch {
+      return NextResponse.json({ error: 'Send the job and how you got paid, then try again.' }, { status: 400 })
+    }
+    const jobId = typeof body.jobId === 'string' ? body.jobId : ''
+    const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
+    if (!jobId) return NextResponse.json({ error: 'Job not found' }, { status: 400 })
+    if (reason.length < 10) {
+      return NextResponse.json({ error: 'Write how you got paid (at least 10 letters, for example: PayPal, 12 Nov, 28 EUR), then try again.' }, { status: 400 })
+    }
+
+    const job = await prisma.testingJob.findUnique({ where: { id: jobId }, select: { id: true, status: true, isTraining: true } })
+    if (!job) return NextResponse.json({ error: 'Job not found' }, { status: 404 })
+    if (job.isTraining) return NextResponse.json({ error: 'Training jobs do not need payment.' }, { status: 409 })
+    if (job.status !== 'DRAFT') {
+      return NextResponse.json({ error: 'This job is already live or finished. Refresh the page and look again.' }, { status: 409 })
+    }
+
+    const activated = await activateJobAfterPayment(jobId, `manual:${jobId}`)
+    if (!activated) {
+      return NextResponse.json({ error: 'This job changed. Refresh the page and try again.' }, { status: 409 })
+    }
+
+    await recordAdminAction({
+      actorId: currentUser.userId,
+      actorEmail: currentUser.email,
+      action: 'mark_job_paid_manually',
+      targetType: 'job',
+      targetId: jobId,
+      reason,
+    })
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Mark job paid error:', error)
+    return NextResponse.json({ error: 'Could not save. Check your internet and try again.' }, { status: 500 })
+  }
+}
 
 export async function GET(request: Request) {
   try {

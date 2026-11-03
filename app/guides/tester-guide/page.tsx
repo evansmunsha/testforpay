@@ -158,7 +158,7 @@ const FAQS = [
   },
   {
     q: "What if a developer never confirms payment?",
-    a: "Developers pay upfront into escrow before any tester starts. If a developer disappears or doesn't confirm, we release payment automatically after the testing period ends. Your money is protected.",
+    a: "Developers pay before any tester starts. If a developer disappears or doesn't confirm, we pay you automatically after the testing period ends. Your pay is protected.",
   },
 ];
 
@@ -386,7 +386,7 @@ export default function TesterGuidePage() {
             {[
               { icon: "🇿🇲", text: "Built by Evans Munsha, a solo developer from Zambia — someone who understands earning in global currencies" },
               { icon: "🌍", text: "Testers from 10+ countries have already earned through TestForPay" },
-              { icon: "🔒", text: "Payments held in escrow — developers pay upfront before any tester starts, so you're always protected" },
+              { icon: "🔒", text: "Developers pay before any tester starts, so you're always protected" },
               { icon: "📱", text: "Your data stays on your device — we never collect personal information beyond what's needed to process payment" },
             ].map((item, i) => (
               <Card key={i} className="border-gray-100 bg-gray-50">

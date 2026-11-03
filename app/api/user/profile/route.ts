@@ -20,7 +20,8 @@ export async function GET() {
         countryCode: true,
         role: true,
         stripeAccountId: true,
-        createdAt: true,
+        paypalEmail: true,
+        phoneNumber: true,
         trainingPoints: true,
       }
     })
@@ -48,7 +49,16 @@ export async function PATCH(request: Request) {
     }
 
     const body = await request.json()
-    const { name, countryCode } = body
+    const { name, countryCode, payoneerEmail, mobileMoneyNumber } = body
+
+    if (payoneerEmail !== undefined && payoneerEmail !== null && payoneerEmail !== '' &&
+      (typeof payoneerEmail !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payoneerEmail.trim()))) {
+      return NextResponse.json({ error: 'Your Payoneer email does not look right. Check it and click Save again.' }, { status: 400 })
+    }
+    if (mobileMoneyNumber !== undefined && mobileMoneyNumber !== null && mobileMoneyNumber !== '' &&
+      (typeof mobileMoneyNumber !== 'string' || !/^\+?[0-9 ]{9,15}$/.test(mobileMoneyNumber.trim()))) {
+      return NextResponse.json({ error: 'Your mobile money number does not look right. Use numbers only, like 0971234567, then click Save again.' }, { status: 400 })
+    }
 
     if (!name || name.trim().length < 2) {
       return NextResponse.json(
@@ -69,6 +79,8 @@ export async function PATCH(request: Request) {
         ...(countryCode !== undefined
           ? { countryCode: countryCode?.trim().toUpperCase() || null }
           : {}),
+        ...(payoneerEmail !== undefined ? { paypalEmail: payoneerEmail?.trim() || null } : {}),
+        ...(mobileMoneyNumber !== undefined ? { phoneNumber: mobileMoneyNumber?.trim() || null } : {}),
       },
       select: {
         id: true,

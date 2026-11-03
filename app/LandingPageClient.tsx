@@ -451,7 +451,7 @@ export default function HomePage() {
               <div className="rounded-3xl border border-slate-200 bg-slate-50 p-6">
                 <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">Payment control</p>
                 <p className="mt-3 text-lg font-semibold text-slate-900">Only pay for approved tests</p>
-                <p className="mt-3 text-sm leading-6 text-slate-600">Escrow-style workflow ensures you fund testing, not guesswork.</p>
+                <p className="mt-3 text-sm leading-6 text-slate-600">Our workflow makes sure you pay for real testing, not guesswork.</p>
               </div>
             </div>
           </div>

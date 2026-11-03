@@ -326,7 +326,10 @@ export async function PATCH(
           )
         }
 
-        try {
+        // Dodo payments are confirmed by the Dodo webhook, which is the only thing that sets this value.
+        if (existingJob.stripePaymentIntent.startsWith('dodo:')) {
+          // Payment already verified; nothing more to check here.
+        } else try {
           const intent = await stripe.paymentIntents.retrieve(
             existingJob.stripePaymentIntent
           )

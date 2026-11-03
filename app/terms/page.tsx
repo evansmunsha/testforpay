@@ -76,7 +76,7 @@ export default function TermsOfServicePage() {
               <li>Provide genuine and constructive feedback</li>
               <li>Not use fake accounts, emulators, or automated tools</li>
               <li>Not submit fraudulent applications or screenshots</li>
-              <li>Set up Stripe Connect to receive payments</li>
+              <li>Add your Payoneer email or mobile money number to receive payments</li>
             </ul>
           </section>
 
@@ -86,17 +86,18 @@ export default function TermsOfServicePage() {
             <h3 className="text-xl font-medium text-gray-800 mb-3">6.1 Developer Payments</h3>
             <ul className="list-disc pl-6 text-gray-700 mb-4 space-y-2">
               <li>Developers pay upfront when creating a testing job</li>
-              <li>Payment includes tester compensation plus 15% platform fee</li>
-              <li>Payments are processed securely through Stripe</li>
+              <li>You pay a fixed price for the plan you choose (Starter, Growth or Pro). The price is shown before you pay</li>
+              <li>Testing runs for 14 days after your group of testers is full</li>
+              <li>Payments from developers are processed securely by Dodo Payments</li>
               <li>Refunds may be issued if a job is cancelled before testers are approved</li>
             </ul>
 
             <h3 className="text-xl font-medium text-gray-800 mb-3">6.2 Tester Payouts</h3>
             <ul className="list-disc pl-6 text-gray-700 mb-4 space-y-2">
               <li>Testers are paid after completing the full testing period</li>
-              <li>Payouts are processed via Stripe Connect</li>
-              <li>Testers must complete Stripe onboarding to receive payments</li>
-              <li>Payment timing depends on Stripe's processing (typically 2-7 business days)</li>
+              <li>Payouts are sent by Payoneer, or by mobile money (MTN or Airtel) for testers in Zambia</li>
+              <li>Testers must add their Payoneer email or mobile money number in Settings to receive payments</li>
+              <li>We send payments within 7 days after the testing period is checked</li>
             </ul>
           </section>
 
@@ -205,7 +206,7 @@ export default function TermsOfServicePage() {
             </p>
             <div className="bg-gray-100 p-4 rounded-lg">
               <p className="text-gray-700"><strong>Evans Munsha</strong></p>
-              <p className="text-gray-700">Email: <a href="mailto:evansensteen@gmail.com" className="text-blue-600 hover:underline">evansensteen@gmail.com</a></p>
+              <p className="text-gray-700">Email: <a href="mailto:testforpays@gmail.com" className="text-blue-600 hover:underline">testforpays@gmail.com</a></p>
               <p className="text-gray-700">Phone: <a href="tel:+260963266937" className="text-blue-600 hover:underline">+260 963 266 937</a></p>
             </div>
           </section>

@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { ApplicationCard } from '@/components/applications/application-card'
 import { DailyCheckInPanel } from '@/components/applications/daily-checkin-panel'
-import { CheckoutForm } from '@/components/payments/checkout-form'
+import { DodoCheckoutButton } from '@/components/payments/dodo-checkout-button'
 import { useToast } from '@/components/ui/toast-provider'
 import { TestingReportViewer } from '@/components/jobs/testing-report-viewer'
 import { DeveloperReports } from '@/components/jobs/developer-reports'
@@ -1161,10 +1161,10 @@ You will get back the money for unused spots.`
             <Card className="bg-blue-50 border-blue-200">
               <CardContent className="pt-6">
                 <p className="text-sm text-blue-900 mb-4">
-                  Complete the EUR payment first, then publish the job to make it visible to testers.
+                  Pay first. Your job goes live for testers as soon as the payment is confirmed.
                 </p>
                 <div className="mb-4">
-                  <CheckoutForm jobId={job.id} amountEurCents={totalChargeEurCents} />
+                  <DodoCheckoutButton jobId={job.id} amountEurCents={totalChargeEurCents} onPaid={() => fetchJob(true)} />
                 </div>
                 <Button onClick={handlePublish} className="w-full">
                   <CheckCircle className="h-4 w-4 mr-2" />
