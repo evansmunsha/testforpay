@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       await sendNotification({
         userId: payment.application.testerId,
         ...NotificationTemplates.paymentReceived(payment.amount),
-        url: '/dashboard/my-applications',
+        url: '/dashboard/payments',
       })
     } catch (error) {
       console.error('Manual payout notification failed:', error)

@@ -21,6 +21,7 @@ interface Transaction {
     appName: string
   }
   application?: {
+    status?: string
     tester: {
       name: string | null
     }
@@ -30,6 +31,8 @@ interface Transaction {
 export default function PaymentsPage() {
   const { isDeveloper, isAdmin } = useAuth()
   const [retrying, setRetrying] = useState<string | null>(null)
+  const [requesting, setRequesting] = useState<string | null>(null)
+  const [requestMessage, setRequestMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -84,6 +87,28 @@ export default function PaymentsPage() {
     }
   }
 
+  const handleRequestPayment = async (paymentId: string) => {
+    setRequesting(paymentId)
+    setRequestMessage(null)
+    try {
+      const response = await fetch('/api/user/transactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ paymentId }),
+      })
+      const data = await response.json().catch(() => ({}))
+      setRequestMessage(
+        response.ok
+          ? { ok: true, text: 'Request sent. We will pay you within 7 days.' }
+          : { ok: false, text: data.error || 'Could not send your request. Try again.' }
+      )
+    } catch {
+      setRequestMessage({ ok: false, text: 'Could not send your request. Check your internet and try again.' })
+    } finally {
+      setRequesting(null)
+    }
+  }
+
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'COMPLETED': return <CheckCircle className="h-4 w-4 text-green-600" />
@@ -132,6 +157,12 @@ export default function PaymentsPage() {
           {isDeveloper ? 'Track your EUR-based job and tester transactions. Developer checkout is processed in EUR at publish time.' : 'View your earnings and payouts'}
         </p>
       </div>
+
+      {requestMessage && (
+        <p className={`rounded-md border p-3 text-sm ${requestMessage.ok ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800'}`}>
+          {requestMessage.text}
+        </p>
+      )}
 
       <Card className="border-blue-200 bg-blue-50/70 md:col-span-3">
         <CardContent className="py-4">
@@ -243,6 +274,15 @@ export default function PaymentsPage() {
                             {getStatusIcon(t.status)}
                             <span className="ml-1.5">{t.status}</span>
                           </Badge>
+                          {!isDeveloper && !isAdmin && t.application?.status === 'COMPLETED' && ['PROCESSING', 'FAILED'].includes(t.status) && (
+                            <button
+                              className="ml-2 px-3 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
+                              disabled={requesting === t.id}
+                              onClick={() => handleRequestPayment(t.id)}
+                            >
+                              {requesting === t.id ? 'Sending...' : 'Ask to be paid'}
+                            </button>
+                          )}
                           {isAdmin && t.status === 'FAILED' && (
                             <button
                               className="ml-2 px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"

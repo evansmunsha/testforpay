@@ -2428,7 +2428,7 @@ export default function AdminDashboard() {
                         <tr key={p.id} className={`border-b hover:bg-gray-50 transition-colors ${p.status === 'FAILED' ? 'bg-red-50' : ''}`}>
                           <td className="py-3 px-2">
                             <p>{p.application?.tester?.name || p.application?.tester?.email || '—'}</p>
-                            {(p.status === 'PROCESSING' || p.status === 'FAILED') && (
+                            {(
                               <div className="mt-1 text-xs text-gray-600">
                                 {p.application?.tester?.paypalEmail && <p>Payoneer: {p.application.tester.paypalEmail}</p>}
                                 {p.application?.tester?.phoneNumber && <p>Mobile money: {p.application.tester.phoneNumber}</p>}

@@ -10,7 +10,11 @@ import { useAuth } from '@/hooks/use-auth'
 import { trainingLevel } from '@/lib/training-rules'
 import { DollarSign, CheckCircle, Loader2, AlertTriangle } from 'lucide-react'
 
+import { buildCountryOptions } from '@/lib/countries'
+
 const SHOW_STRIPE_PAYOUT = false
+
+const countryOptions = buildCountryOptions()
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -170,7 +174,14 @@ export default function SettingsPage() {
         setMessage('Device info saved successfully!')
         setTimeout(() => setMessage(''), 3000)
       } else {
-        setMessage('Failed to save device info')
+        const data = await response.json().catch(() => null)
+        if (data?.error === 'Invalid input') {
+          setMessage('Write your phone model (at least 2 letters) and Android version, then click Save device info again.')
+        } else if (response.status === 500) {
+          setMessage('We could not save. Wait a minute and click Save device info again. If it still fails, write to testforpays@gmail.com.')
+        } else {
+          setMessage(data?.error || 'Could not save. Check your details and click Save device info again.')
+        }
       }
     } catch (error) {
       setMessage('Something went wrong')
@@ -384,17 +395,20 @@ export default function SettingsPage() {
 
           {user?.role === 'TESTER' && (
             <div className="space-y-2">
-              <Label htmlFor="countryCode">Country code</Label>
-              <Input
+              <Label htmlFor="countryCode">Your country</Label>
+              <select
                 id="countryCode"
                 value={countryCode}
-                onChange={(event) => setCountryCode(event.target.value.toUpperCase().slice(0, 2))}
-                placeholder="e.g. MA"
-                maxLength={2}
-                autoComplete="country"
-              />
+                onChange={(event) => setCountryCode(event.target.value)}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">Choose your country</option>
+                {countryOptions.map((country) => (
+                  <option key={country.code} value={country.code}>{country.name}</option>
+                ))}
+              </select>
               <p className="text-xs text-gray-500">
-                Enter your two-letter country code (for example, MA for Morocco). Developers use this to screen recruitment, but it cannot guarantee Google Play availability.
+                Choose the country where you live. Then click Save changes. You must do this before you can save your phone details. Developers use it to choose testers, but it cannot promise the app works in your country on Google Play.
               </p>
             </div>
           )}

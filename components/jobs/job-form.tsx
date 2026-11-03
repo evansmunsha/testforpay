@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ISO_COUNTRY_CODES } from '@/lib/countries'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { eurToUsd, formatEur, formatUsd } from '@/lib/currency'
@@ -101,7 +102,7 @@ const DEFAULT_JOB_FORM_DATA: JobFormData = {
   appDescription: '',
   packageName: '',
   googlePlayLink: '',
-  supportedCountries: [],
+  supportedCountries: [...ISO_COUNTRY_CODES],
   appCategory: '',
   testersNeeded: PLANS.STARTER.testers,
   testDuration: 14,
@@ -409,17 +410,31 @@ export function JobForm() {
 
               <div className="space-y-2">
                 <Label htmlFor="supportedCountries">Countries where the app is available *</Label>
-                <Input
-                  id="supportedCountries"
-                  value={formData.supportedCountries.join(', ')}
-                  onChange={(event) => handleChange(
-                    'supportedCountries',
-                    event.target.value.split(',').map((country) => country.trim().toUpperCase()).filter(Boolean)
-                  )}
-                  placeholder="US, GB, ZM"
-                />
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={formData.supportedCountries.length >= ISO_COUNTRY_CODES.length}
+                    onChange={(event) => handleChange(
+                      'supportedCountries',
+                      event.target.checked ? [...ISO_COUNTRY_CODES] : []
+                    )}
+                  />
+                  Worldwide (any tester can apply). Best way to find testers fast.
+                </label>
+                {formData.supportedCountries.length < ISO_COUNTRY_CODES.length && (
+                  <Input
+                    id="supportedCountries"
+                    value={formData.supportedCountries.join(', ')}
+                    onChange={(event) => handleChange(
+                      'supportedCountries',
+                      event.target.value.split(',').map((country) => country.trim().toUpperCase()).filter(Boolean)
+                    )}
+                    placeholder="US, GB, ZM"
+                  />
+                )}
                 <p className="text-xs text-gray-500">
-                  Enter two-letter ISO country codes separated by commas. This declaration helps screen applicants, but does not guarantee Google Play availability on every account or device.
+                  Tick Worldwide, or type the two-letter codes of your countries, separated by commas. Use only countries where your app shows on Google Play. If your app is blocked in a tester's country, that tester cannot install it.
                 </p>
               </div>
             </CardContent>
