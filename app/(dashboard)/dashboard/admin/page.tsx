@@ -700,7 +700,8 @@ export default function AdminDashboard() {
   const redBadge = (tab: AdminTabKey) => {
     const text = formatBadgeCount(tabBadges[tab] ?? 0)
     return text ? <Badge variant="destructive" className="ml-1">{text}</Badge> : null
-  } = payments.filter(p => p.status === 'FAILED').length
+  }
+  const failedPaymentsCount = payments.filter(p => p.status === 'FAILED').length
   const unresolvedReportsCount = feedbackReports.filter(r => !r.resolvedAt).length
   const attentionCount = (stats?.attention.jobsWithZeroApplications ?? 0)
     + (stats?.attention.testersStuckInVerification ?? 0)

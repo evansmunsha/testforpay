@@ -286,7 +286,7 @@ export default function JobDetailPage() {
           toast({ title: data.scheduled ? 'Start date saved 📅' : 'Testers resumed', description: data.message, variant: 'success' })
         } catch (error) {
           console.error('Failed to start testing:', error)
-          toast({ title: 'Error', description: 'Could not start testing. Check your internet and click again.': 'destructive' })
+          toast({ title: 'Error', description: 'Could not start testing. Check your internet and click again.', variant: 'destructive' })
         } finally {
           setActionLoading(false)
         }
