@@ -25,24 +25,24 @@ export function getDeveloperActions(input: DeveloperActionInput): DeveloperActio
   if (input.pendingApprovals > 0) {
     actions.push({
       id: 'approve',
-      text: `${plural(input.pendingApprovals, 'tester is', 'testers are')} waiting for you to approve or reject.`,
+      text: `${plural(input.pendingApprovals, 'tester is', 'testers are')} waiting for you. Open the job and click Accept tester or Close tester.`,
       buttonLabel: 'Review applications',
     })
   }
   if (input.screenshotsToVerify > 0) {
     actions.push({
       id: 'verify',
-      text: `${plural(input.screenshotsToVerify, 'screenshot', 'screenshots')} to check.`,
-      buttonLabel: 'Verify screenshots',
+      text: `${plural(input.screenshotsToVerify, 'screenshot', 'screenshots')} to check. Look at each one and click Check the screenshot and accept.`,
+      buttonLabel: 'Check screenshots',
     })
   }
   if (input.readyToStart) {
     actions.push({
       id: 'start',
       text: input.scheduledStartDate
-        ? `Testing is scheduled for ${input.scheduledStartDate}. You can still change the date.`
-        : 'Enough testers are verified. Pick a start date to begin testing.',
-      buttonLabel: input.scheduledStartDate ? 'Change start date' : 'Pick start date',
+        ? `Testing starts on ${input.scheduledStartDate}. You can still change the date.`
+        : 'Enough testers are ready. Choose the start date to begin testing.',
+      buttonLabel: input.scheduledStartDate ? 'Change start date' : 'Choose start date',
     })
   }
   return actions

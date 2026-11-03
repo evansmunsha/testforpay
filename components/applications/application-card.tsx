@@ -236,7 +236,7 @@ export function ApplicationCard({
             <div className="bg-indigo-50 p-3 rounded-lg">
               <p className="text-sm font-semibold mb-2 flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 text-indigo-600" />
-                Verification Screenshots
+                Play Store screenshots
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {application.verificationImage && (
@@ -460,7 +460,7 @@ export function ApplicationCard({
                 <>
                   <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-lg">
                     <p className="text-sm text-indigo-800">
-                      📸 Screenshot submitted. Check it above. If Google Play shows the Install button, verify this tester to add them to your ready list. If it does not, close the application.
+                      📸 The tester sent a screenshot. Look at it above. If Google Play shows the Install button, click Check the screenshot and accept. If not, click Close tester.
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -471,7 +471,7 @@ export function ApplicationCard({
                       className="flex-1"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Verify — Install button visible
+                      Check the screenshot and accept
                     </Button>
                     <Button
                       onClick={() => onReject?.(application.id)}
@@ -488,7 +488,7 @@ export function ApplicationCard({
               ) : (
                 <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
                   <p className="text-sm text-yellow-800">
-                    ⏳ Waiting for tester to upload their Play Store screenshot
+                    ⏳ Waiting for the tester to send a Play Store screenshot. You do not need to do anything yet.
                   </p>
                 </div>
               )}
@@ -498,10 +498,10 @@ export function ApplicationCard({
           {['VERIFIED', 'SCHEDULED'].includes(application.status) && (
             <div className="bg-green-50 border border-green-200 p-3 rounded-lg space-y-2">
               <p className="text-sm text-green-800 font-medium">
-                ✅ Verified — on the ready list
+                ✅ Screenshot accepted — tester is on the ready list
               </p>
               <p className="text-xs text-green-700">
-                Testing starts for everyone together when you press Start testing now on this job.
+                Testing starts for everyone together. Click Start testing on this job when you are ready.
               </p>
               <Button
                 onClick={() => onReject?.(application.id)}
@@ -549,7 +549,7 @@ export function ApplicationCard({
       <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Verification Screenshots</DialogTitle>
+            <DialogTitle>Play Store screenshots</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {application.verificationImage && (

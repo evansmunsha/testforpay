@@ -137,7 +137,7 @@ export default function PaymentsPage() {
         <CardContent className="py-4">
           <p className="text-sm font-semibold text-blue-900">How payments work</p>
           <p className="mt-1 text-sm text-blue-800">
-            Payments are held in escrow while testers complete the testing flow. Once the job is verified and completed, funds move to the next step in the payout process.
+            Your payment is held safely while testers do their work. When the job is finished, the money goes to the testers.
           </p>
         </CardContent>
       </Card>
@@ -160,7 +160,7 @@ export default function PaymentsPage() {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600">
-              {isDeveloper ? 'Pending Escrow' : 'Pending Payout'}
+              {isDeveloper ? 'Money held safely' : 'Pending Payout'}
             </CardTitle>
           </CardHeader>
           <CardContent>

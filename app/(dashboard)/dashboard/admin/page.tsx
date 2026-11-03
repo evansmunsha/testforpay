@@ -697,9 +697,9 @@ export default function AdminDashboard() {
   const handleSuspendUser = async (userId: string, action: 'suspend' | 'unsuspend') => {
     if (action === 'suspend') { openSuspendDialog(userId); return }
     openConfirm({
-      title: 'Unsuspend user?',
-      description: 'Restore this user’s access to the platform.',
-      confirmLabel: 'Unsuspend',
+      title: 'Unsuspend this user?',
+      description: 'This person can log in and use the site again. Write the reason below, then click Unsuspend user.',
+      confirmLabel: 'Unsuspend user',
       reasonRequired: true,
       onConfirm: reason => performSuspendUser(userId, 'unsuspend', reason),
     })
@@ -712,7 +712,7 @@ export default function AdminDashboard() {
   }
 
   const handleDeleteUser = async (userId: string) => {
-    openConfirm({ title: 'Delete user?', description: 'Permanently delete this user? This cannot be undone.', confirmLabel: 'Delete', reasonRequired: true,
+    openConfirm({ title: 'Delete this user?', description: 'This removes the person from the site for ever. You cannot undo it. Write the reason below, then click Delete user.', confirmLabel: 'Delete user', reasonRequired: true,
       onConfirm: async (reason) => {
         setActionLoading(userId)
         try {
@@ -728,16 +728,16 @@ export default function AdminDashboard() {
 
   const handleProcessPayouts = async () => {
     openConfirm({
-      title: 'Process due payouts?',
-      description: 'This will attempt payouts currently eligible for processing.',
-      confirmLabel: 'Process payouts',
+      title: 'Pay testers who are due now?',
+      description: 'The site sends money now to every tester who finished and is waiting. You can only do this once the work is done. Write the reason, then click Pay testers now.',
+      confirmLabel: 'Pay testers now',
       reasonRequired: true,
       onConfirm: async reason => {
         setProcessingPayouts(true)
         try {
           const res = await fetch('/api/admin/payouts/process', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) })
           const data = await res.json()
-          if (res.ok) { toast({ title: 'Payouts Processed', description: `${data.processed} payouts processed`, variant: 'success' }); fetchStats(); fetchAuditEntries() }
+          if (res.ok) { toast({ title: 'Payments sent', description: `${data.processed} tester payments were sent.`, variant: 'success' }); fetchStats(); fetchAuditEntries() }
           else toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' })
         } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) }
         finally { setProcessingPayouts(false) }
@@ -748,11 +748,11 @@ export default function AdminDashboard() {
   const requestTestingPauseAction = (application: Application, action: 'pause' | 'resume') => {
     const isPausing = action === 'pause'
     openConfirm({
-      title: isPausing ? 'Pause testing clock?' : 'Resume testing clock?',
+      title: isPausing ? 'Pause this tester’s days?' : 'Restart this tester’s days?',
       description: isPausing
-        ? `Pause ${application.tester.name || application.tester.email}'s active testing period for ${application.job.appName}. Missions and check-ins stop; existing work and payment history are preserved.`
-        : `Resume ${application.tester.name || application.tester.email}'s testing period for ${application.job.appName}. Only the saved remaining duration will continue.`,
-      confirmLabel: isPausing ? 'Pause testing' : 'Resume testing',
+        ? `Stop the days for ${application.tester.name || application.tester.email} on ${application.job.appName}. They cannot send reports while paused. Their work and payment stay safe. They and the developer are told.`
+        : `Restart the days for ${application.tester.name || application.tester.email} on ${application.job.appName}. They continue with the days they had left. They and the developer are told.`,
+      confirmLabel: isPausing ? 'Pause tester' : 'Restart tester',
       reasonRequired: true,
       onConfirm: async reason => {
         setActionLoading(application.id)
@@ -767,7 +767,7 @@ export default function AdminDashboard() {
             toast({ title: 'Error', description: data.error || 'Could not update testing state', variant: 'destructive' })
             return
           }
-          toast({ title: isPausing ? 'Testing paused' : 'Testing resumed', description: data.message, variant: 'success' })
+          toast({ title: isPausing ? 'Tester paused' : 'Tester restarted', description: data.message, variant: 'success' })
           await fetchApplications()
           await fetchAuditEntries()
         } catch (error) {
@@ -782,9 +782,9 @@ export default function AdminDashboard() {
 
   const requestApplicationWithdrawal = (application: Application) => {
     openConfirm({
-      title: 'Withdraw this application?',
-      description: `Remove ${application.tester.name || application.tester.email} from ${application.job.appName} before testing starts. Their application history is kept, any escrowed payment stays on record and its paid spot is freed for another tester, and they can apply again while the job is recruiting. Unavailable once testing has started.`,
-      confirmLabel: 'Withdraw application',
+      title: 'Remove this tester from the job?',
+      description: `Remove ${application.tester.name || application.tester.email} from ${application.job.appName}. Their money stays held safely and the paid spot opens for another tester. They can apply again. This only works before testing starts. Write the reason, then click Remove tester.`,
+      confirmLabel: 'Remove tester',
       reasonRequired: true,
       onConfirm: async reason => {
         setActionLoading(application.id)
@@ -952,7 +952,7 @@ export default function AdminDashboard() {
       else toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' })
     } catch { toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' }) } finally { setActionLoading(null) }
   }
-  const confirmDeleteContactMessage = (m: ContactMessage) => openConfirm({ title: 'Delete message?', description: `Delete message from ${m.name}?`, confirmLabel: 'Delete', onConfirm: () => handleDeleteContactMessage(m.id) })
+  const confirmDeleteContactMessage = (m: ContactMessage) => openConfirm({ title: 'Delete this message?', description: `Delete the message from ${m.name}? You cannot get it back.`, confirmLabel: 'Delete message', onConfirm: () => handleDeleteContactMessage(m.id) })
 
   const handleResolveReport = async (id: string) => {
     setActionLoading(id)
@@ -972,7 +972,7 @@ export default function AdminDashboard() {
   }
 
   const handleDeleteFeedback = async (id: string) => {
-    openConfirm({ title: 'Delete feedback?', description: 'Delete permanently?', confirmLabel: 'Delete', onConfirm: async () => {
+    openConfirm({ title: 'Delete this feedback?', description: 'The feedback is removed from the list and from the home page. You cannot get it back.', confirmLabel: 'Delete feedback', onConfirm: async () => {
       setActionLoading(id)
       try { const res = await fetch(`/api/admin/feedback/${id}`, { method: 'DELETE' }); const data = await res.json(); if (res.ok) { toast({ title: 'Deleted', description: data.message, variant: 'success' }); fetchTestimonials() } }
       catch { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) } finally { setActionLoading(null) }
@@ -980,7 +980,7 @@ export default function AdminDashboard() {
   }
 
   const handleResolveFraudLog = async (id: string) => {
-    openConfirm({ title: 'Resolve fraud log?', description: 'Record why this fraud alert is considered resolved.', confirmLabel: 'Resolve', reasonRequired: true, onConfirm: async reason => {
+    openConfirm({ title: 'Close this fraud alert?', description: 'The alert is marked as done and stays in the log. Write why you close it.', confirmLabel: 'Close alert', reasonRequired: true, onConfirm: async reason => {
       setActionLoading(id)
       try { const res = await fetch('/api/admin/fraud', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'resolve-log', logId: id, reason }) }); if (res.ok) { toast({ title: 'Resolved', description: 'Fraud log resolved', variant: 'success' }); fetchFraudData(); fetchAuditEntries() } else { const data = await res.json(); toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' }) } }
       catch { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) } finally { setActionLoading(null) }
@@ -988,7 +988,7 @@ export default function AdminDashboard() {
   }
 
   const handleClearUserFlags = async (userId: string) => {
-    openConfirm({ title: 'Clear fraud flags?', description: 'Record why the user’s fraud flags should be cleared.', confirmLabel: 'Clear flags', reasonRequired: true, onConfirm: async reason => {
+    openConfirm({ title: 'Remove fraud flags?', description: 'The user is no longer marked as risky. Write why you remove the flags.', confirmLabel: 'Remove flags', reasonRequired: true, onConfirm: async reason => {
       setActionLoading(userId)
       try { const res = await fetch('/api/admin/fraud', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'clear-flags', userId, reason }) }); if (res.ok) { toast({ title: 'Cleared', description: 'Flags cleared', variant: 'success' }); fetchFraudData(); fetchAuditEntries() } else { const data = await res.json(); toast({ title: 'Error', description: data.error || 'Failed', variant: 'destructive' }) } }
       catch { toast({ title: 'Error', description: 'Failed', variant: 'destructive' }) } finally { setActionLoading(null) }
@@ -997,9 +997,9 @@ export default function AdminDashboard() {
 
   const handleRetryPayout = async (paymentId: string) => {
     openConfirm({
-      title: 'Retry payout?',
-      description: 'This will retry the transfer to the tester.',
-      confirmLabel: 'Retry payout',
+      title: 'Send this payment again?',
+      description: 'The site tries to send the money to the tester again. If it works, the tester is told. Write the reason, then click Send payment again.',
+      confirmLabel: 'Send payment again',
       reasonRequired: true,
       onConfirm: async reason => {
         setActionLoading(paymentId)
@@ -1172,7 +1172,7 @@ export default function AdminDashboard() {
           <DialogHeader><DialogTitle>{confirmDialog.title}</DialogTitle><DialogDescription className="whitespace-pre-line">{confirmDialog.description}</DialogDescription></DialogHeader>
           {confirmDialog.reasonRequired && (
             <div className="space-y-2">
-              <Label htmlFor="admin-action-reason">Reason</Label>
+              <Label htmlFor="admin-action-reason">Reason (required — the button stays grey until you write 10 letters)</Label>
               <textarea
                 id="admin-action-reason"
                 value={pendingAdminReason}
@@ -1180,7 +1180,7 @@ export default function AdminDashboard() {
                 minLength={10}
                 maxLength={1000}
                 required
-                placeholder="Explain why this action is necessary (at least 10 characters)."
+                placeholder="Write why in simple words (required, at least 10 letters). The reason is saved in the log."
                 className="min-h-24 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               />
             </div>
@@ -1192,8 +1192,8 @@ export default function AdminDashboard() {
       {/* ── Suspend Dialog ──────────────────────────────────────────────────── */}
       <Dialog open={suspendDialogOpen} onOpenChange={o => !o && setSuspendDialogOpen(false)}>
         <DialogContent>
-          <DialogHeader><DialogTitle>Suspend user?</DialogTitle><DialogDescription>Provide an optional reason.</DialogDescription></DialogHeader>
-          <div className="space-y-2"><Label htmlFor="sr">Reason</Label><textarea id="sr" value={suspendReason} onChange={e => setSuspendReason(e.target.value)} minLength={10} maxLength={1000} required placeholder="Explain why this user is being suspended." className="min-h-24 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" /></div>
+          <DialogHeader><DialogTitle>Suspend user?</DialogTitle>          <DialogDescription>This person cannot log in or use the site. They are told they are suspended. You can unsuspend them later. The reason is required.</DialogDescription></DialogHeader>
+                    <div className="space-y-2"><Label htmlFor="sr">Reason (required, at least 10 letters)</Label><textarea id="sr" value={suspendReason} onChange={e => setSuspendReason(e.target.value)} minLength={10} maxLength={1000} required placeholder="Write why you suspend this person." className="min-h-24 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" /></div>
           <DialogFooter><Button variant="outline" onClick={() => setSuspendDialogOpen(false)}>Cancel</Button><Button variant="destructive" onClick={handleConfirmSuspend} disabled={!!actionLoading || suspendReason.trim().length < 10}>Suspend</Button></DialogFooter>
         </DialogContent>
       </Dialog>
@@ -1205,7 +1205,7 @@ export default function AdminDashboard() {
           <p className="text-sm text-gray-500 mt-1">Platform overview and management</p>
         </div>
         <Button onClick={handleProcessPayouts} disabled={processingPayouts} className="bg-purple-600 hover:bg-purple-700 w-full sm:w-auto">
-          {processingPayouts ? 'Processing...' : 'Process Due Payouts'}
+          {processingPayouts ? 'Paying testers...' : 'Pay testers now'}
         </Button>
       </div>
 
@@ -1285,8 +1285,8 @@ export default function AdminDashboard() {
           {[
             ['Applied', 'PENDING'],
             ['Approved', 'APPROVED'],
-            ['Opt-in submitted', 'OPTED_IN'],
-            ['Verified', 'VERIFIED'],
+            ['Screenshot sent', 'OPTED_IN'],
+                        ['Screenshot accepted', 'VERIFIED'],
             ['Testing', 'TESTING'],
             ['Completed', 'COMPLETED'],
             ['Rejected', 'REJECTED'],
@@ -1405,7 +1405,7 @@ export default function AdminDashboard() {
                 )
               })}
             </div>
-            <p className="border-t pt-2 text-[11px] text-gray-400">Credentials are checked for presence only; external delivery is not verified.</p>
+            <p className="border-t pt-2 text-[11px] text-gray-400">Credentials are checked only to see if they are set. We do not test that emails or payments are really delivered.</p>
           </CardContent>
         </Card>
       </div>
@@ -2164,7 +2164,7 @@ export default function AdminDashboard() {
                       <th className="py-3 px-2 font-medium">Tester and device</th>
                       <th className="py-3 px-2 font-medium">Job and developer</th>
                       <th className="py-3 px-2 font-medium">Status</th>
-                      <th className="py-3 px-2 font-medium">Opt-in uploads</th>
+                      <th className="py-3 px-2 font-medium">Play Store screenshots</th>
                       <th className="py-3 px-2 font-medium">Timeline</th>
                       <th className="py-3 px-2 font-medium">Testing controls</th>
                     </tr></thead>
@@ -2195,7 +2195,7 @@ export default function AdminDashboard() {
                             {getStatusBadge(a.status)}
                             {a.testingPausedAt && <span className="ml-2 text-amber-700">Paused</span>}
                             <p className="mt-1 text-xs text-gray-500">
-                              {a.optInVerified ? 'Opt-in verified' : 'Opt-in not verified'}
+                              {a.optInVerified ? 'Screenshot accepted' : 'Screenshot not accepted yet'}
                             </p>
                           </td>
                           <td className="py-3 px-2 align-top">
@@ -2207,12 +2207,12 @@ export default function AdminDashboard() {
                                     href={imageUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    aria-label={`Open opt-in screenshot ${index + 1} for ${a.tester.name || a.tester.email}`}
+                                    aria-label={`Open Play Store screenshot ${index + 1} for ${a.tester.name || a.tester.email}`}
                                     className="block"
                                   >
                                     <Image
                                       src={imageUrl}
-                                      alt={`Opt-in screenshot ${index + 1}`}
+                                      alt={`Play Store screenshot ${index + 1}`}
                                       width={96}
                                       height={64}
                                       unoptimized
@@ -2229,7 +2229,7 @@ export default function AdminDashboard() {
                           </td>
                           <td className="py-3 px-2 align-top text-xs text-gray-500">
                             <p>Applied: {new Date(a.createdAt).toLocaleString()}</p>
-                            {a.verifiedAt && <p className="mt-1">Verified: {new Date(a.verifiedAt).toLocaleString()}</p>}
+                            {a.verifiedAt && <p className="mt-1">Screenshot accepted: {new Date(a.verifiedAt).toLocaleString()}</p>}
                             {a.testingStartDate && <p className="mt-1">Testing starts: {new Date(a.testingStartDate).toLocaleString()}</p>}
                             {a.testingEndDate && <p className="mt-1">Testing ends: {new Date(a.testingEndDate).toLocaleString()}</p>}
                           </td>
@@ -2325,7 +2325,7 @@ export default function AdminDashboard() {
         {/* ── Payments tab ──────────────────────────────────────────────────── */}
         <TabsContent value="payments">
           <Card>
-            <CardHeader><CardTitle>Payment Reconciliation</CardTitle><CardDescription>All tester payouts</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Payments to testers</CardTitle><CardDescription>Every tester payment. If one failed, click Send payment again.</CardDescription></CardHeader>
             <CardContent>
               {failedPaymentsCount > 0 && (
                 <div className="mb-4 flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
@@ -2354,7 +2354,7 @@ export default function AdminDashboard() {
                             <p>{p.application?.tester?.name || p.application?.tester?.email || '—'}</p>
                             {p.allocationHistory.map(allocation => (
                               <p key={allocation.id} className="mt-1 text-xs text-blue-700">
-                                Reassigned from {allocation.fromApplication.tester.name || allocation.fromApplication.tester.email}
+                                Moved from {allocation.fromApplication.tester.name || allocation.fromApplication.tester.email}
                                 {' '}to {allocation.toApplication.tester.name || allocation.toApplication.tester.email}
                                 {' '}· {new Date(allocation.createdAt).toLocaleString()}
                                 {' '}· {allocation.reason}

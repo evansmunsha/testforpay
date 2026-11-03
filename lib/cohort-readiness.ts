@@ -101,10 +101,10 @@ export function evaluateCohortReadiness(input: CohortReadinessInput): CohortRead
 
 export const COHORT_BLOCKER_MESSAGES: Record<CohortBlocker, string> = {
   COUNTRIES_REQUIRED: 'Declare the countries your app is available in before starting.',
-  ACTIVE_TESTERS_RUNNING: 'Some testers are already testing. Pause them before starting a new group.',
-  COMPLETED_TESTER_PRESENT: 'A tester from this group already finished. Contact support to reconcile before starting again.',
-  OPEN_ISSUES: 'A tester has an unresolved install problem report. It must be resolved first.',
-  PAYMENT_NOT_ESCROWED: 'A tester does not have an intact escrowed payment. Contact support.',
-  SCREENING_FAILED: 'A tester no longer matches your country or Android requirements.',
-  NOT_ENOUGH_VERIFIED: 'Not enough verified testers yet. Keep approving and verifying applicants.',
+  ACTIVE_TESTERS_RUNNING: 'Some testers are already testing. Pause them first, then choose the start date again.',
+  COMPLETED_TESTER_PRESENT: 'A tester in this group already finished. Contact support before you start again.',
+  OPEN_ISSUES: 'A tester reported that the app does not work for them. Open the Testers tab and answer this report first.',
+  PAYMENT_NOT_ESCROWED: 'The money for one tester is not held safely. Contact support.',
+  SCREENING_FAILED: 'A tester no longer fits your country or Android rules. Open the Testers tab and close that tester.',
+  NOT_ENOUGH_VERIFIED: 'Not enough testers are ready yet. Keep clicking Accept tester, then Check the screenshot and accept.',
 }

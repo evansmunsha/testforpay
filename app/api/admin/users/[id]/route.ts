@@ -23,7 +23,7 @@ export async function PATCH(
     const { action, reason } = body
     const auditReason = typeof reason === 'string' ? reason.trim() : ''
     if (!auditReason || auditReason.length < 10) {
-      return NextResponse.json({ error: 'Provide a reason of at least 10 characters' }, { status: 400 })
+      return NextResponse.json({ error: 'Write a reason of at least 10 letters, then try again.' }, { status: 400 })
     }
 
     // Get user
@@ -150,7 +150,7 @@ export async function DELETE(
     }
     const auditReason = typeof body.reason === 'string' ? body.reason.trim() : ''
     if (auditReason.length < 10) {
-      return NextResponse.json({ error: 'Provide a reason of at least 10 characters' }, { status: 400 })
+      return NextResponse.json({ error: 'Write a reason of at least 10 letters, then try again.' }, { status: 400 })
     }
 
     // Get user

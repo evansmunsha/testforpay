@@ -59,10 +59,10 @@ export function VerificationUploader({
         setSuccess(true)
         onUploadComplete?.()
       } else {
-        setError(data.error || 'Failed to upload verification')
+        setError(data.error || 'We could not send your screenshot.')
       }
     } catch (err) {
-      setError('Something went wrong. Please try again.')
+      setError('We could not send your screenshot. Check your internet, then try again.')
     } finally {
       setSubmitting(false)
     }
@@ -85,13 +85,13 @@ export function VerificationUploader({
             <div className="bg-indigo-50 rounded-lg p-6 mb-4">
               <ImageIcon className="h-12 w-12 text-indigo-600 mx-auto mb-3" />
               <h3 className="font-semibold text-indigo-900 mb-2">
-                Upload Verification Screenshots
+                Send your Play Store screenshot
               </h3>
               <p className="text-sm text-indigo-700">
-                Upload a screenshot of the Google Play page showing the Install button. A second screenshot is optional.
+                Take a screenshot of the Google Play page. It must show the Install button. A second picture is optional.
               </p>
               <p className="mt-2 text-sm font-medium text-indigo-900">
-                Checking whether the app is available or installing it is only preparation. Your testing days and daily missions start only when the developer starts testing for the whole group.
+                This step is only to get ready. Your test days start later, on the date the developer chooses.
               </p>
             </div>
 
@@ -109,14 +109,14 @@ export function VerificationUploader({
                 </li>
               </ul>
               <p className="text-xs text-blue-600 mt-3">
-                If you do not see an Install button, do not upload. Use “Can’t install this app?” instead.
+                If you do not see an Install button, do not send a screenshot. Click “Can’t install this app?” instead.
               </p>
             </div>
 
             {error && (
               <div className="bg-red-50 border border-red-200 p-4 rounded-lg mb-4">
                 <p className="text-red-600 font-medium mb-2">{error}</p>
-                <p className="text-sm text-red-500 mb-3">Please refresh the page and try again.</p>
+                <p className="text-sm text-red-500 mb-3">Click Reload page, then send the screenshot again.</p>
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -124,7 +124,7 @@ export function VerificationUploader({
                   className="text-red-600 border-red-300 hover:bg-red-50"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh Page
+                  Reload page
                 </Button>
               </div>
             )}
@@ -133,9 +133,9 @@ export function VerificationUploader({
               <div className="bg-green-50 border border-green-200 p-4 rounded-lg mb-4">
                 <div className="flex items-center gap-2 text-green-700 font-medium mb-1">
                   <CheckCircle className="h-5 w-5" />
-                  Screenshots uploaded successfully!
+                  Your screenshots were sent.
                 </div>
-                <p className="text-sm text-green-600">The developer will review your verification shortly.</p>
+                <p className="text-sm text-green-600">The developer will check them soon. You will get a message. You do not need to do anything now.</p>
               </div>
             )}
 
@@ -230,11 +230,11 @@ export function VerificationUploader({
               size="lg"
             >
               {submitting ? (
-                <>Processing...</>
+                <>Sending...</>
               ) : (
                 <>
                   <CheckCircle className="h-4 w-4 mr-2" />
-                  Submit Verification
+                  Send screenshots to developer
                 </>
               )}
             </Button>

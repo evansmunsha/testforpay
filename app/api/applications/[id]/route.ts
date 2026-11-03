@@ -236,7 +236,7 @@ export async function PATCH(
     if (body.action === 'approve') {
       if (application.status !== 'PENDING') {
         return NextResponse.json(
-          { error: 'Only pending applications can be approved' },
+          { error: 'This tester was already handled. Reload the page to see the latest status.' },
           { status: 409 }
         )
       }
@@ -315,16 +315,16 @@ export async function PATCH(
         })
       } catch (approvalError) {
         const approvalErrors: Record<string, { status: number; message: string }> = {
-          APPLICATION_STATE_CHANGED: { status: 409, message: 'This application changed. Refresh and try again.' },
-          JOB_NOT_RECRUITING: { status: 409, message: 'This job is not recruiting testers right now.' },
+          APPLICATION_STATE_CHANGED: { status: 409, message: 'This tester changed while you were working. Reload the page and try again.' },
+          JOB_NOT_RECRUITING: { status: 409, message: 'This job is not taking new testers now. Open the job page to see its status.' },
           NO_FREE_ESCROW_SLOT: {
             status: 409,
             message: application.job.isTraining
-              ? 'All training tester spots are already taken. Close a blocked tester first, then approve this one.'
-              : 'All paid tester spots are already taken. Close an approved tester who cannot install the app first, then approve this one.',
+              ? 'All training spots are full. Close a tester who cannot install the app, then accept this tester.'
+              : 'All paid spots are full. Close an accepted tester who cannot install the app, then accept this tester.',
           },
-          ESCROW_SLOT_CHANGED: { status: 409, message: 'A paid spot changed while approving. Refresh and try again.' },
-          PAYMENT_NOT_ESCROWED: { status: 409, message: 'This tester has a payment that is not safely held. Contact support.' },
+          ESCROW_SLOT_CHANGED: { status: 409, message: 'A paid spot changed while you were accepting. Reload the page and try again.' },
+          PAYMENT_NOT_ESCROWED: { status: 409, message: 'The money for this tester is not held safely yet. Contact support.' },
         }
         const mapped = approvalError instanceof Error ? approvalErrors[approvalError.message] : undefined
         if (mapped) return NextResponse.json({ error: mapped.message }, { status: mapped.status })
@@ -337,10 +337,10 @@ export async function PATCH(
       try {
         await sendNotification({
           userId: application.testerId,
-          title: application.job.isTraining ? 'Training Request Approved! 🎉' : 'Application Approved! 🎉',
+          title: application.job.isTraining ? 'You are accepted for training 🎉' : 'The developer accepted you 🎉',
           body: application.job.isTraining
-            ? `Your request to join training for "${application.job.appName}" is approved. Open the Play Store link in your dashboard and upload a screenshot showing the Install button.`
-            : `Your application to test "${application.job.appName}" has been approved. Open the Play Store link in your dashboard and upload a screenshot showing the Install button.`,
+            ? `You can join the training for "${application.job.appName}". Open this page, tap Open in Play Store, then tap Send screenshot.`
+            : `You can test "${application.job.appName}". Open this page, tap Open in Play Store, then tap Send screenshot.`,
           url: `/dashboard/applications/${id}`,
           type: 'application_approved',
         })
@@ -363,7 +363,7 @@ export async function PATCH(
       return NextResponse.json({
         success: true,
         application: updatedApplication,
-        message: 'Application approved successfully',
+        message: 'Tester accepted. They will be told and can send their Play Store screenshot.',
       })
     }
 
@@ -403,10 +403,10 @@ export async function PATCH(
         })
       } catch (rejectError) {
         if (rejectError instanceof Error && rejectError.message === 'APPLICATION_STATE_CHANGED') {
-          return NextResponse.json({ error: 'This application changed. Refresh and try again.' }, { status: 409 })
+          return NextResponse.json({ error: 'This tester changed while you were working. Reload the page and try again.' }, { status: 409 })
         }
         if (rejectError instanceof Error && rejectError.message === 'PAYMENT_NOT_ESCROWED') {
-          return NextResponse.json({ error: 'This tester has a payment that is not safely held. Contact support.' }, { status: 409 })
+          return NextResponse.json({ error: 'The money for this tester is not held safely yet. Contact support.' }, { status: 409 })
         }
         throw rejectError
       }
@@ -418,8 +418,8 @@ export async function PATCH(
       try {
         await sendNotification({
           userId: application.testerId,
-          title: 'Application Update',
-          body: `Your application to test "${application.job.appName}" was closed. If you could not install the app, this does not count against you.`,
+          title: 'Your application was closed',
+          body: `Your application for "${application.job.appName}" was closed. If you could not install the app, this does not hurt your record. Open Browse Jobs to find another job.`,
           url: `/dashboard/applications/${id}`,
           type: 'application_rejected',
         })
@@ -431,8 +431,8 @@ export async function PATCH(
         success: true,
         application: updatedApplication,
         message: application.job.isTraining
-          ? 'Training request closed. The training spot is free for another tester.'
-          : 'Application closed. The paid spot is free for another tester.',
+          ? 'Training request closed. The spot is free for another tester.'
+          : 'Tester closed. The paid spot is free for another tester.',
       })
     }
 
@@ -440,7 +440,7 @@ export async function PATCH(
     if (body.action === 'verify') {
       if (application.status !== 'OPTED_IN') {
         return NextResponse.json(
-          { error: 'Only opted-in applications can be verified' },
+          { error: 'This tester has not sent a screenshot yet, or was already accepted. Reload the page to see the latest status.' },
           { status: 409 }
         )
       }
@@ -498,10 +498,10 @@ export async function PATCH(
       try {
         await sendNotification({
           userId: application.testerId,
-          title: updatedApplication.job.isTraining ? 'Training started 🚀' : 'Opt-in verified ✅',
+          title: updatedApplication.job.isTraining ? 'Training started 🚀' : 'Your screenshot was accepted ✅',
           body: updatedApplication.job.isTraining
-            ? `You are verified for "${application.job.appName}". Your training starts now. Open your daily mission.`
-            : `Your screenshot for "${application.job.appName}" has been verified. You are on the ready list — the developer will start testing once enough testers are verified.`,
+            ? `The developer accepted you for "${application.job.appName}". Your training starts now. Open your daily mission.`
+            : `The developer accepted your screenshot for "${application.job.appName}". You are on the ready list. Wait for the developer to choose the start date.`,
           url: updatedApplication.job.isTraining ? '/dashboard/tasks' : `/dashboard/applications/${id}`,
           type: 'verification_approved',
         })
@@ -514,7 +514,7 @@ export async function PATCH(
         await sendNotification({
           userId: application.testerId,
           title: 'Join the group chat 💬',
-          body: `You are verified for "${application.job.appName}". Tap to join the group chat with the developer and other testers.`,
+          body: `You are on the ready list for "${application.job.appName}". Tap to open the group chat and say hello to the developer and other testers.`,
           url: `/dashboard/applications/${id}`,
           type: 'group_chat_invite',
         })
@@ -526,8 +526,8 @@ export async function PATCH(
       try {
         await sendNotification({
           userId: application.job.developerId,
-          title: 'Tester Verified! 🎯',
-          body: `${application.tester.name || 'A tester'} is verified for "${application.job.appName}". Check if you have enough to start testing.`,
+          title: 'A tester is ready 🎯',
+          body: `${application.tester.name || 'A tester'} is accepted for "${application.job.appName}". Open the job. When enough testers are ready, click Choose start date.`,
           url: `/dashboard/jobs/${application.job.id}`,
           type: 'tester_verified',
         })
@@ -539,8 +539,8 @@ export async function PATCH(
         success: true,
         application: updatedApplication,
         message: updatedApplication.job.isTraining && verifiedPointsAwarded > 0
-          ? `Opt-in verified. Training started right away and the tester earned ${verifiedPointsAwarded} training points.`
-          : 'Opt-in verified. The tester is on the ready list.',
+          ? `Screenshot accepted. Training started right away and the tester earned ${verifiedPointsAwarded} training points.`
+          : 'Screenshot accepted. The tester is on the ready list.',
       })
     }
 
@@ -548,13 +548,13 @@ export async function PATCH(
     if (body.action === 'complete') {
       if (application.status !== 'TESTING') {
         return NextResponse.json(
-          { error: 'Only testing applications can be completed' },
+          { error: 'This test is not running, so it cannot be finished. Reload the page to see the latest status.' },
           { status: 409 }
         )
       }
       if (application.testingPausedAt) {
         return NextResponse.json(
-          { error: 'A paused testing application cannot be completed' },
+          { error: 'This test is stopped for now. Start it again before you finish it.' },
           { status: 409 }
         )
       }
@@ -565,7 +565,7 @@ export async function PATCH(
       })
       if (completed.count !== 1) {
         return NextResponse.json(
-          { error: 'The application changed state or is paused; refresh before completing it' },
+          { error: 'This test changed or was stopped. Reload the page and try again.' },
           { status: 409 }
         )
       }
@@ -686,11 +686,11 @@ export async function PATCH(
           ? completedTrainingPoints > 0
             ? `Training completed. ${completedTrainingPoints} training points awarded.`
             : 'Training completed. No completion points because some daily missions were not submitted.'
-          : 'Application marked as completed. Payment will be processed soon.',
+          : 'Test finished. The tester will be paid soon.',
       })
     }
     return NextResponse.json(
-      { error: 'Invalid application action' },
+      { error: 'This action is not known. Reload the page and try again.' },
       { status: 400 }
     )
   } catch (error) {
@@ -715,7 +715,7 @@ export async function PATCH(
 
     console.error('Update application error:', error)
     return NextResponse.json(
-      { error: 'Failed to update application' },
+      { error: 'We could not save this change. Reload the page and try again. If it keeps failing, contact support.' },
       { status: 500 }
     )
   }

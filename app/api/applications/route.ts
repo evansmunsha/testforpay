@@ -141,20 +141,20 @@ export async function POST(request: Request) {
       }) > 0
     if (job.status !== 'ACTIVE' && !canRecruitForPausedCohort) {
       return NextResponse.json(
-        { error: 'This job is not accepting applications' },
+        { error: 'This job is not taking new testers now. Click Browse Jobs and pick another job.' },
         { status: 400 }
       )
     }
 
     if (job.scheduledStartAt && job.scheduledStartAt > new Date()) {
       return NextResponse.json(
-        { error: 'Recruitment has closed because testing has been scheduled' },
+        { error: 'This job already has a start date, so no new testers can join. Click Browse Jobs and pick another job.' },
         { status: 409 }
       )
     }
     if (job.supportedCountries.length === 0) {
       return NextResponse.json(
-        { error: 'This job has not declared supported countries and cannot accept screened applications yet' },
+        { error: 'The developer has not said which countries this app works in yet. Pick another job, or try again later.' },
         { status: 409 }
       )
     }
@@ -181,7 +181,7 @@ export async function POST(request: Request) {
       minimumAndroidVersion: job.minAndroidVersion,
     })) {
       return NextResponse.json(
-        { error: 'Your country or Android version in Settings does not match what this job needs. If they are wrong, fix them in Settings. If they are right, please choose another job. Google Play availability may still vary by account or device.' },
+        { error: 'This app does not work for your country or Android version in Settings. If they are wrong, fix them in Settings, then tap Apply again. If they are right, click Browse Jobs and pick another job.' },
         { status: 400 }
       )
     }
@@ -192,7 +192,7 @@ export async function POST(request: Request) {
     // Block highly suspicious applications
     if (fraudCheck.score >= 70) {
       return NextResponse.json(
-        { error: 'Unable to process application. Please contact support.' },
+        { error: 'We could not accept your application. Please contact support from the Contact page.' },
         { status: 403 }
       )
     }
@@ -334,7 +334,7 @@ export async function POST(request: Request) {
       await sendNotification({
         userId: job.developerId,
         title: 'New Application',
-        body: `${tester?.name || 'A tester'} applied to test "${job.appName}". Review their application.`,
+        body: `${tester?.name || 'A tester'} applied to test "${job.appName}". Open the job, then click Accept tester or Close tester.`,
         url: `/dashboard/jobs/${job.id}`,
         type: 'new_application',
       })
@@ -345,32 +345,32 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       application,
-      message: 'Application submitted successfully',
+      message: 'Your application was sent. Open My Jobs to see what to do next.',
     })
   } catch (error) {
     if (error instanceof Error) {
       if (error.message === 'JOB_FULL') {
         return NextResponse.json(
-          { error: 'This job has reached maximum testers' },
+          { error: 'This job is full. Click Browse Jobs and pick another job.' },
           { status: 400 }
         )
       }
       if (error.message === 'ALREADY_APPLIED') {
         return NextResponse.json(
-          { error: 'You have already applied to this job' },
+          { error: 'You already applied to this job. Open My Jobs to see it.' },
           { status: 400 }
         )
       }
       if (error.message === 'JOB_NOT_ACTIVE') {
         return NextResponse.json(
-          { error: 'This job is not accepting applications' },
+          { error: 'This job is not taking new testers now. Click Browse Jobs and pick another job.' },
           { status: 400 }
         )
       }
     }
     console.error('Create application error:', error)
     return NextResponse.json(
-      { error: 'Failed to submit application' },
+      { error: 'We could not send your application. Check your internet, then tap Apply again.' },
       { status: 500 }
     )
   }

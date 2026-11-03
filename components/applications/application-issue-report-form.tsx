@@ -32,15 +32,15 @@ export function ApplicationIssueReportForm({ applicationId, disabled = false }: 
       })
       const data = await response.json()
       if (!response.ok) {
-        setError(data.error || 'Could not submit this report')
+        setError(data.error || 'We could not send your report. Tap Send problem report again.')
         return
       }
       setDetails('')
       setAttachments([])
-      setMessage('Your private report was sent to the support team and developer. Confirmed incompatibility will not count against you.')
+      setMessage('Your report was sent privately to the support team and the developer. An admin will look at it. If the app does not work for you, you will not lose anything.')
     } catch (cause) {
       console.error('Failed to submit application issue report:', cause)
-      setError('Could not submit this report. Please try again.')
+      setError('We could not send your report. Check your internet, then tap Send problem report again.')
     } finally {
       setSubmitting(false)
     }
@@ -51,7 +51,7 @@ export function ApplicationIssueReportForm({ applicationId, disabled = false }: 
       <div>
         <p className="font-medium text-amber-950">Can’t install this app?</p>
         <p className="text-sm text-amber-900">
-          If Google Play says the app is unavailable in your country or your device is incompatible, tell us what happened here. Checking availability does not start your testing period. Support can review the report and, if incompatibility is confirmed, remove you from this cohort without counting it against your tester record.
+          Does Google Play say the app is not available in your country, or does it not work on your phone? Tell us here. This does not start your test days. An admin will read it. If the app does not work for you, you can leave the job and it will not hurt your record.
         </p>
       </div>
       <select
@@ -61,10 +61,10 @@ export function ApplicationIssueReportForm({ applicationId, disabled = false }: 
         disabled={disabled || submitting}
         className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm"
       >
-        <option value="INSTALL_UNAVAILABLE">App or install link unavailable</option>
-        <option value="COUNTRY_RESTRICTION">Google Play says app is unavailable in my country</option>
-        <option value="DEVICE_INCOMPATIBLE">Google Play says my device is incompatible</option>
-        <option value="OTHER">Other testing problem</option>
+        <option value="INSTALL_UNAVAILABLE">I cannot find the app or the install link</option>
+        <option value="COUNTRY_RESTRICTION">Google Play says the app is not available in my country</option>
+        <option value="DEVICE_INCOMPATIBLE">Google Play says the app does not work on my phone</option>
+        <option value="OTHER">Another problem</option>
       </select>
       <textarea
         value={details}
@@ -73,7 +73,7 @@ export function ApplicationIssueReportForm({ applicationId, disabled = false }: 
         minLength={10}
         maxLength={2000}
         rows={3}
-        placeholder="Tell us what Google Play showed and which step failed."
+        placeholder="Write at least 10 letters. Tell us what Google Play showed and where you got stuck."
         className="w-full rounded-md border border-amber-300 bg-white px-3 py-2 text-sm"
       />
       {attachments.length > 0 && (
@@ -120,7 +120,7 @@ export function ApplicationIssueReportForm({ applicationId, disabled = false }: 
         onClick={submit}
         disabled={disabled || submitting || details.trim().length < 10}
       >
-        {submitting ? 'Sending…' : 'Submit private report'}
+        {submitting ? 'Sending…' : 'Send problem report'}
       </Button>
     </div>
   )

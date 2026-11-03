@@ -101,12 +101,12 @@ export function FeedbackForm({
     const hasAttachments = attachments.length > 0
 
     if (!hasTextContent && !hasAttachments) {
-      setError('Please add a note or upload at least one screenshot or recording')
+      setError('Write a short note, or add a screenshot or recording. Then tap Send feedback to developer.')
       return
     }
 
     if (rating === 0) {
-      setError('Please select a rating')
+      setError('Tap a star to give a rating. Then tap Send feedback to developer.')
       return
     }
 
@@ -130,12 +130,10 @@ export function FeedbackForm({
         setSuccess(true)
         onSubmit?.()
       } else {
-        setError(data.error || 'Failed to submit feedback')
+        setError(data.error || 'We could not send your feedback. Tap Send feedback to developer again.')
       }
     } catch (err) {
-      setError('Something went wrong. Please try again.')
-    } finally {
-      setLoading(false)
+      setError('We could not send your feedback. Check your internet, then tap Send feedback to developer again.')
     }
   }
 
@@ -175,14 +173,14 @@ export function FeedbackForm({
       })
       const data = await res.json()
       if (!res.ok) {
-        setReportMessage(data.error || 'Failed to submit report')
+        setReportMessage(data.error || 'We could not send your report. Tap Send report again.')
         return
       }
-      setReportMessage('Report submitted. Thank you.')
+      setReportMessage('Report sent. Thank you. An admin will look at it.')
       setShowReport(false)
       setReportDetails('')
     } catch (error) {
-      setReportMessage('Something went wrong. Please try again.')
+      setReportMessage('We could not send your report. Check your internet, then tap Send report again.')
     } finally {
       setReportLoading(false)
     }
@@ -192,11 +190,11 @@ export function FeedbackForm({
     setFollowupMessage('')
     const trimmed = followupText.trim()
     if (trimmed.length < 5) {
-      setFollowupMessage('Please write at least 5 characters.')
+      setFollowupMessage('Write at least 5 letters, then tap Send follow-up.')
       return
     }
     if (trimmed.length > 500) {
-      setFollowupMessage('Follow-up must be 500 characters or less.')
+      setFollowupMessage('Your message is too long. Make it shorter than 500 letters, then tap Send follow-up.')
       return
     }
     try {
@@ -208,14 +206,14 @@ export function FeedbackForm({
       })
       const data = await res.json()
       if (!res.ok) {
-        setFollowupMessage(data.error || 'Failed to send follow-up')
+        setFollowupMessage(data.error || 'We could not send your follow-up. Tap Send follow-up again.')
         return
       }
-      setFollowupMessage('Follow-up sent.')
+      setFollowupMessage('Your follow-up was sent. The developer will be told.')
       setFollowupText('')
       onSubmit?.()
     } catch (error) {
-      setFollowupMessage('Something went wrong. Please try again.')
+      setFollowupMessage('We could not send your follow-up. Check your internet, then tap Send follow-up again.')
     } finally {
       setFollowupLoading(false)
     }
@@ -228,8 +226,8 @@ export function FeedbackForm({
           <div className="flex items-center gap-3 text-green-700">
             <CheckCircle className="h-5 w-5" />
             <div>
-              <p className="font-medium">Feedback submitted!</p>
-              <p className="text-sm text-green-600">Thank you for your feedback.</p>
+              <p className="font-medium">Your feedback was sent.</p>
+              <p className="text-sm text-green-600">Thank you. The developer will read it. You will get a message if they reply.</p>
             </div>
           </div>
           {(() => {
@@ -388,9 +386,9 @@ export function FeedbackForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-lg">Leave Feedback</CardTitle>
+        <CardTitle className="text-lg">Write your feedback</CardTitle>
         <CardDescription>
-          Share your experience testing "{appName}" with the developer
+          Tell the developer what it was like to test "{appName}". Fill the boxes below, then tap Send feedback to developer.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -574,11 +572,11 @@ export function FeedbackForm({
           className="w-full"
         >
           {loading ? (
-            'Submitting...'
+            'Sending...'
           ) : (
             <>
               <Send className="h-4 w-4 mr-2" />
-              Submit Feedback
+              Send feedback to developer
             </>
           )}
         </Button>

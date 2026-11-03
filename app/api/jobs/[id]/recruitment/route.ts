@@ -92,7 +92,7 @@ export async function POST(_: Request, { params }: RouteContext) {
   // The cohort-release logic below is kept only until this file is deleted.
   if (process.env.NODE_ENV !== undefined) {
     return NextResponse.json(
-      { error: 'Cohort release is no longer used. Approve testers one by one, then use Start testing now.' },
+      { error: 'This button is no longer used. Click Accept tester for each person, then click Choose start date.' },
       { status: 410 }
     )
   }
@@ -372,8 +372,8 @@ export async function POST(_: Request, { params }: RouteContext) {
         }
         await sendNotification({
           userId: tester.testerId,
-          title: 'You are selected for the testing cohort',
-          body: `You are selected to test "${result.appName}". Join the Google Play closed test and upload your opt-in proof from your dashboard.`,
+          title: 'You are chosen to test an app',
+          body: `You are chosen to test "${result.appName}". Open the Google Play test link, join the test, then tap Send screenshot on your job page.`,
           url: `/dashboard/applications/${tester.id}`,
           type: 'cohort_selected',
         })

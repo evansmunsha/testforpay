@@ -19,7 +19,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     }
     const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
     if (reason.length < 10) {
-      return NextResponse.json({ error: 'Provide a reason of at least 10 characters' }, { status: 400 })
+      return NextResponse.json({ error: 'Write a reason of at least 10 letters, then try again.' }, { status: 400 })
     }
 
     const payment = await prisma.payment.findUnique({

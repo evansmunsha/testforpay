@@ -43,7 +43,7 @@ export function TesterJobPage({ jobId, appName, status, hasVerificationImage, pa
               <a href={googlePlayLink} target="_blank" rel="noopener noreferrer">Open in Play Store</a>
             </Button>
             <Button asChild variant="outline" className="min-h-11">
-              <Link href="/dashboard/applications">Upload screenshot</Link>
+              <Link href="/dashboard/applications">Send screenshot</Link>
             </Button>
           </div>
         )}

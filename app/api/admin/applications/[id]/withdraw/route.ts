@@ -27,7 +27,7 @@ export async function POST(
 
   const parsed = withdrawSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: 'A reason of 3 to 500 characters is required' }, { status: 400 })
+    return NextResponse.json({ error: 'Write a reason of 3 to 500 letters, then try again.' }, { status: 400 })
   }
 
   const { id } = await params

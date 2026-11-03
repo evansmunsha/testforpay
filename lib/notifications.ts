@@ -86,26 +86,26 @@ export async function sendNotification(data: NotificationData) {
 // Notification templates
 export const NotificationTemplates = {
   applicationApproved: (appName: string) => ({
-    title: 'Application Approved! 🎉',
-    body: `Your application to test "${appName}" has been approved. Start testing now!`,
+    title: 'The developer accepted you! 🎉',
+    body: `You can test "${appName}". Open this page, tap Open in Play Store, then tap Send screenshot.`,
     type: 'application_approved',
   }),
 
   applicationRejected: (appName: string) => ({
-    title: 'Application Update',
-    body: `Your application to test "${appName}" was not approved this time.`,
+    title: 'Your application was closed',
+    body: `The developer did not accept your application for "${appName}". Open Browse Jobs to find another job.`,
     type: 'application_rejected',
   }),
 
   verificationApproved: (appName: string) => ({
-    title: 'Verification Approved! ✅',
-    body: `Your screenshot for "${appName}" has been verified. Testing period has started!`,
+    title: 'Your screenshot was accepted ✅',
+    body: `The developer accepted your screenshot for "${appName}". Wait for the start date. You will get a message.`,
     type: 'verification_approved',
   }),
 
   testingComplete: (appName: string, amountCents: number) => ({
-    title: 'Testing Complete! 💰',
-    body: `You've completed testing "${appName}". ${formatEurFromCents(amountCents)} will be sent to your account.`,
+    title: 'Testing is finished 💰',
+    body: `You finished testing "${appName}". ${formatEurFromCents(amountCents)} will be sent to your account. Open Payments to see it.`,
     type: 'testing_complete',
   }),
 
@@ -117,13 +117,13 @@ export const NotificationTemplates = {
 
   newApplication: (testerName: string, appName: string) => ({
     title: 'New Application',
-    body: `${testerName} applied to test "${appName}". Review their application.`,
+    body: `${testerName} applied to test "${appName}". Open the job, then click Accept tester or Close tester.`,
     type: 'new_application',
   }),
 
   newVerification: (testerName: string, appName: string) => ({
-    title: 'Verification Submitted',
-    body: `${testerName} submitted verification for "${appName}". Review it now.`,
+    title: 'A tester sent a screenshot',
+    body: `${testerName} sent a Play Store screenshot for "${appName}". Open the job, check the screenshot, then click Accept tester.`,
     type: 'new_verification',
   }),
 

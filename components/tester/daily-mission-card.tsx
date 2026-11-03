@@ -52,7 +52,7 @@ export function DailyMissionCard({
     try {
       await onSubmit(content.trim(), screenshotUrl.trim() || undefined, uploadedVideo ?? undefined)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Submission failed. Please try again.')
+      setError(err instanceof Error ? err.message : 'We could not send your report. Check your internet, then tap Send report again.')
     } finally {
       setLoading(false)
     }
@@ -187,7 +187,7 @@ export function DailyMissionCard({
           ) : (
             <CheckCircle className="mr-2 h-4 w-4" />
           )}
-          {loading ? 'Submitting...' : 'Complete Mission'}
+          {loading ? 'Sending...' : 'Send report'}
         </Button>
       </CardContent>
     </Card>

@@ -149,19 +149,19 @@ export async function POST(
     })
 
     const notificationText = result.action === 'pause'
-      ? 'Testing is paused. Your completed work and payment record are preserved; missions and check-ins are unavailable until an authorized resume.'
-      : `Testing resumed. The pause time was excluded, and your saved remaining testing duration continues from the previous progress.`
+      ? 'An admin stopped this test for now. Your finished work and payment are safe. You cannot send reports until it starts again. You do not need to do anything.'
+      : 'This test started again. The time it was stopped is not counted. Open your job and keep going with your daily mission.'
     const notifications = await Promise.allSettled([
       sendNotification({
         userId: result.application.testerId,
-        title: result.action === 'pause' ? 'Testing paused' : 'Testing resumed',
+        title: result.action === 'pause' ? 'Your test was stopped for now' : 'Your test started again',
         body: `${result.application.job.appName}: ${notificationText}`,
         url: `/dashboard/applications/${id}`,
         type: result.action === 'pause' ? 'testing_paused' : 'testing_resumed',
       }),
       sendNotification({
         userId: result.application.job.developerId,
-        title: result.action === 'pause' ? 'Tester clock paused' : 'Tester clock resumed',
+        title: result.action === 'pause' ? 'A tester\'s test was stopped for now' : 'A tester\'s test started again',
         body: `${result.application.tester.name || 'A tester'} — ${result.application.job.appName}: ${notificationText}`,
         url: `/dashboard/jobs/${result.application.job.id}`,
         type: result.action === 'pause' ? 'testing_paused' : 'testing_resumed',

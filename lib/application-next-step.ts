@@ -15,33 +15,33 @@ export type TesterNextStep = {
 export function getTesterNextStep(input: TesterNextStepInput): TesterNextStep {
   switch (input.status) {
     case 'PENDING':
-      return { text: 'Wait for the developer to review your application.', actionNeeded: false }
+      return { text: 'The developer is reading your application. Wait for a message. You do not need to do anything now.', actionNeeded: false }
     case 'APPROVED':
       return input.hasVerificationImage
-        ? { text: 'Wait for the developer to check your screenshot.', actionNeeded: false }
+        ? { text: 'The developer is checking your screenshot. Wait for a message. You do not need to do anything now.', actionNeeded: false }
         : {
-            text: 'Open the app in Google Play, then upload a screenshot that shows the Install button.',
+            text: 'Open the app in Google Play. Take a screenshot that shows the Install button. Then tap Send screenshot.',
             actionNeeded: true,
           }
     case 'OPTED_IN':
-      return { text: 'Wait for the developer to check your screenshot.', actionNeeded: false }
+      return { text: 'The developer is checking your screenshot. Wait for a message. You do not need to do anything now.', actionNeeded: false }
     case 'VERIFIED':
-      return { text: 'You are verified. Join the group chat and wait for the developer to start testing.', actionNeeded: false }
+      return { text: 'The developer accepted you. Say hello in the group chat. Then wait for the developer to choose the start date.', actionNeeded: false }
     case 'SCHEDULED':
-      return { text: 'You are on the ready list. Testing begins when the developer starts it.', actionNeeded: false }
+      return { text: 'You are on the ready list. Testing starts on the date the developer chose. You will get a message.', actionNeeded: false }
     case 'TESTING':
       return input.paused
-        ? { text: 'Testing is paused by an administrator. Nothing to do right now.', actionNeeded: false }
-        : { text: "Do today's mission and send your report with a screen recording.", actionNeeded: true }
+        ? { text: 'An admin stopped this test for now. You do not need to do anything. You will get a message when it starts again.', actionNeeded: false }
+        : { text: "Do today's mission. Then send your report with a screen recording.", actionNeeded: true }
     case 'COMPLETED':
       return input.hasFeedback
-        ? { text: 'Testing is finished. Your payment is being processed.', actionNeeded: false }
-        : { text: 'Testing is finished. Leave your feedback for the developer.', actionNeeded: true }
+        ? { text: 'Testing is finished. Your payment is on its way.', actionNeeded: false }
+        : { text: 'Testing is finished. Write your feedback for the developer in the box below.', actionNeeded: true }
     case 'INELIGIBLE':
     case 'REJECTED':
     case 'WITHDRAWN':
-      return { text: 'Nothing to do here. Browse other jobs.', actionNeeded: false }
+      return { text: 'Nothing to do here. Click Browse Jobs to find another job.', actionNeeded: false }
     default:
-      return { text: 'Open the job to see what is happening.', actionNeeded: false }
+      return { text: 'Click Open job to see what is happening.', actionNeeded: false }
   }
 }

@@ -200,7 +200,7 @@ export function JobOperations() {
 
   const createTrainingJob = async () => {
     if (!reasonOk) {
-      toast({ title: 'Reason needed', description: 'Write a reason of at least 10 characters first.', variant: 'destructive' })
+        toast({ title: 'Reason needed', description: 'Write a reason of at least 10 letters in the Reason box, then click the button again.', variant: 'destructive' })
       return
     }
     setCreatingTraining(true)
@@ -271,7 +271,7 @@ export function JobOperations() {
 
   const run = async (key: string, request: () => Promise<Response>, success: string) => {
     if (!reasonOk) {
-      toast({ title: 'Reason needed', description: 'Write a reason of at least 10 characters first.', variant: 'destructive' })
+        toast({ title: 'Reason needed', description: 'Write a reason of at least 10 letters in the Reason box, then click the button again.', variant: 'destructive' })
       return
     }
     setBusyId(key)
@@ -308,7 +308,7 @@ export function JobOperations() {
   const startTesting = () => run(
     'start',
     () => fetch(`/api/jobs/${jobId}/start`, json(resumingPaused ? { resumePausedApplications: true } : { startDate })),
-    resumingPaused ? 'Testing resumed' : 'Testing scheduled'
+    resumingPaused ? 'Testers restarted' : 'Start date saved'
   )
 
   const formatDate = (value: string | null) => (value ? new Date(value).toLocaleString() : '—')
@@ -318,7 +318,7 @@ export function JobOperations() {
       <Card>
         <CardHeader>
           <CardTitle>Testing Operations</CardTitle>
-          <CardDescription>Oversee one job: group readiness, every tester’s checks and uploads, reports, and mission screenshots.</CardDescription>
+          <CardDescription>Choose one job to see its testers, their screenshots, problem reports and daily mission uploads. You can accept, pause, close or remove testers here.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div>
@@ -338,13 +338,13 @@ export function JobOperations() {
             </select>
           </div>
           <div>
-            <label htmlFor="operations-reason" className="text-sm font-medium">Admin reason for actions below (at least 10 characters)</label>
+            <label htmlFor="operations-reason" className="text-sm font-medium">Your reason (required for the buttons below — at least 10 letters)</label>
             <input
               id="operations-reason"
               value={reason}
               onChange={(event) => setReason(event.target.value)}
               maxLength={500}
-              placeholder="Why are you doing this? It is saved in the audit log."
+              placeholder="Write why you do this. It is saved in the log."
               className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
             />
           </div>
@@ -505,7 +505,7 @@ export function JobOperations() {
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="text-lg font-semibold">{data.readiness.verifiedCount} / {data.job.testersNeeded} verified and ready</span>
+                <span className="text-lg font-semibold">{data.readiness.verifiedCount} / {data.job.testersNeeded} testers ready</span>
                 {Object.entries(data.statusCounts).map(([status, count]) => (
                   <Badge key={status} variant="secondary">{status}: {count}</Badge>
                 ))}
@@ -517,12 +517,12 @@ export function JobOperations() {
               )}
               {data.readiness.pausedToResume > 0 && (
                 <p className="text-sm text-amber-800">
-                  {data.readiness.pausedToResume} paused tester(s) will resume with their saved remaining time when testing starts.
+                  {data.readiness.pausedToResume} paused tester(s) will start again with the days they had left.
                 </p>
               )}
               {!resumingPaused && (
                 <div>
-                  <label htmlFor="operations-start-date" className="text-sm font-medium">Start date (tomorrow or later, days change at midnight UTC)</label>
+                  <label htmlFor="operations-start-date" className="text-sm font-medium">Start date (choose tomorrow or later). All testers are told.</label>
                   <input
                     id="operations-start-date"
                     type="date"
@@ -538,7 +538,7 @@ export function JobOperations() {
                 onClick={startTesting}
                 className="bg-green-600 text-white hover:bg-green-700"
               >
-                {resumingPaused ? 'Resume paused testers now' : 'Schedule testing'}
+                {resumingPaused ? 'Restart paused testers now' : 'Choose start date'}
               </Button>
             </CardContent>
           </Card>
@@ -602,8 +602,8 @@ export function JobOperations() {
                           <div className="flex flex-col gap-2">
                             {application.status === 'OPTED_IN' && (
                               <Button size="sm" disabled={!reasonOk || busyId === application.id}
-                                onClick={() => run(application.id, () => patchApplication(application.id, 'verify'), 'Tester verified')}>
-                                Verify
+                                onClick={() => run(application.id, () => patchApplication(application.id, 'verify'),                                 'Screenshot accepted')}>
+                                                                Accept screenshot
                               </Button>
                             )}
                             {application.status === 'TESTING' && (
@@ -612,20 +612,20 @@ export function JobOperations() {
                                 onClick={() => run(
                                   application.id,
                                   () => fetch(`/api/admin/applications/${application.id}/pause`, json({ action: application.testingPausedAt ? 'resume' : 'pause' })),
-                                  application.testingPausedAt ? 'Testing resumed' : 'Testing paused'
+                                  application.testingPausedAt ? 'Tester restarted' : 'Tester paused'
                                 )}>
-                                {application.testingPausedAt ? 'Resume' : 'Pause'}
+                                {application.testingPausedAt ? 'Restart tester' : 'Pause tester'}
                               </Button>
                             )}
                             {CLOSABLE.includes(application.status) && (
                               <>
                                 <Button size="sm" variant="outline" disabled={!reasonOk || busyId === application.id}
                                   onClick={() => run(application.id, () => patchApplication(application.id, 'reject'), 'Application closed')}>
-                                  Close
+                                                                    Close tester
                                 </Button>
                                 <Button size="sm" variant="outline" disabled={!reasonOk || busyId === application.id}
-                                  onClick={() => run(application.id, () => fetch(`/api/admin/applications/${application.id}/withdraw`, json({})), 'Application withdrawn')}>
-                                  Withdraw
+                                  onClick={() => run(application.id, () => fetch(`/api/admin/applications/${application.id}/withdraw`, json({})),                                   'Tester removed')}>
+                                                                    Remove tester
                                 </Button>
                               </>
                             )}

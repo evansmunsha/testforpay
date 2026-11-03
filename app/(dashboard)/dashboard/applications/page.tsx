@@ -117,15 +117,15 @@ export default function ApplicationsPage() {
 
   const getStatusMessage = (status: string) => {
     switch (status) {
-      case 'PENDING': return 'Waiting for developer approval'
-      case 'APPROVED': return 'Approved! Next: open the Play Store link and upload a screenshot showing the Install button'
-      case 'OPTED_IN': return 'Screenshot submitted. Waiting for the developer to check it'
-      case 'VERIFIED': return 'Verified. You are on the ready list. Testing starts when the developer starts the whole group'
-      case 'SCHEDULED': return 'Verified. Waiting for the whole group to start'
-      case 'TESTING': return 'Testing in progress'
-      case 'COMPLETED': return 'Testing completed! Payment processing'
-      case 'REJECTED': return 'Application was not approved'
-      case 'INELIGIBLE': return 'This app is not available for your declared country or device. This will not count against your tester record.'
+      case 'PENDING': return 'Waiting for the developer to accept you'
+      case 'APPROVED': return 'You are accepted! Next: open the Play Store link and send a screenshot that shows the Install button'
+      case 'OPTED_IN': return 'Screenshot sent. Waiting for the developer to check it'
+      case 'VERIFIED': return 'The developer accepted your screenshot. You are on the ready list. Testing starts when the developer chooses the start date'
+      case 'SCHEDULED': return 'You are on the ready list. Waiting for the start date'
+      case 'TESTING': return 'Testing is running'
+      case 'COMPLETED': return 'Testing is finished! Your payment is on its way'
+      case 'REJECTED': return 'The developer did not accept your application'
+      case 'INELIGIBLE': return 'This app does not work for your country or phone. This does not hurt your tester record.'
       default: return ''
     }
   }
@@ -224,11 +224,11 @@ export default function ApplicationsPage() {
             <div className="text-center py-12 text-gray-500">
               <FileText className="h-12 w-12 mx-auto mb-4 text-gray-400" />
               <p className="font-medium mb-2">No applications yet</p>
-              <p className="text-sm mb-4">Apply to testing jobs to start tracking your progress here.</p>
+              <p className="text-sm mb-4">You have not applied to a job yet. Click Browse Jobs, pick a job and apply. Then you can follow it here.</p>
               <ul className="mx-auto max-w-md text-left text-sm text-gray-600 space-y-1 mb-4">
-                <li>• Browse available jobs</li>
-                <li>• Submit your application</li>
-                <li>• Complete the opt-in and verification steps</li>
+                <li>1. Click Browse Jobs and pick a job</li>
+                <li>2. Click Apply</li>
+                <li>3. After the developer accepts you, send a Play Store screenshot</li>
               </ul>
               <Link href="/dashboard/browse">
                 <Button>Browse Jobs</Button>
@@ -307,27 +307,27 @@ export default function ApplicationsPage() {
                 {app.status === 'PENDING' && (
                   <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
                     <p className="text-sm text-yellow-800">
-                      ⏳ Your application is being reviewed by the developer. You'll be notified once approved.
+                      ⏳ The developer is reading your application. You will get a message when you are accepted. You do not need to do anything now.
                     </p>
                   </div>
                 )}
 
                 {app.status === 'SCHEDULED' && (
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                    You are verified and on the ready list. Your testing days and daily missions begin when the developer starts testing for the whole group. You will get a notification. No mission or check-in is available before then.
+                    You are on the ready list. Testing starts on the date the developer chooses. You will get a message. There is no mission to do before that date.
                   </div>
                 )}
 
                 {app.status === 'INELIGIBLE' && (
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
-                    This app could not be tested with the declared country or device. This confirmed incompatibility does not count against your tester record.
+                    This app does not work for your country or phone. This does not hurt your tester record. Click Browse Jobs to find another job.
                   </div>
                 )}
 
                 {app.status === 'APPROVED' && !app.verificationImage && (
                   <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg space-y-3">
                     <p className="text-sm text-blue-800 font-medium">
-                      ✅ Congratulations! The developer approved you.
+                      ✅ The developer accepted you. Now send a Play Store screenshot.
                     </p>
                     <div className="bg-white border border-blue-100 rounded-lg p-3">
                       <p className="text-sm text-blue-900 font-semibold mb-2">Next steps:</p>
@@ -346,14 +346,14 @@ export default function ApplicationsPage() {
                         </li>
                         <li className="flex gap-2">
                           <span className="font-bold">4.</span>
-                          <span>Upload the screenshot below. If you also install the app, you can add a second screenshot.</span>
+                          <span>Tap <strong>Send screenshot</strong> below and pick your picture. If you also installed the app, you can add a second picture.</span>
                         </li>
                       </ol>
                       <p className="mt-3 rounded-md bg-amber-50 p-3 text-sm text-amber-900">
-                        If Google Play says the app is <strong>not available in your country</strong> or there is no Install button, tell us using “Can’t install this app?” below. You will not be penalised.
+                        Google Play says the app is <strong>not available in your country</strong>, or there is no Install button? Click “Can’t install this app?” below and tell us. You will not lose anything.
                       </p>
                       <p className="mt-3 rounded-md bg-blue-50 p-3 text-sm text-blue-900">
-                        Checking Google Play or installing the app is only preparation. Your testing days and daily missions do not begin until the developer starts testing for the whole group.
+                        This step is only to get ready. Your test days start later, on the date the developer chooses.
                       </p>
                     </div>
                     <div className="flex gap-2 pt-2">
@@ -374,7 +374,7 @@ export default function ApplicationsPage() {
                         className="flex-1"
                       >
                         <Upload className="h-4 w-4 mr-2" />
-                        Upload Screenshot
+                        Send screenshot
                       </Button>
                     </div>
                   </div>
@@ -387,10 +387,10 @@ export default function ApplicationsPage() {
                 {app.status === 'OPTED_IN' && (
                   <div className="bg-indigo-50 border border-indigo-200 p-4 rounded-lg space-y-3">
                     <p className="text-sm text-indigo-800 font-medium">
-                      📸 Verification screenshot submitted
+                      📸 Your screenshot was sent
                     </p>
                     <p className="text-sm text-indigo-800">
-                      The developer is checking your screenshot. If it shows the Install button, you join the ready list. This does not start testing. Your testing days and daily missions begin when the developer starts the whole group.
+                      The developer is checking it. If it shows the Install button, you join the ready list. Testing starts later, on the date the developer chooses.
                     </p>
                     {(app.verificationImage || app.verificationImage2) && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -417,10 +417,9 @@ export default function ApplicationsPage() {
                   <div className="space-y-4">
                     {app.testingPausedAt ? (
                       <div className="rounded-lg border border-amber-300 bg-amber-50 p-4">
-                        <p className="text-sm font-medium text-amber-900">Testing is paused by an administrator.</p>
+                        <p className="text-sm font-medium text-amber-900">An admin stopped this test for now.</p>
                         <p className="mt-1 text-sm text-amber-800">
-                          Your completed missions and check-ins are preserved. The clock and new submissions are stopped;
-                          the saved remaining duration will continue only after an authorized resume.
+                          Your finished missions are safe. You cannot send new reports now. You will get a message when the test starts again. You do not need to do anything.
                         </p>
                       </div>
                     ) : (
@@ -474,7 +473,7 @@ export default function ApplicationsPage() {
                   <div className="space-y-4">
                     <div className="bg-green-50 border border-green-200 p-4 rounded-lg">
                       <p className="text-sm text-green-800 font-medium">
-                        🎉 Testing completed! Payment of {formatEurFromCents(app.payment?.amount || 0)} is being processed.
+                        🎉 Testing is finished! Your payment of {formatEurFromCents(app.payment?.amount || 0)} is on its way. Please write your feedback below.
                       </p>
                     </div>
                     
@@ -497,7 +496,7 @@ export default function ApplicationsPage() {
                 {app.status === 'REJECTED' && (
                   <div className="bg-red-50 border border-red-200 p-4 rounded-lg">
                     <p className="text-sm text-red-800">
-                      Your application was not approved by the developer.
+                      The developer did not accept your application. Click Browse Jobs to apply to another job.
                     </p>
                   </div>
                 )}
@@ -516,9 +515,9 @@ export default function ApplicationsPage() {
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Verify Your Test Participation</DialogTitle>
+            <DialogTitle>Send your Play Store screenshot</DialogTitle>
             <DialogDescription>
-              Upload a screenshot from Google Play showing you've joined the closed test
+              Take a screenshot of the app page in Google Play. It must show the Install button. Pick the picture below, then tap Send screenshot.
             </DialogDescription>
           </DialogHeader>
           {selectedApplicationId && (

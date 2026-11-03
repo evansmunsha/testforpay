@@ -246,25 +246,25 @@ export default function JobDetailPage() {
     if (resumesPaused && (!resumePausedApplications || resumeReason.trim().length < 10)) {
       toast({
         title: 'Confirm resuming paused testers',
-        description: 'Tick the confirmation box and give a reason of at least 10 characters first.',
+        description: 'Tick the box and write a reason of at least 10 letters. Then click Resume testers.',
         variant: 'destructive',
       })
       return
     }
     if (!resumesPaused && (!startDateInput || startDateInput < tomorrowUtc)) {
       toast({
-        title: 'Pick a start date',
-        description: `Choose tomorrow (${tomorrowUtc}) or a later date. Days change at midnight UTC.`,
+        title: 'Choose the start date',
+        description: `Pick ${tomorrowUtc} or a later day, then click Choose start date again.`,
         variant: 'destructive',
       })
       return
     }
     openConfirm({
-      title: resumesPaused ? 'Resume paused testers now?' : `Schedule testing for ${startDateInput}?`,
+      title: resumesPaused ? 'Resume the paused testers now?' : `Start testing on ${startDateInput}?`,
       description: resumesPaused
-        ? `This resumes the paused testers right now with their saved remaining time.`
-        : `Day 1 is ${startDateInput} for all ${job?.testersNeeded ?? 0} verified testers, and day ${job?.testDuration} is the same calendar day for everyone (days change at midnight UTC). Testers can start any time on day 1. All verified testers will be told the date.`,
-      confirmLabel: resumesPaused ? 'Resume' : 'Schedule testing',
+        ? `The paused testers start again now. They keep the days they have left.`
+        : `Day 1 is ${startDateInput} for all ${job?.testersNeeded ?? 0} testers. Testing lasts ${job?.testDuration} days for everyone. All testers will be told the date.`,
+      confirmLabel: resumesPaused ? 'Resume testers' : 'Choose start date',
       onConfirm: async () => {
         setActionLoading(true)
         try {
@@ -279,14 +279,14 @@ export default function JobDetailPage() {
           })
           const data = await response.json()
           if (!response.ok) {
-            toast({ title: 'Error', description: data.error || 'Could not schedule testing', variant: 'destructive' })
+            toast({ title: 'Error', description: data.error || 'Could not save the start date. Check your internet and click again.', variant: 'destructive' })
             return
           }
           await fetchJob(true)
-          toast({ title: data.scheduled ? 'Testing scheduled 📅' : 'Testing resumed', description: data.message, variant: 'success' })
+          toast({ title: data.scheduled ? 'Start date saved 📅' : 'Testers resumed', description: data.message, variant: 'success' })
         } catch (error) {
           console.error('Failed to start testing:', error)
-          toast({ title: 'Error', description: 'Could not start testing', variant: 'destructive' })
+          toast({ title: 'Error', description: 'Could not start testing. Check your internet and click again.': 'destructive' })
         } finally {
           setActionLoading(false)
         }
@@ -355,7 +355,7 @@ export default function JobDetailPage() {
 
       if (response.ok) {
         fetchJob()
-        toast({ title: 'Approved', description: 'Tester has been notified', variant: 'success' })
+        toast({ title: 'Tester accepted', description: 'The tester was told. Next, add their email in Play Console.', variant: 'success' })
       } else {
         const data = await response.json()
         toast({ title: 'Error', description: data.error || 'Failed to approve', variant: 'destructive' })
@@ -406,12 +406,12 @@ export default function JobDetailPage() {
 Testers will be compensated based on their progress:
 • Completed: 100% payment
 • Testing: 75% payment
-• Verified: 50% payment
-• Opted-in: 25% payment
-• Approved only: 0%
+• Screenshot accepted: 50% payment
+• Joined the test: 25% payment
+• Accepted only: 0%
 
-You will receive a partial refund for unused budget.`
-      : 'Are you sure you want to cancel this job? You will receive a full refund.'
+You will get back the money for unused spots.`
+      : 'Do you want to cancel this job? You will get all your money back.'
 
     openConfirm({
       title: 'Cancel job?',
@@ -461,9 +461,9 @@ You will receive a partial refund for unused budget.`
 
   const handleVerify = async (applicationId: string) => {
     openConfirm({
-      title: 'Verify this tester?',
-      description: 'Confirm the screenshot if itshows the Install button on Google Play. The tester joins the ready list. Testing does not start until you schedule a start date.',
-      confirmLabel: 'Verify tester',
+      title: 'Accept this screenshot?',
+      description: 'Accept it only if the screenshot shows the Install button on Google Play. The tester joins the ready list. Testing starts only on the date you choose.',
+      confirmLabel: 'Accept screenshot',
       onConfirm: async () => {
         setActionLoading(true)
         try {
@@ -475,9 +475,9 @@ You will receive a partial refund for unused budget.`
 
           if (response.ok) {
             fetchJob()
-            toast({ title: 'Tester verified', description: 'The tester is on the ready list. Testing starts only on the date you schedule.', variant: 'success' })
+            toast({ title: 'Screenshot accepted', description: 'The tester is on the ready list. Testing starts on the date you choose.', variant: 'success' })
           } else {
-            toast({ title: 'Error', description: 'Failed to verify application', variant: 'destructive' })
+            toast({ title: 'Error', description: 'Could not accept the screenshot. Check your internet and click again.', variant: 'destructive' })
           }
         } catch (err) {
           toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' })
@@ -552,7 +552,7 @@ You will receive a partial refund for unused budget.`
       : isCompleted
         ? 'Testing completed. Payouts are being processed.'
         : isActive
-          ? 'Payment received and held in escrow while testers work.'
+          ? 'Your payment is received and held safely while testers work.'
           : 'Payment status is being updated.'
 
   return (
@@ -710,7 +710,7 @@ You will receive a partial refund for unused budget.`
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {recruitment?.eligible ?? 0} / {job.testersNeeded} eligible testers
+              {recruitment?.eligible ?? 0} / {job.testersNeeded} testers allowed to join
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
               <div 
@@ -755,12 +755,12 @@ You will receive a partial refund for unused budget.`
           <CheckCircle className="h-6 w-6 text-green-600 mt-0.5 shrink-0" />
           <div className="flex-1">
             <p className="font-bold text-green-900 text-base">
-              {recruitment?.verifiedCount} / {job.testersNeeded} testers verified — ready to start!
+              {recruitment?.verifiedCount} / {job.testersNeeded} testers are ready — you can start!
             </p>
             <p className="text-sm text-green-800 mt-1">
-              All required testers have confirmed they can install the app. Pick a start date (tomorrow or later). Day 1 is that date for everyone, and the {job.testDuration}-day period ends on the same calendar day for every tester. Days change at midnight UTC.
+              All testers showed they can install the app. Choose the start date (tomorrow or later), then click the green button. Day 1 is the same for everyone, and the {job.testDuration} days end on the same day for everyone.
               {job.scheduledStartAt && (
-                <> Currently scheduled: <strong>{job.scheduledStartAt.slice(0, 10)}</strong>.</>
+                <> Start date now: <strong>{job.scheduledStartAt.slice(0, 10)}</strong>.</>
               )}
             </p>
             <input
@@ -777,7 +777,7 @@ You will receive a partial refund for unused budget.`
             disabled={actionLoading}
             className="bg-green-600 hover:bg-green-700 text-white shrink-0"
           >
-            {job.scheduledStartAt ? 'Change start date' : 'Schedule testing'}
+            {job.scheduledStartAt ? 'Change start date' : 'Choose start date'}
           </Button>
         </div>
       )}
@@ -787,7 +787,7 @@ You will receive a partial refund for unused budget.`
           <CardHeader>
             <CardTitle>Recruitment progress</CardTitle>
             <CardDescription>
-              Approve applicants one by one. Each approved tester gets the Play Store link immediately and their email is visible so you can add them to Play Console. Once they upload a screenshot showing the Install button, verify them. The Schedule testing button appears when you have enough verified testers.
+              Click Accept tester for each person. They get the Play Store link, and you see their email to add in Play Console. When a tester sends a screenshot with the Install button, click Check the screenshot and accept. The Choose start date button shows when enough testers are ready.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -808,15 +808,15 @@ You will receive a partial refund for unused budget.`
 
             <div className="rounded-md bg-gray-50 p-3 text-sm space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Approved (waiting for screenshot)</span>
+                <span className="text-gray-600">Accepted (waiting for screenshot)</span>
                 <strong>{job.applications.filter(a => a.status === 'APPROVED').length}</strong>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-gray-600">Screenshot submitted (awaiting review)</span>
+                <span className="text-gray-600">Screenshot sent (you need to check it)</span>
                 <strong>{awaitingVerification.length}</strong>
               </div>
               <div className="flex items-center justify-between border-t pt-2">
-                <span className="font-medium">Verified — ready to start</span>
+                <span className="font-medium">Ready to start</span>
                 <strong className={(recruitment?.verifiedCount ?? 0) >= job.testersNeeded ? 'text-green-700' : 'text-gray-900'}>
                   {recruitment?.verifiedCount ?? 0} / {job.testersNeeded} needed
                 </strong>
@@ -827,7 +827,7 @@ You will receive a partial refund for unused budget.`
               <div className="space-y-3 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
                 <p>
                   {recruitment?.pausedToResume} earlier tester{recruitment?.pausedToResume === 1 ? ' is' : 's are'} paused.
-                  Starting will resume only their saved remaining time. Their original start date and finished work stay.
+                  Starting will only continue the days they had left. Their first start date and finished work stay.
                 </p>
                 <label className="flex items-start gap-2">
                   <input
@@ -841,7 +841,7 @@ You will receive a partial refund for unused budget.`
                   value={resumeReason}
                   onChange={(event) => setResumeReason(event.target.value)}
                   maxLength={1000}
-                  placeholder="Reason for resuming (at least 10 characters)"
+                  placeholder="Why do you resume them? (at least 10 letters)"
                   className="w-full rounded-md border border-amber-400 bg-white px-3 py-2"
                 />
               </div>
@@ -857,7 +857,7 @@ You will receive a partial refund for unused budget.`
                 >
                   {(recruitment?.pausedToResume ?? 0) > 0
                     ? `Resume paused testers (${recruitment?.verifiedCount} ready)`
-                    : `Schedule testing (${recruitment?.verifiedCount} testers ready)`}
+                    : `Choose start date (${recruitment?.verifiedCount} testers ready)`}
                 </Button>
                 {(recruitment?.pausedToResume ?? 0) === 0 && (
                   <p className="text-xs text-gray-500">Use the date picker in the green box above to choose the start date.</p>
@@ -866,7 +866,7 @@ You will receive a partial refund for unused budget.`
             ) : (
               <div className="space-y-1 text-xs text-gray-500">
                 <p>
-                  Keep approving applicants and verifying their screenshots. The Schedule testing button appears once {job.testersNeeded} testers are verified.
+                  Keep accepting testers and checking their screenshots. The Choose start date button shows when {job.testersNeeded} testers are ready.
                 </p>
                 {(recruitment?.blockers ?? [])
                   .filter((blocker) => blocker.code !== 'NOT_ENOUGH_VERIFIED')
@@ -882,7 +882,7 @@ You will receive a partial refund for unused budget.`
       <Card id="payment-status">
         <CardHeader>
           <CardTitle>Payment Status</CardTitle>
-          <CardDescription>Clear view of escrow and payouts</CardDescription>
+          <CardDescription>Money held safely, and what testers are paid</CardDescription>
         </CardHeader>        <CardContent className="space-y-4">
           <div className="text-sm">{paymentSummary}</div>
           <div className="space-y-3 text-sm">
@@ -898,7 +898,7 @@ You will receive a partial refund for unused budget.`
                   {paymentReceived
                     ? isCancelled
                       ? 'Payment was captured; refund processing has started.'
-                      : 'Paid and held in escrow.'
+                      : 'Paid and held safely.'
                     : 'Not paid yet.'}
                 </p>
               </div>

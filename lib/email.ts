@@ -66,10 +66,10 @@ export async function sendDeveloperWelcomeEmail(
               <p style="color: #1e40af; font-weight: 600; margin: 0 0 8px;">Here's how it works:</p>
               <ol style="color: #1e40af; margin: 0; padding-left: 20px; line-height: 1.8;">
                 <li>Pick a plan (Starter, Growth, or Pro) and add your app details</li>
-                <li>Verified testers apply and opt in to your Google Play closed test</li>
+                <li>Testers apply, join your Google Play closed test and send you a screenshot as proof</li>
                 <li>Testers use your app for 14 days and send you daily check-ins</li>
                 <li>Testing completes — Google unlocks production publishing for you</li>
-                <li>You pay once upfront — we hold it in escrow until testing is done</li>
+                <li>You pay once upfront — we keep the money held safely until testing is done</li>
               </ol>
             </div>
 
@@ -114,7 +114,7 @@ export async function sendDeveloperNudgeEmail(
           <li>Your app name and Google Play closed test link</li>
           <li>Pick a plan — Starter (12 testers, €28), Growth (15 testers, €48), or Pro (25 testers, €78)</li>
         </ul>
-        <p style="color: #166534; margin: 10px 0 0; font-size: 14px;">Takes about 2 minutes. Payment is held in escrow — testers only get paid after 14 days.</p>
+        <p style="color: #166534; margin: 10px 0 0; font-size: 14px;">Takes about 2 minutes. Your money is held safely — testers only get paid after 14 days.</p>
       </div>
 
       ${btn('Post a Testing Job Now →', `${APP_URL}/dashboard/jobs/new`)}
@@ -153,7 +153,7 @@ export async function sendTesterWelcomeEmail(
           <li><strong>Set up Stripe</strong> — go to Settings and connect your bank account</li>
           <li><strong>Browse jobs</strong> — find an app you'd like to test</li>
           <li><strong>Apply</strong> — wait for the developer to approve you</li>
-          <li><strong>Install the app</strong> — opt in to the Google Play test</li>
+          <li><strong>Install the app</strong> — join the Google Play test with the link the developer sends</li>
           <li><strong>Test for 14 days</strong> — use the app and send daily check-ins</li>
           <li><strong>Get paid</strong> — payment lands in your bank automatically</li>
         </ol>
@@ -195,24 +195,24 @@ export async function sendApplicationApprovedEmail(
   return resend.emails.send({
     from: FROM_EMAIL,
     to,
-    subject: `🎉 Your application was approved - ${data.appName}`,
+    subject: `🎉 The developer accepted you - ${data.appName}`,
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h1 style="color: #2563eb;">Application Approved!</h1>
+        <h1 style="color: #2563eb;">The developer accepted you!</h1>
         <p>Hi ${data.testerName},</p>
-        <p>Great news! Your application to test <strong>${data.appName}</strong> has been approved.</p>
+        <p>Good news! The developer accepted you to test <strong>${data.appName}</strong>.</p>
         
         <div style="background: #eff6ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <h2 style="margin-top: 0; color: #1e40af;">Next Steps:</h2>
+          <h2 style="margin-top: 0; color: #1e40af;">What to do now:</h2>
           <ol>
-            <li>Wait until the developer releases the selected tester group and sends the opt-in link</li>
-            <li>Join the Google Play closed test and upload screenshots to verify your opt-in</li>
-            <li>Your testing period begins when the developer starts testing for the whole group, not when you apply</li>
+            <li>Wait for the developer to send you the Play Store link</li>
+            <li>Join the test on Google Play, then send your screenshot in My Jobs</li>
+            <li>Testing starts on the day the developer chooses for the whole group</li>
             <li>Get paid ${formatEurFromCents(data.paymentCents)}</li>
           </ol>
         </div>
         <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
-          You will receive a separate notification with the opt-in link when the tester group is ready. Questions? Reply to this email or visit your dashboard.
+          We will tell you when the Play Store link is ready. Questions? Reply to this email or open your dashboard.
         </p>
       </div>
     `,
@@ -456,8 +456,8 @@ export async function sendJobPostedEmail(
 
       <p style="color: #374151; line-height: 1.6;">
         <strong>What happens next:</strong><br/>
-        Testers will apply — you'll get an email for each one. Review their device info and approve or reject.
-        Once 12+ testers are verified and opted in, the 14-day clock starts. Keep them engaged and you'll meet Google's requirement on schedule.
+        Testers will apply — you'll get an email for each one. Open the job, look at their phone details, then click Accept tester or Close tester.
+        When 12 or more testers have joined the test and you accepted their screenshots, you choose the start date and the 14 days begin.
       </p>
 
       ${btn('View Applications →', `${APP_URL}/dashboard/jobs/${data.jobId}`)}

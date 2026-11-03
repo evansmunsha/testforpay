@@ -158,7 +158,7 @@ export function JobCard({ job, onApply, applied = false, loading = false }: JobC
           <ul className="space-y-1 text-sm text-gray-700">
             <li className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
-              Opt-in to Google Play closed test
+              Join the Google Play closed test
             </li>
             <li className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />

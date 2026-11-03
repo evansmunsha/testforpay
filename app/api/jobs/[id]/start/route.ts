@@ -54,7 +54,7 @@ export async function POST(
     }
     const parsed = startSchema.safeParse(json)
     if (!parsed.success) {
-      return NextResponse.json({ error: 'A reason of at least 10 characters is required' }, { status: 400 })
+      return NextResponse.json({ error: 'Write a reason of at least 10 letters, then try again.' }, { status: 400 })
     }
     const { resumePausedApplications, reason } = parsed.data
 
@@ -63,16 +63,16 @@ export async function POST(
     if (parsed.data.startDate !== undefined) {
       startDay = parseTestingStartDate(parsed.data.startDate)
       if (!startDay) {
-        return NextResponse.json({ error: 'Start date must look like YYYY-MM-DD' }, { status: 400 })
+        return NextResponse.json({ error: 'The start date is not correct. Choose a date from the calendar box and try again.' }, { status: 400 })
       }
       if (!isTomorrowOrLater(startDay)) {
         return NextResponse.json(
-          { error: `The start date must be tomorrow or later (days change at midnight ${TESTING_DAY_TIMEZONE})` },
+          { error: `The start date is too early. Choose tomorrow or a later day. Days change at midnight (${TESTING_DAY_TIMEZONE}).` },
           { status: 400 }
         )
       }
     } else if (!resumePausedApplications) {
-      return NextResponse.json({ error: 'Pick a start date (tomorrow or later)' }, { status: 400 })
+      return NextResponse.json({ error: 'Choose the start date (tomorrow or later), then click Choose start date.' }, { status: 400 })
     }
 
     const { id } = await params
@@ -281,12 +281,12 @@ export async function POST(
     const notifications = await Promise.allSettled(result.testers.map((tester) =>
       sendNotification({
         userId: tester.testerId,
-        title: result.scheduled ? 'Testing date set' : 'Testing has started!',
+        title: result.scheduled ? 'Your testing start date is set' : 'Testing has started!',
         body: result.scheduled
-          ? `Testing for "${result.appName}" starts on ${dateLabel} (${TESTING_DAY_TIMEZONE}). Day 1 is that date and you can start any time that day. Open the app and report every calendar day for ${result.testDuration} days.`
+          ? `Testing for "${result.appName}" starts on ${dateLabel} (${TESTING_DAY_TIMEZONE}). That is day 1. Each day for ${result.testDuration} days, open your job and send your report.`
           : result.resumedIds.has(tester.id)
-          ? `Testing for "${result.appName}" has resumed. Your earlier progress is kept and only your saved remaining time continues.`
-          : `Testing for "${result.appName}" has started. Your ${result.testDuration}-day testing period begins now. Open your daily mission.`,
+          ? `Testing for "${result.appName}" started again. Your earlier work is kept. Open your job and do today's mission.`
+          : `Testing for "${result.appName}" started. You have ${result.testDuration} days. Open your job and do today's mission.`,
         url: `/dashboard/applications/${tester.id}`,
         type: result.scheduled ? 'testing_scheduled' : 'testing_started',
       })
@@ -299,8 +299,8 @@ export async function POST(
 
     try {
       const groupMessage = result.scheduled
-        ? `📅 Testing is scheduled for ${dateLabel} (${TESTING_DAY_TIMEZONE}).`
-        : `🚀 Testing has started today (${dateLabel}).`
+        ? `📅 The start date is ${dateLabel} (${TESTING_DAY_TIMEZONE}).`
+        : `🚀 Testing started today (${dateLabel}).`
       await prisma.jobGroupMessage.create({
         data: {
           jobId: id,
@@ -336,15 +336,15 @@ export async function POST(
       const known: Record<string, { status: number; message: string }> = {
         JOB_NOT_FOUND: { status: 404, message: 'Job not found' },
         FORBIDDEN: { status: 403, message: 'Forbidden' },
-        JOB_NOT_ACTIVE: { status: 409, message: 'This job is not in a state where testing can start' },
+        JOB_NOT_ACTIVE: { status: 409, message: 'You cannot start testing for this job now. Open the job and check its status.' },
         RESUME_DECISION_REQUIRED: {
           status: 400,
-          message: 'Some testers are paused. Explicitly confirm resuming them and give a reason of at least 10 characters.',
+          message: 'Some testers are paused. Tick the box, write a reason of at least 10 letters, then click Resume testers.',
         },
-        ADMIN_REASON_REQUIRED: { status: 400, message: 'Admins must provide a reason of at least 10 characters' },
-        PAUSED_CANNOT_BE_SCHEDULED: { status: 409, message: 'Some testers are paused. Paused testers must be resumed (not scheduled) so their saved time is kept.' },
-        START_DATE_REQUIRED: { status: 400, message: 'Pick a start date (tomorrow or later)' },
-        START_STATE_CHANGED: { status: 409, message: 'The tester states changed while starting. Refresh and try again; nothing was started.' },
+        ADMIN_REASON_REQUIRED: { status: 400, message: 'Write a reason of at least 10 letters, then try again.' },
+        PAUSED_CANNOT_BE_SCHEDULED: { status: 409, message: 'Some testers are paused. Click Resume testers first, so they keep their saved days.' },
+        START_DATE_REQUIRED: { status: 400, message: 'Choose the start date (tomorrow or later), then click Choose start date.' },
+        START_STATE_CHANGED: { status: 409, message: 'Some testers changed while you clicked. Nothing was started. Reload the page and try again.' },
       }
       if (known[error.message]) {
         return NextResponse.json({ error: known[error.message].message }, { status: known[error.message].status })

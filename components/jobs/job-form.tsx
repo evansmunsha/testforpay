@@ -52,9 +52,9 @@ const PLANS: Record<PlanType, PlanConfig> = {
     label: 'Starter',
     description: 'Perfect for first-time publishers',
     features: [
-      '12 verified testers',
+      '12 real testers',
       '14-day testing period',
-      'Google Play opt-in verification',
+      'We check each tester joined on Google Play',
       'Basic feedback reports',
       'Email support',
       'Approval guarantee',
@@ -68,9 +68,9 @@ const PLANS: Record<PlanType, PlanConfig> = {
     label: 'Growth',
     description: 'For developers shipping regularly',
     features: [
-      '15 verified testers',
+      '15 real testers',
       '14-day testing period',
-      'Google Play opt-in verification',
+      'We check each tester joined on Google Play',
       'Detailed feedback reports',
       'Priority support',
       'Automatic dropout replacement',
@@ -85,9 +85,9 @@ const PLANS: Record<PlanType, PlanConfig> = {
     label: 'Pro',
     description: 'Maximum safety & insights',
     features: [
-      '25 verified testers',
+      '25 real testers',
       '14-day testing period',
-      'Google Play opt-in verification',
+      'We check each tester joined on Google Play',
       'Advanced analytics',
       'Dedicated support',
       'Automatic dropout replacement',
@@ -202,7 +202,7 @@ export function JobForm() {
     setError('')
 
     if (formData.appDescription.trim().length < 100) {
-      setError('Please write at least 100 characters in the description so testers know what to test.')
+      setError('Write at least 100 letters in the description, so testers know what to test. Then click Save job and go to payment.')
       return
     }
 
@@ -217,7 +217,7 @@ export function JobForm() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Failed to create job')
+        setError(data.error || 'Your job was not saved. Check the form and click Save job and go to payment again.')
         setLoading(false)
         return
       }
@@ -225,7 +225,7 @@ export function JobForm() {
       localStorage.removeItem('jobFormData')
       router.push(`/dashboard/jobs/${data.jobId}`)
     } catch {
-      setError('Something went wrong. Please try again.')
+      setError('Your job was not saved. Check your internet and click Save job and go to payment again.')
       setLoading(false)
     }
   }
@@ -252,7 +252,7 @@ export function JobForm() {
             <div>
               <p className="font-medium">Your draft has been restored</p>
               <p className="text-sm">
-                We found your previously saved form data. Continue editing or start fresh.
+                We found your saved form. You can keep writing, or click the button to start again.
               </p>
             </div>
           </div>
@@ -403,7 +403,7 @@ export function JobForm() {
                   required
                 />
                 <p className="text-xs text-gray-500">
-                  Testers will use this link to opt in to your closed test.
+                  Testers use this link to join your closed test. Paste the link from Play Console.
                 </p>
               </div>
 
@@ -586,11 +586,11 @@ export function JobForm() {
               </div>
 
               <Button onClick={handleSubmit} className="w-full" size="lg" disabled={loading || formData.appDescription.length < 100}>
-                {loading ? 'Creating Job...' : 'Create Testing Job'}
+                {loading ? 'Saving your job...' : 'Save job and go to payment'}
               </Button>
 
               <p className="text-center text-xs text-gray-500">
-                Job will be saved as draft. Complete payment on the next screen, then publish it.
+                Your job is saved as a draft. On the next screen, pay to publish it.
               </p>
             </CardContent>
           </Card>

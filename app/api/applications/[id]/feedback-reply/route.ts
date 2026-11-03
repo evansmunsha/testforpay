@@ -104,8 +104,8 @@ export async function POST(
     try {
       await sendNotification({
         userId: application.tester.id,
-        title: 'Developer replied to your feedback',
-        body: `A developer replied to your feedback on "${application.job.appName}".`,
+        title: 'The developer replied to your feedback',
+        body: `The developer of "${application.job.appName}" replied to your feedback. Open your job to read it.`,
         url: `/dashboard/applications/${id}`,
         type: 'feedback_reply',
       })

@@ -153,19 +153,19 @@ export async function PATCH(request: Request) {
     const notificationResults = await Promise.allSettled([
       sendNotification({
         userId: report.testerId,
-        title: 'Testing issue report updated',
+        title: 'Your problem report was answered',
         body: parsed.data.status === 'INCOMPATIBLE'
-          ? `Your report for "${report.job.appName}" was confirmed. This will not count against your tester record.`
-          : `Your report for "${report.job.appName}" has been updated by support.`,
+          ? `Support checked your report for "${report.job.appName}". The app does not work for you. This does not hurt your record. Click Browse Jobs to find another job.`
+          : `Support read your report for "${report.job.appName}". Open the job to see what to do next.`,
         url: `/dashboard/applications/${report.applicationId}`,
         type: 'application_issue_update',
       }),
       sendNotification({
         userId: report.job.developerId,
-        title: 'Testing issue reviewed',
+        title: 'A tester\'s problem was checked',
         body: parsed.data.status === 'INCOMPATIBLE'
-          ? `Support confirmed an availability or compatibility issue for "${report.job.appName}". The tester was removed without penalty, and their paid spot is free. Approve another applicant to fill it.`
-          : `Support reviewed a testing issue for "${report.job.appName}".`,
+          ? `Support checked a problem for "${report.job.appName}". The app does not work for this tester, so they were removed and their spot is free. Open the job and accept another tester.`
+          : `Support read a problem report for "${report.job.appName}". You do not need to do anything.`,
         url: `/dashboard/jobs/${report.jobId}`,
         type: 'application_issue_update',
       }),

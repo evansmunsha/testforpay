@@ -179,10 +179,10 @@ export default function BrowsePage() {
         await fetchApplications()
         await fetchJobs()
         
-        toast({ title: 'Applied!', description: 'Check your applications page for next steps', variant: 'success' })
+        toast({ title: 'Application sent', description: 'Open My Jobs to see what to do next.', variant: 'success' })
         router.push('/dashboard/applications')
       } else {
-        const errorMessage = typeof data?.error === 'string' && data.error ? data.error : 'Failed to apply'
+        const errorMessage = typeof data?.error === 'string' && data.error ? data.error : 'We could not send your application.'
         const lower = errorMessage.toLowerCase()
         const needsSettings = lower.includes('settings') || lower.includes('country') || lower.includes('android') || lower.includes('verify')
         setApplyWarning({
@@ -190,10 +190,10 @@ export default function BrowsePage() {
           needsSettings,
         })
         window.scrollTo({ top: 0, behavior: 'smooth' })
-        toast({ title: 'Could not apply', description: errorMessage, variant: 'destructive' })
+        toast({ title: 'Could not send your application', description: errorMessage, variant: 'destructive' })
       }
     } catch (error) {
-      toast({ title: 'Error', description: 'Something went wrong. Please try again.', variant: 'destructive' })
+      toast({ title: 'Application not sent', description: 'Check your internet, then tap Apply again.', variant: 'destructive' })
     } finally {
       setApplyingJobId(null)
     }
