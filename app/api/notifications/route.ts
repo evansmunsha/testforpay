@@ -2,18 +2,28 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 import prisma from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
-import { computeNavBadges, markSectionSeen } from '@/lib/nav-badges'
+import { computeAdminTabBadges, computeNavBadges, markSectionSeen } from '@/lib/nav-badges'
+import { ADMIN_TAB_KEYS, adminSectionName } from '@/lib/nav-badges-format'
 
-const seenSchema = z.object({ section: z.enum(['messages', 'feedback']) })
+const seenSchema = z.object({
+  section: z.enum(['messages', 'feedback']).optional(),
+  adminTab: z.enum(ADMIN_TAB_KEYS).optional(),
+})
 
-// POST { section } — the caller opened a menu section, so its badge should clear.
+// POST { section } or { adminTab } — the caller opened a menu section or admin tab, so its badge should clear.
 export async function POST(request: Request) {
   try {
     const currentUser = await getCurrentUser()
     if (!currentUser) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
     const parsed = seenSchema.safeParse(await request.json().catch(() => null))
-    if (!parsed.success) return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
-    await markSectionSeen(currentUser.userId, parsed.data.section)
+    if (!parsed.success || (!parsed.data.section && !parsed.data.adminTab)) {
+      return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
+    }
+    if (parsed.data.adminTab) {
+      if (currentUser.role !== 'ADMIN') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      await markSectionSeen(currentUser.userId, adminSectionName(parsed.data.adminTab))
+    }
+    if (parsed.data.section) await markSectionSeen(currentUser.userId, parsed.data.section)
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Mark section seen error:', error)
@@ -38,6 +48,12 @@ export async function GET(request: Request) {
     // ?badges=1 returns the menu badge counts for this user's own role only.
     if (searchParams.get('badges') === '1') {
       const badges = await computeNavBadges(currentUser.userId, currentUser.role)
+      if (currentUser.role === 'ADMIN' && searchParams.get('adminTabs') === '1') {
+        return NextResponse.json(
+          { badges, adminTabs: await computeAdminTabBadges(currentUser.userId) },
+          { headers: { 'Cache-Control': 'no-store' } }
+        )
+      }
       return NextResponse.json({ badges }, { headers: { 'Cache-Control': 'no-store' } })
     }
 

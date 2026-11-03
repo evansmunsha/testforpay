@@ -406,7 +406,7 @@ export default function JobDetailPage() {
 Testers will be compensated based on their progress:
 • Completed: 100% payment
 • Testing: 75% payment
-• Screenshot accepted: 50% payment
+• Screenshot checked: 50% payment
 • Joined the test: 25% payment
 • Accepted only: 0%
 
@@ -462,7 +462,7 @@ You will get back the money for unused spots.`
   const handleVerify = async (applicationId: string) => {
     openConfirm({
       title: 'Accept this screenshot?',
-      description: 'Accept it only if the screenshot shows the Install button on Google Play. The tester joins the ready list. Testing starts only on the date you choose.',
+      description: 'Accept it only if the screenshot shows the Install button on Google Play. The tester is ready. Testing starts only on the date you choose.',
       confirmLabel: 'Accept screenshot',
       onConfirm: async () => {
         setActionLoading(true)
@@ -475,7 +475,7 @@ You will get back the money for unused spots.`
 
           if (response.ok) {
             fetchJob()
-            toast({ title: 'Screenshot accepted', description: 'The tester is on the ready list. Testing starts on the date you choose.', variant: 'success' })
+            toast({ title: 'Screenshot checked', description: 'The tester is ready. Testing starts on the date you choose.', variant: 'success' })
           } else {
             toast({ title: 'Error', description: 'Could not accept the screenshot. Check your internet and click again.', variant: 'destructive' })
           }

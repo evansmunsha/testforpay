@@ -28,7 +28,7 @@ export function getTesterNextStep(input: TesterNextStepInput): TesterNextStep {
     case 'VERIFIED':
       return { text: 'The developer accepted you. Say hello in the group chat. Then wait for the developer to choose the start date.', actionNeeded: false }
     case 'SCHEDULED':
-      return { text: 'You are on the ready list. Testing starts on the date the developer chose. You will get a message.', actionNeeded: false }
+      return { text: 'You are ready. Testing starts on the date the developer chose. You will get a message.', actionNeeded: false }
     case 'TESTING':
       return input.paused
         ? { text: 'An admin stopped this test for now. You do not need to do anything. You will get a message when it starts again.', actionNeeded: false }

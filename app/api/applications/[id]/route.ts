@@ -501,7 +501,7 @@ export async function PATCH(
           title: updatedApplication.job.isTraining ? 'Training started 🚀' : 'Your screenshot was accepted ✅',
           body: updatedApplication.job.isTraining
             ? `The developer accepted you for "${application.job.appName}". Your training starts now. Open your daily mission.`
-            : `The developer accepted your screenshot for "${application.job.appName}". You are on the ready list. Wait for the developer to choose the start date.`,
+            : `The developer checked your screenshot for "${application.job.appName}". You are ready. Wait for the developer to choose the start date.`,
           url: updatedApplication.job.isTraining ? '/dashboard/tasks' : `/dashboard/applications/${id}`,
           type: 'verification_approved',
         })
@@ -514,7 +514,7 @@ export async function PATCH(
         await sendNotification({
           userId: application.testerId,
           title: 'Join the group chat 💬',
-          body: `You are on the ready list for "${application.job.appName}". Tap to open the group chat and say hello to the developer and other testers.`,
+          body: `You are ready for "${application.job.appName}". Tap to open the group chat and say hello to the developer and other testers.`,
           url: `/dashboard/applications/${id}`,
           type: 'group_chat_invite',
         })
@@ -539,8 +539,8 @@ export async function PATCH(
         success: true,
         application: updatedApplication,
         message: updatedApplication.job.isTraining && verifiedPointsAwarded > 0
-          ? `Screenshot accepted. Training started right away and the tester earned ${verifiedPointsAwarded} training points.`
-          : 'Screenshot accepted. The tester is on the ready list.',
+          ? `Screenshot checked. Training started right away and the tester earned ${verifiedPointsAwarded} training points.`
+          : 'Screenshot checked. The tester is ready.',
       })
     }
 

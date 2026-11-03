@@ -18,6 +18,7 @@ import {
   Eye, Trash2, TrendingDown, Activity, Zap, AlertTriangle,
 } from 'lucide-react'
 import { formatEurFromCents } from '@/lib/currency'
+import { ADMIN_TAB_KEYS, formatBadgeCount, type AdminTabBadges, type AdminTabKey } from '@/lib/nav-badges-format'
 import type { Cents } from '@/types/money'
 import { ApplicationIssueQueue } from '@/components/admin/application-issue-queue'
 import { JobOperations } from '@/components/admin/job-operations'
@@ -668,7 +669,38 @@ export default function AdminDashboard() {
     const requestedTab = searchParams.get('tab')
     if (requestedTab === 'contacts') setActiveTab('contacts')
   }, [searchParams])
-  const failedPaymentsCount = payments.filter(p => p.status === 'FAILED').length
+
+  // Red tab numbers: the open tab is marked as seen first, then the server counts what is still waiting.
+  const [tabBadges, setTabBadges] = useState<AdminTabBadges>({})
+  useEffect(() => {
+    let cancelled = false
+    const refresh = async () => {
+      try {
+        const openTab = (ADMIN_TAB_KEYS as readonly string[]).includes(activeTab) ? activeTab : null
+        if (openTab) {
+          await fetch('/api/notifications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ adminTab: openTab }),
+          })
+        }
+        const response = await fetch('/api/notifications?badges=1&adminTabs=1', { cache: 'no-store' })
+        if (response.ok && !cancelled) setTabBadges((await response.json()).adminTabs ?? {})
+      } catch {
+        // Badges are optional; ignore network errors.
+      }
+    }
+    refresh()
+    const interval = setInterval(refresh, 30000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [activeTab])
+  const redBadge = (tab: AdminTabKey) => {
+    const text = formatBadgeCount(tabBadges[tab] ?? 0)
+    return text ? <Badge variant="destructive" className="ml-1">{text}</Badge> : null
+  } = payments.filter(p => p.status === 'FAILED').length
   const unresolvedReportsCount = feedbackReports.filter(r => !r.resolvedAt).length
   const attentionCount = (stats?.attention.jobsWithZeroApplications ?? 0)
     + (stats?.attention.testersStuckInVerification ?? 0)
@@ -1286,7 +1318,7 @@ export default function AdminDashboard() {
             ['Applied', 'PENDING'],
             ['Approved', 'APPROVED'],
             ['Screenshot sent', 'OPTED_IN'],
-                        ['Screenshot accepted', 'VERIFIED'],
+                        ['Screenshot checked (ready)', 'VERIFIED'],
             ['Testing', 'TESTING'],
             ['Completed', 'COMPLETED'],
             ['Rejected', 'REJECTED'],
@@ -1418,18 +1450,16 @@ export default function AdminDashboard() {
             <TabsTrigger value="operations">Testing Ops</TabsTrigger>
             <TabsTrigger value="users">Users <Badge variant="secondary" className="ml-1">{stats?.totalUsers || 0}</Badge></TabsTrigger>
             <TabsTrigger value="jobs">Jobs <Badge variant="secondary" className="ml-1">{stats?.totalJobs || 0}</Badge></TabsTrigger>
-            <TabsTrigger value="applications">Apps <Badge variant="secondary" className="ml-1">{stats?.totalApplications || 0}</Badge></TabsTrigger>
-            <TabsTrigger value="contacts">Msgs <Badge variant="secondary" className="ml-1">{stats?.totalContactMessages || 0}</Badge></TabsTrigger>
-            <TabsTrigger value="payments">Payments</TabsTrigger>
-            <TabsTrigger value="reports">
-              Reports {unresolvedReportsCount > 0 && <Badge variant="destructive" className="ml-1">{unresolvedReportsCount}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="application-issues">App Issues</TabsTrigger>
-            <TabsTrigger value="community">Community</TabsTrigger>
-            <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
+            <TabsTrigger value="applications">Apps {redBadge('applications')}</TabsTrigger>
+            <TabsTrigger value="contacts">Msgs {redBadge('contacts')}</TabsTrigger>
+            <TabsTrigger value="payments">Payments {redBadge('payments')}</TabsTrigger>
+            <TabsTrigger value="reports">Reports {redBadge('reports')}</TabsTrigger>
+            <TabsTrigger value="application-issues">App Issues {redBadge('application-issues')}</TabsTrigger>
+            <TabsTrigger value="community">Community {redBadge('community')}</TabsTrigger>
+            <TabsTrigger value="testimonials">Testimonials {redBadge('testimonials')}</TabsTrigger>
             <TabsTrigger value="acquisition">Acquisition</TabsTrigger>
             <TabsTrigger value="fraud" className="text-red-600">
-              <ShieldAlert className="h-3.5 w-3.5 mr-1" />Fraud {(fraudStats?.unresolvedLogs ?? 0) > 0 && <Badge variant="destructive" className="ml-1">{fraudStats?.unresolvedLogs}</Badge>}
+              <ShieldAlert className="h-3.5 w-3.5 mr-1" />Fraud {redBadge('fraud')}
             </TabsTrigger>
           </TabsList>
         </div>
@@ -2195,7 +2225,7 @@ export default function AdminDashboard() {
                             {getStatusBadge(a.status)}
                             {a.testingPausedAt && <span className="ml-2 text-amber-700">Paused</span>}
                             <p className="mt-1 text-xs text-gray-500">
-                              {a.optInVerified ? 'Screenshot accepted' : 'Screenshot not accepted yet'}
+                              {a.optInVerified ? 'Screenshot checked' : 'Screenshot not checked yet'}
                             </p>
                           </td>
                           <td className="py-3 px-2 align-top">
@@ -2229,7 +2259,7 @@ export default function AdminDashboard() {
                           </td>
                           <td className="py-3 px-2 align-top text-xs text-gray-500">
                             <p>Applied: {new Date(a.createdAt).toLocaleString()}</p>
-                            {a.verifiedAt && <p className="mt-1">Screenshot accepted: {new Date(a.verifiedAt).toLocaleString()}</p>}
+                            {a.verifiedAt && <p className="mt-1">Screenshot checked: {new Date(a.verifiedAt).toLocaleString()}</p>}
                             {a.testingStartDate && <p className="mt-1">Testing starts: {new Date(a.testingStartDate).toLocaleString()}</p>}
                             {a.testingEndDate && <p className="mt-1">Testing ends: {new Date(a.testingEndDate).toLocaleString()}</p>}
                           </td>

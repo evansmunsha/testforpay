@@ -120,8 +120,8 @@ export default function ApplicationsPage() {
       case 'PENDING': return 'Waiting for the developer to accept you'
       case 'APPROVED': return 'You are accepted! Next: open the Play Store link and send a screenshot that shows the Install button'
       case 'OPTED_IN': return 'Screenshot sent. Waiting for the developer to check it'
-      case 'VERIFIED': return 'The developer accepted your screenshot. You are on the ready list. Testing starts when the developer chooses the start date'
-      case 'SCHEDULED': return 'You are on the ready list. Waiting for the start date'
+      case 'VERIFIED': return 'The developer checked your screenshot. You are ready. Testing starts when the developer chooses the start date'
+      case 'SCHEDULED': return 'You are ready. Waiting for the start date'
       case 'TESTING': return 'Testing is running'
       case 'COMPLETED': return 'Testing is finished! Your payment is on its way'
       case 'REJECTED': return 'The developer did not accept your application'
@@ -314,7 +314,7 @@ export default function ApplicationsPage() {
 
                 {app.status === 'SCHEDULED' && (
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-                    You are on the ready list. Testing starts on the date the developer chooses. You will get a message. There is no mission to do before that date.
+                    You are ready. Testing starts on the date the developer chooses. You will get a message. There is no mission to do before that date.
                   </div>
                 )}
 
@@ -390,7 +390,7 @@ export default function ApplicationsPage() {
                       📸 Your screenshot was sent
                     </p>
                     <p className="text-sm text-indigo-800">
-                      The developer is checking it. If it shows the Install button, you join the ready list. Testing starts later, on the date the developer chooses.
+                      The developer is checking it. If it shows the Install button, you are ready. Testing starts later, on the date the developer chooses.
                     </p>
                     {(app.verificationImage || app.verificationImage2) && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

@@ -498,7 +498,7 @@ export function ApplicationCard({
           {['VERIFIED', 'SCHEDULED'].includes(application.status) && (
             <div className="bg-green-50 border border-green-200 p-3 rounded-lg space-y-2">
               <p className="text-sm text-green-800 font-medium">
-                ✅ Screenshot accepted — tester is on the ready list
+                ✅ Screenshot checked — tester is ready
               </p>
               <p className="text-xs text-green-700">
                 Testing starts for everyone together. Click Start testing on this job when you are ready.

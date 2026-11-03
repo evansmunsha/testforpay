@@ -602,7 +602,7 @@ export function JobOperations() {
                           <div className="flex flex-col gap-2">
                             {application.status === 'OPTED_IN' && (
                               <Button size="sm" disabled={!reasonOk || busyId === application.id}
-                                onClick={() => run(application.id, () => patchApplication(application.id, 'verify'),                                 'Screenshot accepted')}>
+                                onClick={() => run(application.id, () => patchApplication(application.id, 'verify'),                                 'Screenshot checked')}>
                                                                 Accept screenshot
                               </Button>
                             )}
