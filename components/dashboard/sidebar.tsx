@@ -16,6 +16,7 @@ import {
   X,
   Trophy,
   MessageSquare,
+  PlayCircle,
   Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -95,6 +96,11 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
       icon: MessageSquare,
     },
     {
+      href: '/dashboard/guides',
+      label: 'How it works',
+      icon: PlayCircle,
+    },
+    {
       href: '/dashboard/settings',
       label: 'Settings',
       icon: Settings,
@@ -133,6 +139,11 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
       icon: MessageSquare,
     },
     {
+      href: '/dashboard/guides',
+      label: 'How it works',
+      icon: PlayCircle,
+    },
+    {
       href: '/dashboard/settings',
       label: 'Settings',
       icon: Settings,
@@ -144,6 +155,11 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
       href: '/dashboard/admin',
       label: 'Admin Panel',
       icon: Shield,
+    },
+    {
+      href: '/dashboard/guides',
+      label: 'Guide videos',
+      icon: PlayCircle,
     },
     {
       href: '/dashboard/settings',

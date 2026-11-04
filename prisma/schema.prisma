@@ -997,3 +997,25 @@ model CronExecution {
 
   @@index([jobName, startedAt])
 }
+
+enum GuideAudience {
+  TESTER
+  DEVELOPER
+  ALL
+}
+
+// Training videos the admin uploads. Testers and developers watch them on the "How it works" page.
+model GuideVideo {
+  id           String        @id @default(cuid())
+  title        String
+  description  String        @default("")
+  audience     GuideAudience @default(TESTER)
+  blobPathname String        @unique
+  contentType  String
+  sizeBytes    Int
+  sortOrder    Int           @default(0)
+  hidden       Boolean       @default(false)
+  createdAt    DateTime      @default(now())
+
+  @@index([audience, hidden, sortOrder])
+}
