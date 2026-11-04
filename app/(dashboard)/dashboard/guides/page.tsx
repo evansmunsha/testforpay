@@ -127,7 +127,8 @@ function AdminTools({ videos, reload, setError }: { videos: Guide[]; reload: () 
   const [file, setFile] = useState<File | null>(null)
   const [progress, setProgress] = useState(0)
   const [busy, setBusy] = useState(false)
-  const [workingId, setWorkingId] = useState<string | null>(null)
+  const [addError, setAddError] = useState('')
+  const [workingId, setWorkingId], setWorkingId] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -148,10 +149,12 @@ function AdminTools({ videos, reload, setError }: { videos: Guide[]; reload: () 
   }
 
   const handleAdd = async () => {
-    if (!file) return setError('Choose a video file first.')
-    if (title.trim().length < 3) return setError('Write a title (at least 3 letters).')
-    if (!['video/mp4', 'video/quicktime', 'video/webm'].includes(file.type)) return setError('Only MP4, MOV or WEBM videos are allowed.')
-    if (file.size > 300 * 1024 * 1024) return setError('The video is bigger than 300 MB. Make it smaller and try again.')
+    setAddError('')
+    if (!file) return setAddError('Choose a video file first.')
+    const finalTitle = title.trim() || file.name.replace(/\.[^.]+$/, '').trim()
+    if (finalTitle.length < 3) return setAddError('Write a title (at least 3 letters).')
+    if (!['video/mp4', 'video/quicktime', 'video/webm'].includes(file.type)) return setAddError('Only MP4, MOV or WEBM videos are allowed.')
+    if (file.size > 300 * 1024 * 1024) return setAddError('The video is bigger than 300 MB. Make it smaller and try again.')
     setBusy(true)
     setError('')
     setProgress(0)
@@ -164,14 +167,14 @@ function AdminTools({ videos, reload, setError }: { videos: Guide[]; reload: () 
         multipart: true,
         onUploadProgress: ({ percentage }) => setProgress(Math.round(percentage)),
       })
-      await send({ action: 'create', title: title.trim(), description: description.trim(), audience, pathname: blob.pathname })
+      await send({ action: 'create', title: finalTitle, description: description.trim(), audience, pathname: blob.pathname })
       setTitle('')
       setDescription('')
       setFile(null)
       if (fileInput.current) fileInput.current.value = ''
       await reload()
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Upload failed. Try again.')
+      setAddError(err instanceof Error ? err.message : 'Upload failed. Try again.')
     } finally {
       setBusy(false)
     }
@@ -222,6 +225,7 @@ function AdminTools({ videos, reload, setError }: { videos: Guide[]; reload: () 
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
             {busy ? `Uploading ${progress}%` : 'Upload video'}
           </Button>
+          {addError && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{addError}</p>}
         </CardContent>
       </Card>
 
