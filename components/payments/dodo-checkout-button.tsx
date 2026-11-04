@@ -21,7 +21,13 @@ export function DodoCheckoutButton({ jobId, amountEurCents, onPaid }: DodoChecko
 
   // After paying, Dodo sends the developer back here. Wait until our server has the payment confirmation.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get('payment') !== 'returned') return
+    const query = new URLSearchParams(window.location.search)
+    if (query.get('payment') !== 'returned') return
+    const returnedStatus = (query.get('status') || '').toLowerCase()
+    if (['failed', 'cancelled', 'canceled'].includes(returnedStatus)) {
+      setError('The payment did not go through, and you were not charged. Click "Pay now" to try again.')
+      return
+    }
     setConfirming(true)
     let attempts = 0
     const timer = setInterval(async () => {
@@ -41,6 +47,7 @@ export function DodoCheckoutButton({ jobId, amountEurCents, onPaid }: DodoChecko
       if (attempts >= 20) {
         clearInterval(timer)
         setConfirming(false)
+        setError('We did not receive a payment. If you did not pay, click "Pay now" to try again. If you paid, wait a few minutes and refresh, or contact us.')
       }
     }, 3000)
     return () => clearInterval(timer)
@@ -49,6 +56,7 @@ export function DodoCheckoutButton({ jobId, amountEurCents, onPaid }: DodoChecko
   const startPayment = async () => {
     setLoading(true)
     setError('')
+    setConfirming(false)
     try {
       const response = await fetch('/api/payments/dodo/checkout', {
         method: 'POST',
@@ -95,7 +103,7 @@ export function DodoCheckoutButton({ jobId, amountEurCents, onPaid }: DodoChecko
 
         {error && <p className="text-sm text-red-600">{error}</p>}
 
-        <Button onClick={startPayment} disabled={loading || confirming} className="w-full">
+        <Button onClick={startPayment} disabled={loading} className="w-full">
           {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Lock className="mr-2 h-4 w-4" />}
           Pay {formatEurFromCents(amountEurCents)} now
         </Button>
