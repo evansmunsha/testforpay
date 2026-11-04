@@ -47,10 +47,14 @@ export function DailyMissionCard({
 
   const handleSubmit = async () => {
     if (content.trim().length < 10) return
+    if (!uploadedVideo) {
+      setError('Add your screen recording first. It is needed to send the report.')
+      return
+    }
     setError('')
     setLoading(true)
     try {
-      await onSubmit(content.trim(), screenshotUrl.trim() || undefined, uploadedVideo ?? undefined)
+      await onSubmit(content.trim(), screenshotUrl.trim() || undefined, uploadedVideo)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'We could not send your report. Check your internet, then tap Send report again.')
     } finally {
@@ -179,7 +183,7 @@ export function DailyMissionCard({
 
         <Button
           onClick={handleSubmit}
-          disabled={content.trim().length < 10 || loading || videoUploading}
+          disabled={content.trim().length < 10 || !uploadedVideo || loading || videoUploading}
           className="w-full"
         >
           {loading ? (

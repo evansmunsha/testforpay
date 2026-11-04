@@ -12,7 +12,7 @@ const submitSchema = z.object({
   screenshotUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   video: z.object({
     pathname: z.string().min(1),
-  }).optional(),
+  }, { message: 'Add your screen recording before you send the report' }),
 })
 
 export async function POST(
@@ -103,7 +103,7 @@ export async function POST(
     }
 
     let stagedVideo: { id: string } | null = null
-    if (video) {
+    {
       if (!isAllowedVideoPath(video.pathname, currentUser.userId, taskId)) {
         return NextResponse.json({ error: 'This video does not belong to your mission' }, { status: 400 })
       }

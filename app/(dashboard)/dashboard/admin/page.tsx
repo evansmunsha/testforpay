@@ -141,6 +141,7 @@ interface Application {
 
 interface Payment {
   id: string; amount: Cents; status: string; createdAt: string; failureReason?: string | null
+  videoStats?: { uploaded: number; confirmed: number }
   application: { job: { id: string; appName: string }; tester: { id: string; email: string; name: string | null; paypalEmail?: string | null; phoneNumber?: string | null; countryCode?: string | null } }
   allocationHistory: Array<{
     id: string
@@ -2435,6 +2436,18 @@ export default function AdminDashboard() {
                                 {!p.application?.tester?.paypalEmail && !p.application?.tester?.phoneNumber && <p className="text-amber-600">No payout details yet. Ask the tester to add them in Settings.</p>}
                               </div>
                             )}
+                                                            <div className="mt-1 text-xs">
+                                                              {p.videoStats && p.videoStats.uploaded > 0 ? (
+                                                                <p className={p.videoStats.confirmed === p.videoStats.uploaded ? 'text-green-700' : 'text-amber-600'}>
+                                                                  Videos: {p.videoStats.uploaded} uploaded, {p.videoStats.confirmed} confirmed by developer
+                                                                </p>
+                                                              ) : (
+                                                                <p className="text-amber-600">Videos: none uploaded</p>
+                                                              )}
+                                                              <a href={`/dashboard/jobs/${p.application.job.id}`} className="text-blue-700 hover:underline">
+                                                                Open job reports
+                                                              </a>
+                                                            </div>
                             {p.allocationHistory.map(allocation => (
                               <p key={allocation.id} className="mt-1 text-xs text-blue-700">
                                 Moved from {allocation.fromApplication.tester.name || allocation.fromApplication.tester.email}

@@ -190,10 +190,10 @@ export function MissionVideoRecorder({ taskId, onUploaded, onUploadingChange }: 
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-indigo-100 bg-indigo-50/60 p-3" aria-label="Optional screen recording">
+    <section className="space-y-3 rounded-lg border border-indigo-100 bg-indigo-50/60 p-3"     aria-label="Screen recording (required)">
       <div>
         <p className="flex items-center gap-2 text-sm font-medium text-gray-800">
-          <Camera className="h-4 w-4 text-indigo-600" /> Screen recording <span className="font-normal text-gray-500">(optional)</span>
+              <Camera className="h-4 w-4 text-indigo-600" /> Screen recording <span className="font-normal text-red-600">(required)</span>
         </p>
         <p className="mt-1 text-xs text-gray-600">Up to 2 minutes and 100 MB. Only MP4 or MOV. The developer can view it after you submit.</p>
       </div>

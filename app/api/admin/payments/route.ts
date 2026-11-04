@@ -120,6 +120,21 @@ export async function GET() {
       take: 100,
     })
 
+    const videoRows = await prisma.submissionVideo.findMany({
+      where: {
+        taskSubmissionId: { not: null },
+        applicationId: { in: payments.map((payment) => payment.applicationId) },
+      },
+      select: { applicationId: true, developerConfirmedAt: true },
+    })
+    const videoStats = new Map<string, { uploaded: number; confirmed: number }>()
+    for (const row of videoRows) {
+      const stats = videoStats.get(row.applicationId) ?? { uploaded: 0, confirmed: 0 }
+      stats.uploaded += 1
+      if (row.developerConfirmedAt) stats.confirmed += 1
+      videoStats.set(row.applicationId, stats)
+    }
+
     const paymentsWithReasons = await Promise.all(payments.map(async (payment) => {
       let failureReason: string | null = null
       if (payment.status === 'FAILED') {
@@ -146,6 +161,7 @@ export async function GET() {
       }
       return {
         ...payment,
+        videoStats: videoStats.get(payment.applicationId) ?? { uploaded: 0, confirmed: 0 },
         failureReason,
       }
     }))
