@@ -36,6 +36,11 @@ export function MissionVideoRecorder({ taskId, onUploaded, onUploadingChange }: 
   const [busy, setBusy] = useState(false)
   const [uploaded, setUploaded] = useState(false)
   const [error, setError] = useState('')
+  const [isPhone, setIsPhone] = useState(false)
+
+  useEffect(() => {
+    setIsPhone(/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent))
+  }, [])
 
   const clearPreview = () => {
     if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current)
@@ -193,16 +198,18 @@ export function MissionVideoRecorder({ taskId, onUploaded, onUploadingChange }: 
         <p className="mt-1 text-xs text-gray-600">Up to 2 minutes and 100 MB. Only MP4 or MOV. The developer can view it after you submit.</p>
       </div>
 
-      {!recording && !file && (
+      {!recording && !file && isPhone && (
         <p className="rounded-md bg-white p-2 text-xs text-gray-700">
           On a phone: swipe down from the top, tap <strong>Screen recorder</strong>, do your mission in the app, stop the recording, then tap <strong>Choose MP4 or MOV</strong> and pick your video.
         </p>
       )}
       {!recording && !file && (
         <div className="flex flex-col gap-2 sm:flex-row">
-          <Button type="button" variant="outline" className="min-h-11" onClick={startRecording}>
-            <Play className="mr-2 h-4 w-4" /> Record screen
-          </Button>
+          {!isPhone && (
+            <Button type="button" variant="outline" className="min-h-11" onClick={startRecording}>
+              <Play className="mr-2 h-4 w-4" /> Record screen
+            </Button>
+          )}
           <label className="flex min-h-11 cursor-pointer items-center justify-center rounded-md border bg-white px-4 text-sm font-medium text-gray-700">
             Choose MP4 or MOV
             <input
