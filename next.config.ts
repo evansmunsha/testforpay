@@ -9,6 +9,7 @@ const otherFfprobeBinaries = [
 ]
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ['ffprobe-static'],
   outputFileTracingIncludes: {
     '/api/videos/upload': ['./node_modules/ffprobe-static/bin/linux/x64/ffprobe'],
     '/api/tasks/[taskId]/submit': ['./node_modules/ffprobe-static/bin/linux/x64/ffprobe'],

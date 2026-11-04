@@ -7,9 +7,15 @@ import { execFile } from 'node:child_process'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import { get } from '@vercel/blob'
-import { path as ffprobePath } from 'ffprobe-static'
+import ffprobeStatic from 'ffprobe-static'
 
 const execFileAsync = promisify(execFile)
+
+// The bundler rewrites the package's own path, so on Vercel (Linux x64) point at the traced file directly.
+const ffprobePath =
+  process.platform === 'linux' && process.arch === 'x64'
+    ? join(process.cwd(), 'node_modules', 'ffprobe-static', 'bin', 'linux', 'x64', 'ffprobe')
+    : ffprobeStatic.path
 
 /** Downloads a private Blob to a temporary file and reads its duration using ffprobe. */
 export async function getVideoDurationSeconds(pathname: string): Promise<number> {
