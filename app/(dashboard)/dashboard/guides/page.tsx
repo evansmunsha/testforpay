@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { upload } from '@vercel/blob/client'
-import { ArrowDown, ArrowUp, Eye, EyeOff, Loader2, Pencil, PlayCircle, Trash2, UploadCloud } from 'lucide-react'
+import { ArrowDown, ArrowUp, Eye, EyeOff, FileVideo, Loader2, Pencil, PlayCircle, Trash2, UploadCloud } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,28 @@ const AUDIENCE_LABEL: Record<Audience, string> = {
   TESTER: 'Testers',
   DEVELOPER: 'Developers',
   ALL: 'Everyone',
+}
+
+const TITLE_SUGGESTIONS: Record<Audience, string[]> = {
+  TESTER: [
+    '1. Get started: sign up and add how you get paid',
+    '2. Find a job and start testing',
+    '3. Daily missions and screen recording',
+    '4. How to ask to be paid',
+    '5. How to report a problem',
+  ],
+  DEVELOPER: [
+    '1. Get started: create your account',
+    '2. Post a testing job and pay',
+    '3. Approve testers and add them in Google Play',
+    '4. Watch tester videos and confirm your app',
+    '5. How to cancel a job',
+  ],
+  ALL: [
+    'Welcome to TestForPay',
+    'How payments work',
+    'How to get help',
+  ],
 }
 
 async function send(body: Record<string, unknown>) {
@@ -163,7 +185,12 @@ function AdminTools({ videos, reload, setError }: { videos: Guide[]; reload: () 
           <CardDescription>Choose who will see it. MP4, MOV or WEBM, up to 300 MB.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Input placeholder="Title, for example: 1. Get started" value={title} onChange={(e) => setTitle(e.target.value)} disabled={busy} />
+          <Input list="guide-title-suggestions" placeholder="Title: tap here to pick a suggestion, or type your own" value={title} onChange={(e) => setTitle(e.target.value)} disabled={busy} />
+          <datalist id="guide-title-suggestions">
+            {TITLE_SUGGESTIONS[audience].map((suggestion) => (
+              <option key={suggestion} value={suggestion} />
+            ))}
+          </datalist>
           <Input placeholder="Short description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} disabled={busy} />
           <div>
             <label htmlFor="guide-audience" className="text-sm font-medium text-gray-800">Who can watch it?</label>
@@ -185,9 +212,13 @@ function AdminTools({ videos, reload, setError }: { videos: Guide[]; reload: () 
             accept="video/mp4,video/quicktime,video/webm"
             disabled={busy}
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-            className="block w-full text-sm"
+            className="hidden"
           />
-          <Button onClick={handleAdd} disabled={busy || !file} className="w-full sm:w-auto">
+          <Button type="button" variant="outline" disabled={busy} onClick={() => fileInput.current?.click()} className="w-full sm:w-auto">
+            <FileVideo className="mr-2 h-4 w-4" /> {file ? 'Choose a different video' : 'Choose video file'}
+          </Button>
+          {file && <p className="text-xs text-green-700">Chosen: {file.name} ({(file.size / (1024 * 1024)).toFixed(1)} MB)</p>}
+          <Button onClick={handleAdd} disabled={busy} className="w-full sm:w-auto">
             {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <UploadCloud className="mr-2 h-4 w-4" />}
             {busy ? `Uploading ${progress}%` : 'Upload video'}
           </Button>
