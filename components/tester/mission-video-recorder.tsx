@@ -76,7 +76,7 @@ export function MissionVideoRecorder({ taskId, onUploaded, onUploadingChange }: 
   const startRecording = async () => {
     setError('')
     if (!navigator.mediaDevices?.getDisplayMedia || typeof MediaRecorder === 'undefined') {
-      setError('Screen recording is not supported in this browser. Record with your device, then choose the MP4 or MOV file below.')
+      setError('Websites cannot record a phone screen. Use your phone\'s own screen recorder: swipe down from the top of the screen, tap "Screen recorder" (or "Screen record"), open the app and do your mission, then stop the recording. Come back here and tap "Choose MP4 or MOV" to pick your video.')
       return
     }
 
@@ -193,6 +193,11 @@ export function MissionVideoRecorder({ taskId, onUploaded, onUploadingChange }: 
         <p className="mt-1 text-xs text-gray-600">Up to 2 minutes and 100 MB. Only MP4 or MOV. The developer can view it after you submit.</p>
       </div>
 
+      {!recording && !file && (
+        <p className="rounded-md bg-white p-2 text-xs text-gray-700">
+          On a phone: swipe down from the top, tap <strong>Screen recorder</strong>, do your mission in the app, stop the recording, then tap <strong>Choose MP4 or MOV</strong> and pick your video.
+        </p>
+      )}
       {!recording && !file && (
         <div className="flex flex-col gap-2 sm:flex-row">
           <Button type="button" variant="outline" className="min-h-11" onClick={startRecording}>

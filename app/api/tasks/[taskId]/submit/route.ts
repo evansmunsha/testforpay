@@ -5,6 +5,7 @@ import prisma from '@/lib/prisma'
 import { z } from 'zod'
 import { getMissionDay } from '@/lib/mission-clock'
 import { isAllowedVideoPath } from '@/lib/video-rules'
+import { ensureStagedMissionVideo } from '@/lib/stage-mission-video'
 
 const submitSchema = z.object({
   content: z.string().min(10, 'Please write at least 10 characters'),
@@ -106,14 +107,9 @@ export async function POST(
       if (!isAllowedVideoPath(video.pathname, currentUser.userId, taskId)) {
         return NextResponse.json({ error: 'This video does not belong to your mission' }, { status: 400 })
       }
-      stagedVideo = await prisma.submissionVideo.findFirst({
-        where: {
-          applicationId: application.id,
-          blobPathname: video.pathname,
-          taskSubmissionId: null,
-          deletedAt: null,
-        },
-        select: { id: true },
+      stagedVideo = await ensureStagedMissionVideo({
+        applicationId: application.id,
+        pathname: video.pathname,
       })
       if (!stagedVideo) {
         return NextResponse.json({ error: 'Upload a valid video before submitting this mission' }, { status: 400 })
