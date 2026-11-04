@@ -747,6 +747,8 @@ model SubmissionVideo {
   durationSeconds  Int
   createdAt        DateTime       @default(now())
   deletedAt        DateTime?
+  // Set when the developer confirms the recording really shows their app.
+  developerConfirmedAt DateTime?
 
   @@index([applicationId])
   @@index([deletedAt])

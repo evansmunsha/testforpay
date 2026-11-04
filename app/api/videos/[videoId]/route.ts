@@ -58,3 +58,42 @@ export async function GET(
     return NextResponse.json({ error: 'Could not download video' }, { status: 500 })
   }
 }
+
+// The job's developer confirms that a mission recording really shows their app.
+export async function POST(
+  _request: Request,
+  { params }: { params: Promise<{ videoId: string }> }
+) {
+  try {
+    const user = await getCurrentUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (user.role !== 'DEVELOPER') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+    const { videoId } = await params
+    const video = await prisma.submissionVideo.findUnique({
+      where: { id: videoId },
+      select: {
+        id: true,
+        deletedAt: true,
+        taskSubmissionId: true,
+        developerConfirmedAt: true,
+        application: { select: { job: { select: { developerId: true } } } },
+      },
+    })
+    if (!video || video.deletedAt || !video.taskSubmissionId || video.application.job.developerId !== user.userId) {
+      return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+    }
+
+    const confirmedAt = video.developerConfirmedAt ?? new Date()
+    if (!video.developerConfirmedAt) {
+      await prisma.submissionVideo.update({
+        where: { id: video.id },
+        data: { developerConfirmedAt: confirmedAt },
+      })
+    }
+    return NextResponse.json({ success: true, developerConfirmedAt: confirmedAt })
+  } catch (error) {
+    console.error('Confirm video error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

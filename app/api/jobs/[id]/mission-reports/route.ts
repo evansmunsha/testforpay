@@ -40,7 +40,7 @@ export async function GET(
           completedAt: true,
           task: { select: { dayNumber: true } },
           tester: { select: { id: true, name: true } },
-          video: { select: { id: true, deletedAt: true } },
+          video: { select: { id: true, deletedAt: true, developerConfirmedAt: true } },
         },
       }),
       prisma.applicationIssueReport.findMany({
@@ -74,6 +74,7 @@ export async function GET(
         video: s.video ? {
           id: s.video.id,
           deletedAt: s.video.deletedAt,
+          developerConfirmedAt: s.video.developerConfirmedAt,
           deleteAfter: getVideoDeleteAfter(endByTester.get(s.tester.id) ?? null),
         } : null,
       })),
