@@ -101,7 +101,7 @@ export async function POST(request: Request) {
       appName, 
       appDescription, 
       packageName, 
-      googlePlayLink, 
+      googlePlayLink: rawGooglePlayLink, 
       planType: rawPlanType,
       appCategory,
       minAndroidVersion,
@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     } = body
 
     // Validation
-    if (!appName || !appDescription || !googlePlayLink) {
+    if (!appName || !appDescription || !rawGooglePlayLink) {
       return NextResponse.json(
         { error: 'Missing required fields: appName, appDescription, and googlePlayLink are required' },
         { status: 400 }
@@ -136,10 +136,13 @@ export async function POST(request: Request) {
       )
     }
 
-    // Validate Google Play link format (basic check)
-    if (!googlePlayLink.includes('play.google.com/apps/testing/')) {
+    // Both link types are accepted and saved exactly as pasted.
+    const googlePlayLink = String(rawGooglePlayLink ?? '').trim()
+    const isClosedTestLink = /^https?:\/\/play\.google\.com\/apps\/testing\/[\w.]+/i.test(googlePlayLink)
+    const isStoreLink = /^https?:\/\/play\.google\.com\/store\/apps\/details\?(?:[^#]*&)?id=[\w.]+/i.test(googlePlayLink)
+    if (!isClosedTestLink && !isStoreLink) {
       return NextResponse.json(
-        { error: 'Invalid Google Play closed test link. It should look like: https://play.google.com/apps/testing/com.example.app' },
+        { error: 'Invalid Google Play link. Paste your closed test link (https://play.google.com/apps/testing/com.example.app) or your Play Store link (https://play.google.com/store/apps/details?id=com.example.app).' },
         { status: 400 }
       )
     }

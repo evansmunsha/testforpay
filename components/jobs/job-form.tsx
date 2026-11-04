@@ -394,11 +394,11 @@ export function JobForm() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="googlePlayLink">Google Play Closed Test Link *</Label>
+                <Label htmlFor="googlePlayLink">Google Play link *</Label>
                 <Input
                   id="googlePlayLink"
                   type="url"
-                  placeholder="https://play.google.com/apps/testing/..."
+                  placeholder="https://play.google.com/store/apps/details?id=..."
                   value={formData.googlePlayLink}
                   onChange={(e) => handleChange('googlePlayLink', e.target.value)}
                   required

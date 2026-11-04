@@ -46,9 +46,9 @@ export interface CohortReadiness {
 export function evaluateCohortReadiness(input: CohortReadinessInput): CohortReadiness {
   const requireEscrow = input.requireEscrow ?? true
   const blockers = new Set<CohortBlocker>()
-  if (input.supportedCountries.length === 0) blockers.add('COUNTRIES_REQUIRED')
   if (input.activeTestingCount > 0) blockers.add('ACTIVE_TESTERS_RUNNING')
   if (input.completedSelectedCount > 0) blockers.add('COMPLETED_TESTER_PRESENT')
+  if (input.supportedCountries.length === 0) blockers.add('COUNTRIES_REQUIRED')
 
   const candidates = input.applications.filter((application) =>
     application.cohortSelected &&
