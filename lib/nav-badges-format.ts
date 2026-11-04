@@ -1,4 +1,4 @@
-export type NavBadges = Partial<Record<'jobs' | 'applications' | 'messages' | 'feedback' | 'community' | 'admin', number>>
+export type NavBadges = Partial<Record<'jobs' | 'applications' | 'messages' | 'feedback' | 'community' | 'admin' | 'guides', number>>
 
 export const ADMIN_TAB_KEYS = [
   'contacts',

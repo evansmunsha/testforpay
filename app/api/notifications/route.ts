@@ -48,6 +48,18 @@ export async function GET(request: Request) {
     // ?badges=1 returns the menu badge counts for this user's own role only.
     if (searchParams.get('badges') === '1') {
       const badges = await computeNavBadges(currentUser.userId, currentUser.role)
+      if (currentUser.role !== 'ADMIN') {
+        // Guide videos this person is allowed to see but has not finished yet.
+        const audiences = currentUser.role === 'DEVELOPER' ? ['DEVELOPER', 'ALL'] : ['TESTER', 'ALL']
+        const unwatched = await prisma.guideVideo.count({
+          where: {
+            hidden: false,
+            audience: { in: audiences as ('TESTER' | 'DEVELOPER' | 'ALL')[] },
+            views: { none: { userId: currentUser.userId } },
+          },
+        })
+        if (unwatched > 0) badges.guides = unwatched
+      }
       if (currentUser.role === 'ADMIN' && searchParams.get('adminTabs') === '1') {
         return NextResponse.json(
           { badges, adminTabs: await computeAdminTabBadges(currentUser.userId) },

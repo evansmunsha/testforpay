@@ -2,22 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { upload } from '@vercel/blob/client'
-import { ArrowDown, ArrowUp, Eye, EyeOff, FileVideo, Loader2, Pencil, PlayCircle, Trash2, UploadCloud } from 'lucide-react'
+import { ArrowDown, ArrowUp, Eye, EyeOff, FileVideo, Loader2, Pencil, Trash2, UploadCloud } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { GuideWatchList, sendGuideAction as send, type Guide, type GuideAudience } from '@/components/dashboard/guide-watch-list'
 
-type Audience = 'TESTER' | 'DEVELOPER' | 'ALL'
-type Guide = {
-  id: string
-  title: string
-  description: string
-  audience: Audience
-  hidden: boolean
-  sortOrder: number
-  sizeBytes: number
-}
+type Audience = GuideAudience
 
 const AUDIENCE_LABEL: Record<Audience, string> = {
   TESTER: 'Testers',
@@ -27,35 +19,39 @@ const AUDIENCE_LABEL: Record<Audience, string> = {
 
 const TITLE_SUGGESTIONS: Record<Audience, string[]> = {
   TESTER: [
-    '1. Get started: sign up and add how you get paid',
-    '2. Find a job and start testing',
-    '3. Daily missions and screen recording',
-    '4. How to ask to be paid',
-    '5. How to report a problem',
+    '1. Welcome to TestForPay',
+    '2. Create your account',
+    '3. Verify your email',
+    '4. Set your country and payment method',
+    '5. Add your phone details',
+    '6. Find a job',
+    '7. Apply and wait for the developer',
+    '8. Join the test on Google Play',
+    '9. Send your proof screenshot',
+    '10. Your daily mission',
+    '11. Record your screen',
+    '12. Write and send your report',
+    '13. Missed a day? Catch up',
+    '14. Get paid',
+    '15. Need help? Contact us',
   ],
   DEVELOPER: [
-    '1. Get started: create your account',
-    '2. Post a testing job and pay',
-    '3. Approve testers and add them in Google Play',
-    '4. Watch tester videos and confirm your app',
-    '5. How to cancel a job',
+    '1. Welcome, developers',
+    '2. Create your developer account',
+    '3. Post a testing job',
+    '4. Understand the cost',
+    '5. Pay to publish your job',
+    '6. Review applications',
+    '7. Add testers on Google Play',
+    '8. Check tester proof',
+    '9. Watch the daily reports',
+    '10. Confirm "Yes, this is my app"',
+    '11. Cancel a job and refunds',
   ],
   ALL: [
-    'Welcome to TestForPay',
-    'How payments work',
-    'How to get help',
+    'Using Messages and Feedback',
+    'Install TestForPay on your phone',
   ],
-}
-
-async function send(body: Record<string, unknown>) {
-  const res = await fetch('/api/guides', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || 'Something went wrong. Try again.')
-  return data
 }
 
 export default function GuidesPage() {
@@ -69,6 +65,7 @@ export default function GuidesPage() {
       const res = await fetch('/api/guides', { cache: 'no-store' })
       if (!res.ok) throw new Error('Could not load the videos. Refresh the page.')
       setVideos((await res.json()).videos ?? [])
+      setError('')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not load the videos.')
     } finally {
@@ -76,12 +73,37 @@ export default function GuidesPage() {
     }
   }, [])
 
+  // Live updates: refresh every 8 seconds while the tab is open, and when you come back to it.
   useEffect(() => {
     load()
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') load()
+    }
+    const interval = setInterval(refreshIfVisible, 8000)
+    document.addEventListener('visibilitychange', refreshIfVisible)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener('visibilitychange', refreshIfVisible)
+    }
   }, [load])
 
   if (authLoading || loading) {
-    return <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-gray-400" /></div>
+    return (
+      <div className="space-y-4">
+        <div className="h-8 w-48 animate-pulse rounded bg-gray-200" />
+        <div className="grid gap-5 lg:grid-cols-2">
+          {[0, 1].map((key) => (
+            <div key={key} className="overflow-hidden rounded-2xl border bg-white">
+              <div className="aspect-video animate-pulse bg-gray-200" />
+              <div className="space-y-2 p-4">
+                <div className="h-4 w-2/3 animate-pulse rounded bg-gray-200" />
+                <div className="h-3 w-1/2 animate-pulse rounded bg-gray-100" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -89,33 +111,15 @@ export default function GuidesPage() {
       <div>
         <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">{isAdmin ? 'Guide videos' : 'How it works'}</h2>
         <p className="mt-1 text-sm text-gray-600">
-          {isAdmin ? 'Upload, hide, reorder or delete the training videos.' : 'Watch these short videos. They show every step in simple English.'}
+          {isAdmin
+            ? 'Upload, hide, reorder or delete the training videos. Below the tools you see what viewers see, with likes and comments.'
+            : 'Watch these short videos in order. They show every step in simple English.'}
         </p>
       </div>
       {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
       {isAdmin && <AdminTools videos={videos} reload={load} setError={setError} />}
-      {!isAdmin && videos.length === 0 && (
-        <Card><CardContent className="py-8 text-center text-sm text-gray-600">No videos yet. Please check again soon.</CardContent></Card>
-      )}
-      {!isAdmin && (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {videos.map((video) => (
-            <Card key={video.id}>
-              <CardContent className="space-y-2 pt-4">
-                <video
-                  controls
-                  preload="metadata"
-                  playsInline
-                  src={`/api/guides?stream=${video.id}`}
-                  className="aspect-video w-full rounded-lg bg-black"
-                />
-                <p className="font-medium text-gray-900">{video.title}</p>
-                {video.description && <p className="text-sm text-gray-600">{video.description}</p>}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      {isAdmin && videos.length > 0 && <h3 className="pt-2 text-lg font-semibold text-gray-900">What viewers see</h3>}
+      <GuideWatchList videos={videos} setVideos={(update) => setVideos(update)} reload={load} isAdmin={isAdmin} />
     </div>
   )
 }
@@ -132,7 +136,6 @@ function AdminTools({ videos, reload, setError }: { videos: Guide[]; reload: () 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editTitle, setEditTitle] = useState('')
   const [editDescription, setEditDescription] = useState('')
-  const [preview, setPreview] = useState<string | null>(null)
   const fileInput = useRef<HTMLInputElement>(null)
 
   const run = async (id: string, task: () => Promise<unknown>) => {
@@ -281,9 +284,6 @@ function AdminTools({ videos, reload, setError }: { videos: Guide[]; reload: () 
                 <Button size="sm" variant="outline" disabled={index === videos.length - 1 || workingId === video.id} onClick={() => run(video.id, () => send({ action: 'move', id: video.id, direction: 'down' }))}>
                   <ArrowDown className="mr-1 h-4 w-4" /> Down
                 </Button>
-                <Button size="sm" variant="outline" onClick={() => setPreview(preview === video.id ? null : video.id)}>
-                  <PlayCircle className="mr-1 h-4 w-4" /> Watch
-                </Button>
                 <Button size="sm" variant="outline" disabled={workingId === video.id} onClick={() => run(video.id, () => send({ action: 'update', id: video.id, hidden: !video.hidden }))}>
                   {video.hidden ? <Eye className="mr-1 h-4 w-4" /> : <EyeOff className="mr-1 h-4 w-4" />}
                   {video.hidden ? 'Show' : 'Hide'}
@@ -297,9 +297,6 @@ function AdminTools({ videos, reload, setError }: { videos: Guide[]; reload: () 
                   <Trash2 className="mr-1 h-4 w-4" /> Delete
                 </Button>
               </div>
-              {preview === video.id && (
-                <video controls preload="metadata" playsInline src={`/api/guides?stream=${video.id}`} className="aspect-video w-full max-w-xl rounded-lg bg-black" />
-              )}
             </div>
           ))}
         </CardContent>

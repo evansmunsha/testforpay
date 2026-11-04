@@ -67,6 +67,7 @@ export function Sidebar({ userRole, isOpen = true, onClose }: SidebarProps) {
     '/dashboard/feedback': 'feedback',
     '/dashboard/community': 'community',
     '/dashboard/admin': 'admin',
+    '/dashboard/guides': 'guides',
   }
 
   const developerLinks = [

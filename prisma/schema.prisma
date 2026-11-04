@@ -1016,6 +1016,46 @@ model GuideVideo {
   sortOrder    Int           @default(0)
   hidden       Boolean       @default(false)
   createdAt    DateTime      @default(now())
+  likes        GuideLike[]
+  comments     GuideComment[]
+  views        GuideView[]
 
   @@index([audience, hidden, sortOrder])
+}
+
+// Set when a person has watched (nearly) all of a video.
+model GuideView {
+  id        String     @id @default(cuid())
+  videoId   String
+  video     GuideVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime   @default(now())
+
+  @@unique([videoId, userId])
+  @@index([userId])
+}
+
+// One like per person per video.
+model GuideLike {
+  id        String     @id @default(cuid())
+  videoId   String
+  video     GuideVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime   @default(now())
+
+  @@unique([videoId, userId])
+}
+
+// One comment per person per video (writing again replaces the old one).
+model GuideComment {
+  id        String     @id @default(cuid())
+  videoId   String
+  video     GuideVideo @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  userId    String
+  text      String     @db.Text
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@unique([videoId, userId])
+  @@index([videoId, createdAt])
 }

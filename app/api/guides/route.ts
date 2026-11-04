@@ -81,23 +81,119 @@ export async function GET(request: Request) {
       select: {
         id: true, title: true, description: true, audience: true,
         hidden: true, sortOrder: true, sizeBytes: true, createdAt: true,
+        _count: { select: { likes: true, comments: true } },
+        likes: { where: { userId: user.userId }, select: { id: true } },
+        views: { where: { userId: user.userId }, select: { id: true } },
+        comments: {
+          orderBy: { updatedAt: 'desc' },
+          take: 50,
+          select: { id: true, userId: true, text: true, updatedAt: true },
+        },
       },
     })
-    return NextResponse.json({ videos })
+
+    const commenterIds = [...new Set(videos.flatMap((video) => video.comments.map((comment) => comment.userId)))]
+    const commenters = commenterIds.length
+      ? await prisma.user.findMany({ where: { id: { in: commenterIds } }, select: { id: true, name: true, role: true } })
+      : []
+    const commenterById = new Map(commenters.map((person) => [person.id, person]))
+
+    return NextResponse.json({
+      videos: videos.map(({ likes, views, comments, _count, ...video }) => ({
+        ...video,
+        watchedByMe: views.length > 0,
+        likeCount: _count.likes,
+        likedByMe: likes.length > 0,
+        commentCount: _count.comments,
+        comments: comments.map((comment) => ({
+          id: comment.id,
+          text: comment.text,
+          updatedAt: comment.updatedAt,
+          mine: comment.userId === user.userId,
+          authorName: commenterById.get(comment.userId)?.name || 'Member',
+          authorRole: commenterById.get(comment.userId)?.role ?? 'TESTER',
+        })),
+      })),
+    })
   } catch (error) {
     console.error('Guide videos fetch error:', error)
     return NextResponse.json({ error: 'Could not load the videos' }, { status: 500 })
   }
 }
 
-// Admin only: upload token, create, update, move and delete.
+const likeSchema = z.object({ action: z.enum(['like', 'watched']), id: z.string().min(1) })
+const commentSchema = z.object({
+  action: z.literal('comment'),
+  id: z.string().min(1),
+  text: z.string().trim().min(2, 'Write at least 2 letters').max(300, 'Keep it under 300 letters'),
+})
+const removeCommentSchema = z.object({ action: z.literal('removeComment'), commentId: z.string().min(1) })
+
+// Likes and comments: any signed-in person who is allowed to watch the video.
+async function handleEngagement(user: { userId: string; role: string }, body: unknown) {
+  const input = body as { action?: string }
+
+  if (input.action === 'removeComment') {
+    const parsed = removeCommentSchema.safeParse(body)
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+    const comment = await prisma.guideComment.findUnique({ where: { id: parsed.data.commentId }, select: { userId: true } })
+    if (!comment) return NextResponse.json({ success: true })
+    if (comment.userId !== user.userId && user.role !== 'ADMIN') {
+      return NextResponse.json({ error: 'You can only delete your own comment' }, { status: 403 })
+    }
+    await prisma.guideComment.delete({ where: { id: parsed.data.commentId } })
+    return NextResponse.json({ success: true })
+  }
+
+  const parsed = input.action === 'like' || input.action === 'watched' ? likeSchema.safeParse(body) : commentSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message ?? 'Invalid input' }, { status: 400 })
+  }
+  const videoId = parsed.data.id
+  const video = await prisma.guideVideo.findUnique({ where: { id: videoId }, select: { hidden: true, audience: true } })
+  const allowed = audiencesFor(user.role)
+  if (!video || (user.role !== 'ADMIN' && (video.hidden || !allowed?.includes(video.audience)))) {
+    return NextResponse.json({ error: 'Video not found' }, { status: 404 })
+  }
+
+  if (parsed.data.action === 'watched') {
+    await prisma.guideView.upsert({
+      where: { videoId_userId: { videoId, userId: user.userId } },
+      create: { videoId, userId: user.userId },
+      update: {},
+    })
+    return NextResponse.json({ success: true })
+  }
+
+  if (parsed.data.action === 'like') {
+    const key = { videoId_userId: { videoId, userId: user.userId } }
+    const existing = await prisma.guideLike.findUnique({ where: key, select: { id: true } })
+    if (existing) await prisma.guideLike.delete({ where: key })
+    else await prisma.guideLike.create({ data: { videoId, userId: user.userId } })
+    return NextResponse.json({ success: true, liked: !existing })
+  }
+
+  await prisma.guideComment.upsert({
+    where: { videoId_userId: { videoId, userId: user.userId } },
+    create: { videoId, userId: user.userId, text: parsed.data.text },
+    update: { text: parsed.data.text },
+  })
+  return NextResponse.json({ success: true })
+}
+
+// Admin only: upload token, create, update, move and delete. Likes and comments are open to viewers.
 export async function POST(request: Request) {
   try {
     const user = await getCurrentUser()
-    if (!user || user.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const body = await request.json()
 
+    if (body?.action === 'like' || body?.action === 'watched' || body?.action === 'comment' || body?.action === 'removeComment') {
+      return await handleEngagement(user, body)
+    }
+
+    if (user.role !== 'ADMIN') return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (body && typeof body.type === 'string' && body.type.startsWith('blob.')) {
       const uploadBody = body as HandleUploadBody
       if (uploadBody.type !== 'blob.generate-client-token') {
