@@ -7,6 +7,8 @@ import { useAuth } from '@/hooks/use-auth'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { GuideFeed } from '@/components/dashboard/guide-feed'
+import { GuidePlayer } from '@/components/dashboard/guide-player'
 import { GuideWatchList, sendGuideAction as send, type Guide, type GuideAudience } from '@/components/dashboard/guide-watch-list'
 
 type Audience = GuideAudience
@@ -55,7 +57,7 @@ const TITLE_SUGGESTIONS: Record<Audience, string[]> = {
 }
 
 export default function GuidesPage() {
-  const { isAdmin, loading: authLoading } = useAuth()
+  const { isAdmin, isTester, isDeveloper, loading: authLoading } = useAuth()
   const [videos, setVideos] = useState<Guide[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -86,6 +88,43 @@ export default function GuidesPage() {
       document.removeEventListener('visibilitychange', refreshIfVisible)
     }
   }, [load])
+
+  const markWatched = (id: string) => {
+    setVideos((current) => current.map((item) => (item.id === id ? { ...item, watchedByMe: true } : item)))
+    send({ action: 'watched', id }).catch(() => undefined)
+  }
+
+  const toggleLike = (id: string) => {
+    setVideos((current) =>
+      current.map((item) =>
+        item.id === id
+          ? { ...item, likedByMe: !item.likedByMe, likeCount: Math.max(0, item.likeCount + (item.likedByMe ? -1 : 1)) }
+          : item
+      )
+    )
+    send({ action: 'like', id }).catch(() => load())
+  }
+
+  // Each role sees only its own videos, in the same order as the admin set them.
+  const ownVideos = isTester
+    ? videos.filter((video) => video.audience === 'TESTER')
+    : isDeveloper
+      ? videos.filter((video) => video.audience === 'DEVELOPER')
+      : []
+
+  if (!authLoading && !loading && !isAdmin && ownVideos.length > 0) {
+    if (isTester) return <GuideFeed videos={ownVideos} onWatched={markWatched} onLike={toggleLike} />
+    return (
+      <div className="space-y-6">
+        <div>
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">How it works</h2>
+          <p className="mt-1 text-sm text-gray-600">Click a video to watch it. Each one shows one step.</p>
+        </div>
+        {error && <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+        <GuidePlayer videos={ownVideos} onWatched={markWatched} />
+      </div>
+    )
+  }
 
   if (authLoading || loading) {
     return (
