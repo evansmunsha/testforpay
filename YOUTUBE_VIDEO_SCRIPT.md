@@ -86,7 +86,7 @@ Okay, what's the cost?
 
 For Developers: Starter Plan is $150 for 20 testers. Professional Plan is $250 for 35 testers. Or go custom and set your own rates. You pay per tester, and you only pay when they complete the 14-day test.
 
-For Testers: You earn $5 to $15 per app test. Get paid weekly via Stripe or PayPal. Unlimited concurrent tests. Average testers make $50-$200 per month.
+For Testers: Get paid by Payoneer outside Zambia or by MTN/Airtel mobile money in Zambia after completing a test.
 
 It's transparent. No hidden fees. No surprises.
 

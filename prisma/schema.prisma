@@ -125,7 +125,7 @@ model User {
   muteDeveloperReplies Boolean @default(false)
   trainingPoints   Int      @default(0)
   trainingAwards   TrainingAward[]
-  paypalEmail       String?
+  payoneerEmail     String?
   phoneNumber      String?
   countryCode      String?
   applications     Application[]

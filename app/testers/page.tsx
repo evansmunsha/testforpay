@@ -7,7 +7,7 @@ import { LiveStats } from '@/components/shared/live-stats'
 export const metadata = {
   title: 'Get Paid to Test Apps — Earn €2.75 Per Test | TestForPay',
   description:
-    'Earn money testing Android apps from your phone. No experience needed. Install apps, check in daily for 14 days, get paid via PayPal or bank transfer. Join free.',
+    'Earn money testing Android apps from your phone. No experience needed. Install apps, check in daily for 14 days, and get paid by Payoneer outside Zambia or mobile money in Zambia. Join free.',
 }
 
 export default function TestersPage() {
@@ -40,7 +40,7 @@ export default function TestersPage() {
             <span className="text-emerald-200">from Your Phone</span>
           </h1>
           <p className="text-lg text-emerald-100 mb-8 max-w-2xl mx-auto">
-            Earn €2.30–€2.75 per test. No experience needed. Just install apps, use them naturally for 14 days, and get paid via PayPal or bank transfer.
+            Earn €2.30–€2.75 per test. No experience needed. Just install apps, use them naturally for 14 days, and get paid by Payoneer outside Zambia or mobile money in Zambia.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <a href="/signup?role=TESTER" className="bg-white text-emerald-700 px-8 py-3 rounded-lg font-bold text-lg hover:bg-emerald-50 transition">
@@ -100,7 +100,7 @@ export default function TestersPage() {
               { n: '1', title: 'Browse Testing Jobs', desc: 'Find apps that match your interests and device' },
               { n: '2', title: 'Apply & Opt-In', desc: 'Join the closed test on Google Play and verify your opt-in' },
               { n: '3', title: 'Test for 14 Days', desc: 'Use the app naturally and provide honest feedback' },
-              { n: '4', title: 'Get Paid', desc: 'Receive €2.50–€3.00 per completed test via PayPal or bank transfer' },
+              { n: '4', title: 'Get Paid', desc: 'Receive €2.50–€3.00 per completed test by Payoneer outside Zambia or mobile money in Zambia' },
             ].map((step, i) => (
               <div key={step.n} className="text-center">
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-lg mx-auto mb-3 ${i === 3 ? 'bg-emerald-500' : 'bg-emerald-600'}`}>
@@ -121,7 +121,6 @@ export default function TestersPage() {
             <span className="flex items-center gap-2">🏦 Bank Transfer</span>
           </div>
           <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-gray-400 text-sm">
-            [Upload real PayPal/bank screenshot here — replace with Image component]
           </div>
         </div>
       </section>*/}
@@ -146,7 +145,7 @@ export default function TestersPage() {
           <div className="space-y-3">
             {[
               { q: 'Is TestForPay legit?', a: "Yes. We're a real marketplace connecting app developers with real Android users. Testers get paid after completing the full 14-day test period." },
-              { q: 'How do I get paid?', a: 'Payments are sent via PayPal or bank transfer within 48 hours of completing a test. You see the payment amount before accepting any job.' },
+              { q: 'How do I get paid?', a: 'Testers outside Zambia are paid by Payoneer. Testers in Zambia can receive mobile money through MTN or Airtel. You see the payment amount before accepting a job.' },
               { q: 'How often are jobs available?', a: 'New testing jobs are posted daily. The number available depends on developer demand, but active testers typically see 2–5 new apps per week.' },
               { q: 'Is this allowed by Google Play?', a: 'Yes. Google Play requires real testers like you to join app closed tests and stay opted in for 14 days. We connect you with real developers who genuinely need you to install their app and remain in the test. No bots, no fake accounts — just real people helping real apps get ready for launch.' },
               { q: 'Do I need experience?', a: 'No experience needed. If you have an Android phone and can use apps naturally, you qualify. We provide clear instructions for every test.' },

@@ -90,7 +90,7 @@ const faqs = [
   },
   {
     q: 'What payment options do testers use?',
-    a: 'Testers can receive payments via PayPal or bank transfer depending on their country and preferences.',
+    a: 'Testers outside Zambia are paid by Payoneer. Testers in Zambia can receive mobile money through MTN or Airtel.',
   },
   {
     q: 'Can I use this for any Android app?',

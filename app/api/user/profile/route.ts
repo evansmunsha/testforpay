@@ -20,7 +20,7 @@ export async function GET() {
         countryCode: true,
         role: true,
         stripeAccountId: true,
-        paypalEmail: true,
+        payoneerEmail: true,
         phoneNumber: true,
         trainingPoints: true,
       }
@@ -79,7 +79,7 @@ export async function PATCH(request: Request) {
         ...(countryCode !== undefined
           ? { countryCode: countryCode?.trim().toUpperCase() || null }
           : {}),
-        ...(payoneerEmail !== undefined ? { paypalEmail: payoneerEmail?.trim() || null } : {}),
+        ...(payoneerEmail !== undefined ? { payoneerEmail: payoneerEmail?.trim() || null } : {}),
         ...(mobileMoneyNumber !== undefined ? { phoneNumber: mobileMoneyNumber?.trim() || null } : {}),
       },
       select: {

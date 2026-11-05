@@ -142,7 +142,7 @@ interface Application {
 interface Payment {
   id: string; amount: Cents; status: string; createdAt: string; failureReason?: string | null
   videoStats?: { uploaded: number; confirmed: number }
-  application: { job: { id: string; appName: string }; tester: { id: string; email: string; name: string | null; paypalEmail?: string | null; phoneNumber?: string | null; countryCode?: string | null } }
+  application: { job: { id: string; appName: string }; tester: { id: string; email: string; name: string | null; payoneerEmail?: string | null; phoneNumber?: string | null; countryCode?: string | null } }
   allocationHistory: Array<{
     id: string
     createdAt: string
@@ -1050,7 +1050,7 @@ export default function AdminDashboard() {
   const handleMarkJobPaid = (job: Job) => {
     openConfirm({
       title: 'Did the developer pay you?',
-      description: `Click this only after you got the money for "${job.appName}" (PayPal, Wise or bank). The job goes live and testers are told. Write how you got paid (for example: PayPal, 12 Nov, 28 EUR).`,
+      description: `Click this only after you confirm the payment for "${job.appName}" was received. The job goes live and testers are told. Record the payment method, date and amount (for example: Dodo Payments, 12 Nov, 28 EUR).`,
       confirmLabel: 'Yes, make the job live',
       reasonRequired: true,
       onConfirm: async reason => {
@@ -2431,9 +2431,9 @@ export default function AdminDashboard() {
                             <p>{p.application?.tester?.name || p.application?.tester?.email || '—'}</p>
                             {(
                               <div className="mt-1 text-xs text-gray-600">
-                                {p.application?.tester?.paypalEmail && <p>Payoneer: {p.application.tester.paypalEmail}</p>}
+                                {p.application?.tester?.payoneerEmail && <p>Payoneer: {p.application.tester.payoneerEmail}</p>}
                                 {p.application?.tester?.phoneNumber && <p>Mobile money: {p.application.tester.phoneNumber}</p>}
-                                {!p.application?.tester?.paypalEmail && !p.application?.tester?.phoneNumber && <p className="text-amber-600">No payout details yet. Ask the tester to add them in Settings.</p>}
+                                {!p.application?.tester?.payoneerEmail && !p.application?.tester?.phoneNumber && <p className="text-amber-600">No payout details yet. Ask the tester to add them in Settings.</p>}
                               </div>
                             )}
                                                             <div className="mt-1 text-xs">
@@ -2467,7 +2467,7 @@ export default function AdminDashboard() {
                                   {actionLoading === p.id ? 'Retrying...' : 'Retry'}
                                 </Button>
                               )}
-                              {(p.status === 'PROCESSING' || p.status === 'FAILED') && (p.application?.tester?.paypalEmail || p.application?.tester?.phoneNumber) && (
+                              {(p.status === 'PROCESSING' || p.status === 'FAILED') && (p.application?.tester?.payoneerEmail || p.application?.tester?.phoneNumber) && (
                                 <Button size="sm" className="w-fit text-xs" disabled={actionLoading === p.id} onClick={() => handleMarkPaid(p)}>
                                   I paid this tester
                                 </Button>

@@ -172,9 +172,9 @@ export async function POST(request: Request) {
 
     const tester = await prisma.user.findUnique({
       where: { id: currentUser.userId },
-      select: { name: true, email: true, paypalEmail: true, phoneNumber: true },
+      select: { name: true, email: true, payoneerEmail: true, phoneNumber: true },
     })
-    if (!tester?.paypalEmail && !tester?.phoneNumber) {
+    if (!tester?.payoneerEmail && !tester?.phoneNumber) {
       return NextResponse.json({ error: 'First add your Payoneer email or mobile money number in Settings, so we know where to send your money.' }, { status: 400 })
     }
 

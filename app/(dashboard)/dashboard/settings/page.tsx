@@ -70,7 +70,7 @@ export default function SettingsPage() {
         .then(async (response) => response.ok ? response.json() : null)
         .then((profile) => {
           if (profile?.countryCode) setCountryCode(profile.countryCode)
-          if (profile?.paypalEmail) setPayoneerEmail(profile.paypalEmail)
+          if (profile?.payoneerEmail) setPayoneerEmail(profile.payoneerEmail)
           if (profile?.phoneNumber) setMobileMoneyNumber(profile.phoneNumber)
         })
         .catch((error) => console.error('Failed to load profile country:', error))

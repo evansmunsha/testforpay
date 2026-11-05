@@ -5,7 +5,7 @@ import { loadJobOperations, readPageParam } from '@/lib/admin-job-operations'
 import { activateJobAfterPayment } from '@/lib/job-activation'
 import { recordAdminAction } from '@/lib/admin-audit'
 
-// Admin got the developer's payment outside the site (PayPal, Wise, bank) and makes the job live.
+// Admin confirms a developer payment received outside the website and makes the job live.
 export async function POST(request: Request) {
   const currentUser = await getCurrentUser()
   if (!currentUser || currentUser.role !== 'ADMIN') {
@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     const reason = typeof body.reason === 'string' ? body.reason.trim() : ''
     if (!jobId) return NextResponse.json({ error: 'Job not found' }, { status: 400 })
     if (reason.length < 10) {
-      return NextResponse.json({ error: 'Write how you got paid (at least 10 letters, for example: PayPal, 12 Nov, 28 EUR), then try again.' }, { status: 400 })
+      return NextResponse.json({ error: 'Write the payment method, date and amount (at least 10 letters, for example: Dodo Payments, 12 Nov, 28 EUR), then try again.' }, { status: 400 })
     }
 
     const job = await prisma.testingJob.findUnique({ where: { id: jobId }, select: { id: true, status: true, isTraining: true } })

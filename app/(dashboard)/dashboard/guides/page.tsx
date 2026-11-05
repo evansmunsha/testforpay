@@ -230,12 +230,25 @@ function AdminTools({ videos, reload, setError }: { videos: Guide[]; reload: () 
           <CardDescription>Choose who will see it. MP4, MOV or WEBM, up to 300 MB.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Input list="guide-title-suggestions" placeholder="Title: tap here to pick a suggestion, or type your own" value={title} onChange={(e) => setTitle(e.target.value)} disabled={busy} />
-          <datalist id="guide-title-suggestions">
-            {TITLE_SUGGESTIONS[audience].map((suggestion) => (
-              <option key={suggestion} value={suggestion} />
-            ))}
-          </datalist>
+          <div>
+            <label htmlFor="guide-title-suggestion" className="text-sm font-medium text-gray-800">Choose a suggested title</label>
+            <select
+              id="guide-title-suggestion"
+              value={TITLE_SUGGESTIONS[audience].includes(title) ? title : ''}
+              onChange={(e) => setTitle(e.target.value)}
+              disabled={busy}
+              className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm"
+            >
+              <option value="">Choose a title</option>
+              {TITLE_SUGGESTIONS[audience].map((suggestion) => (
+                <option key={suggestion} value={suggestion}>{suggestion}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="guide-title" className="text-sm font-medium text-gray-800">Video title</label>
+            <Input id="guide-title" placeholder="Choose a title above or type your own" value={title} onChange={(e) => setTitle(e.target.value)} disabled={busy} />
+          </div>
           <Input placeholder="Short description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} disabled={busy} />
           <div>
             <label htmlFor="guide-audience" className="text-sm font-medium text-gray-800">Who can watch it?</label>

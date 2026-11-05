@@ -100,7 +100,7 @@ export async function GET() {
                 email: true,
                 name: true,
                 stripeAccountId: true,
-                paypalEmail: true,
+                payoneerEmail: true,
                 phoneNumber: true,
                 countryCode: true,
               },
