@@ -157,131 +157,165 @@ export function ApplicationCard({
   const accountAge = Number.isFinite(accountCreatedAt)
     ? Math.max(0, Math.floor((Date.now() - accountCreatedAt) / (1000 * 60 * 60 * 24)))
     : null
+  const applicationCreatedAt = new Date(application.createdAt)
+  const appliedDate = Number.isNaN(applicationCreatedAt.getTime())
+    ? 'Unavailable'
+    : applicationCreatedAt.toLocaleDateString()
   const testerHue = (testerColorIndex * 137.508) % 360
   const testerColor = `hsl(${testerHue} 70% 48%)`
+  const testerInitials = (application.tester.name || 'Anonymous Tester')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
   const repliesMuted = !!application.tester?.muteDeveloperReplies
 
   return (
     <>
       <Card
-        className="border-l-4 hover:shadow-md transition-shadow"
-        style={{ borderLeftColor: testerColor }}
+        className="overflow-hidden rounded-2xl border border-slate-200 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+        style={{ borderTopColor: testerColor, borderTopWidth: 4 }}
       >
-        <CardHeader style={{ backgroundColor: `hsl(${testerHue} 80% 96%)` }}>
-          <div className="flex items-start justify-between">
-            <div className="flex items-center gap-3 flex-1">
-              <Image 
-                src="/images/default-avatar.svg" 
-                alt="Tester" 
-                width={48} 
-                height={48}
-                className="rounded-full border-2"
-                style={{ borderColor: testerColor }}
-              />
-              <div>
-                <CardTitle className="text-lg">
-                  {application.tester.name || 'Anonymous Tester'}
-                </CardTitle>
-                {application.tester.email && (
-                  <p className="text-sm text-gray-600">{application.tester.email}</p>
-                )}
-              </div>
+        <CardHeader
+          className="flex flex-col gap-4 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5"
+          style={{ background: `linear-gradient(120deg, hsl(${testerHue} 85% 96%), #ffffff 68%)` }}
+        >
+          <div className="flex min-w-0 items-center gap-4">
+            <div
+              aria-hidden="true"
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-bold text-white shadow-sm ring-4 ring-white"
+              style={{ backgroundColor: testerColor }}
+            >
+              {testerInitials}
             </div>
-            <Badge className={getStatusColor(application.status)}>
-              {application.testingPausedAt ? 'TESTING PAUSED' : application.status.replace('_', ' ')}
-            </Badge>
+            <div className="min-w-0">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">
+                Tester profile
+              </p>
+              <CardTitle className="truncate text-lg font-bold text-slate-900 sm:text-xl">
+                {application.tester.name || 'Anonymous Tester'}
+              </CardTitle>
+              {application.tester.email && (
+                <p className="mt-1 truncate text-sm text-slate-600">{application.tester.email}</p>
+              )}
+            </div>
           </div>
+          <Badge className={`${getStatusColor(application.status)} w-fit rounded-full px-3 py-1.5 text-xs font-bold tracking-wide`}>
+            {application.testingPausedAt ? 'TESTING PAUSED' : application.status.replace('_', ' ')}
+          </Badge>
         </CardHeader>
 
-        <CardContent className="space-y-4">
-          {/* Key Info */}
-          <div className="grid md:grid-cols-2 gap-4 text-sm">
-            <div className="flex items-center gap-2 text-gray-600">
-              <Calendar className="h-4 w-4" />
-              <span>Applied {new Date(application.createdAt).toLocaleDateString()}</span>
+        <CardContent className="space-y-5 p-4 sm:p-5">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-100 bg-white p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                <Calendar className="h-4 w-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Applied</span>
+                <span className="block truncate text-sm font-semibold text-slate-800">
+                  {appliedDate}
+                </span>
+              </span>
             </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <Clock className="h-4 w-4" />
-              <span>Account age: {accountAge === null ? 'Not available' : `${accountAge} days`}</span>
+            <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-100 bg-white p-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600">
+                <Clock className="h-4 w-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Account age</span>
+                <span className="block truncate text-sm font-semibold text-slate-800">
+                  {accountAge === null ? 'Unavailable' : `${accountAge} days`}
+                </span>
+              </span>
             </div>
           </div>
 
-          {/* Device Info */}
           {application.tester.deviceInfo ? (
-            <div className="bg-gray-50 p-3 rounded-lg">
-              <p className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <Smartphone className="h-4 w-4" />
-                Device Information
-              </p>
-              <div className="grid md:grid-cols-3 gap-2 text-sm">
+            <section className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-slate-700 shadow-sm">
+                  <Smartphone className="h-4 w-4" />
+                </span>
                 <div>
-                  <span className="text-gray-600">Model:</span>
-                  <p className="font-medium">{application.tester.deviceInfo.deviceModel}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Android:</span>
-                  <p className="font-medium">{application.tester.deviceInfo.androidVersion}</p>
-                </div>
-                <div>
-                  <span className="text-gray-600">Screen:</span>
-                  <p className="font-medium">
-                    {application.tester.deviceInfo.screenSize || 'Not specified'}
-                  </p>
+                  <h3 className="text-sm font-bold text-slate-900">Device information</h3>
+                  <p className="text-xs text-slate-500">The tester’s Android device</p>
                 </div>
               </div>
-            </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                {[
+                  ['Phone model', application.tester.deviceInfo.deviceModel],
+                  ['Android version', application.tester.deviceInfo.androidVersion],
+                  ['Screen size', application.tester.deviceInfo.screenSize || 'Not specified'],
+                ].map(([label, value]) => (
+                  <div key={label} className="min-w-0 rounded-xl border border-slate-100 bg-white p-3">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{label}</p>
+                    <p className="mt-1 break-words text-sm font-semibold text-slate-900">{value}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
           ) : (
-            <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-              <p className="text-sm text-yellow-800 flex items-center gap-2">
-                <AlertCircle className="h-4 w-4" />
-                No device information provided
-              </p>
+            <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              <span className="font-medium">This tester has not added device information yet.</span>
             </div>
           )}
 
-          {/* Verification Images */}
           {(application.verificationImage || application.verificationImage2) && (
-            <div className="bg-indigo-50 p-3 rounded-lg">
-              <p className="text-sm font-semibold mb-2 flex items-center gap-2">
-                <ImageIcon className="h-4 w-4 text-indigo-600" />
-                Play Store screenshots
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <section className="rounded-2xl border border-indigo-100 bg-indigo-50/60 p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-indigo-600 shadow-sm">
+                    <ImageIcon className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900">Play Store proof</h3>
+                    <p className="text-xs text-slate-600">Tap an image to view it larger</p>
+                  </div>
+                </div>
+                <Badge variant="outline" className="shrink-0 border-indigo-200 bg-white text-indigo-700">
+                  {[application.verificationImage, application.verificationImage2].filter(Boolean).length} image(s)
+                </Badge>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {application.verificationImage && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setImageDialogOpen(true)}
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                    className="group relative overflow-hidden rounded-xl border border-indigo-200 bg-white text-left shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   >
-                        <Image
+                    <Image
                       src={application.verificationImage}
                       alt="Verification screenshot 1"
                       width={640}
                       height={360}
                       unoptimized
-                      className="max-w-full h-auto rounded border border-indigo-200"
+                      className="aspect-[16/10] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                     />
-                  </div>
+                    <span className="block px-3 py-2 text-xs font-semibold text-slate-600">Screenshot 1 · View full size</span>
+                  </button>
                 )}
                 {application.verificationImage2 && (
-                  <div
+                  <button
+                    type="button"
                     onClick={() => setImageDialogOpen(true)}
-                    className="cursor-pointer hover:opacity-80 transition-opacity"
+                    className="group relative overflow-hidden rounded-xl border border-indigo-200 bg-white text-left shadow-sm transition hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
                   >
-                        <Image
+                    <Image
                       src={application.verificationImage2}
                       alt="Verification screenshot 2"
                       width={640}
                       height={360}
                       unoptimized
-                      className="max-w-full h-auto rounded border border-indigo-200"
+                      className="aspect-[16/10] w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                     />
-                  </div>
+                    <span className="block px-3 py-2 text-xs font-semibold text-slate-600">Screenshot 2 · View full size</span>
+                  </button>
                 )}
               </div>
-              <p className="text-xs text-indigo-700 mt-2">
-                Click to view full size
-              </p>
-            </div>
+            </section>
           )}
 
           {/* Testing Period Info */}
@@ -418,36 +452,48 @@ export function ApplicationCard({
 
           {/* Action Buttons */}
           {application.status === 'PENDING' && (
-            <div className="flex gap-2 pt-2">
-              <Button
-                onClick={() => onApprove?.(application.id)}
-                disabled={loading}
-                className="flex-1"
-                size="sm"
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Approve
-              </Button>
-              <Button
-                onClick={() => onReject?.(application.id)}
-                disabled={loading}
-                variant="destructive"
-                className="flex-1"
-                size="sm"
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Reject
-              </Button>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-3">
+                <h3 className="text-sm font-bold text-slate-900">Review this application</h3>
+                <p className="mt-1 text-xs text-slate-600">Choose whether this tester should join your test.</p>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  onClick={() => onApprove?.(application.id)}
+                  disabled={loading}
+                  className="min-h-11 flex-1 bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Approve
+                </Button>
+                <Button
+                  onClick={() => onReject?.(application.id)}
+                  disabled={loading}
+                  variant="destructive"
+                  className="min-h-11 flex-1"
+                >
+                  <XCircle className="mr-2 h-4 w-4" />
+                  Reject
+                </Button>
+              </div>
             </div>
           )}
 
           {application.status === 'APPROVED' && (
-            <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg space-y-2">
-              <p className="text-sm text-blue-800 font-medium">
-                ✅ Approved — waiting for tester to open Play Store and upload a screenshot
-              </p>
+            <div className="space-y-3 rounded-2xl border border-blue-200 bg-gradient-to-br from-blue-50 to-white p-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700">
+                  <Clock className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-bold text-blue-950">Accepted · waiting for Play Store proof</p>
+                  <p className="mt-1 text-xs leading-relaxed text-blue-800">
+                    The tester has been notified. Their email is above, so you can add them in Play Console.
+                  </p>
+                </div>
+              </div>
               <p className="text-xs text-blue-700">
-                The tester has been notified. Their email is shown above so you can add them to Play Console.
+                The tester will upload a screenshot after joining the test.
               </p>
               <Button
                 onClick={() => onReject?.(application.id)}
@@ -463,60 +509,75 @@ export function ApplicationCard({
           )}
 
           {application.status === 'OPTED_IN' && (
-            <div className="space-y-2">
+            <div className="space-y-3 rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-white p-4">
               {application.verificationImage ? (
                 <>
-                  <div className="bg-indigo-50 border border-indigo-200 p-3 rounded-lg">
-                    <p className="text-sm text-indigo-800">
-                      📸 The tester sent a screenshot. Look at it above. If Google Play shows the Install button, click Check the screenshot and accept. If not, click Close tester.
-                    </p>
+                  <div className="flex items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-100 text-indigo-700">
+                      <ImageIcon className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-bold text-indigo-950">Check the Play Store screenshot</p>
+                      <p className="mt-1 text-xs leading-relaxed text-indigo-800">
+                        Check the proof above. If it shows the tester can join or install the app, accept them.
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 sm:flex-row">
                     <Button
                       onClick={() => onVerify?.(application.id)}
                       disabled={loading}
-                      size="sm"
-                      className="flex-1"
+                      className="min-h-11 flex-1 bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
-                      Check the screenshot and accept
+                      Accept tester
                     </Button>
                     <Button
                       onClick={() => onReject?.(application.id)}
                       disabled={loading}
                       variant="outline"
-                      size="sm"
-                      className="flex-1"
+                      className="min-h-11 flex-1 border-slate-300 bg-white"
                     >
                       <XCircle className="h-4 w-4 mr-2" />
-                      Close application
+                      Close tester
                     </Button>
                   </div>
                 </>
               ) : (
-                <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    ⏳ Waiting for the tester to send a Play Store screenshot. You do not need to do anything yet.
-                  </p>
+                <div className="flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-amber-700">
+                    <Clock className="h-5 w-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-bold text-amber-950">Waiting for screenshot</p>
+                    <p className="mt-1 text-xs text-amber-800">No action is needed until the tester sends proof.</p>
+                  </div>
                 </div>
               )}
             </div>
           )}
 
           {['VERIFIED', 'SCHEDULED'].includes(application.status) && (
-            <div className="bg-green-50 border border-green-200 p-3 rounded-lg space-y-2">
-              <p className="text-sm text-green-800 font-medium">
-                ✅ Screenshot checked — tester is ready
-              </p>
-              <p className="text-xs text-green-700">
-                Testing starts for everyone together. Click Start testing on this job when you are ready.
-              </p>
+            <div className="space-y-3 rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-50/50 p-4 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                  <CheckCircle className="h-6 w-6" />
+                </span>
+                <div>
+                  <p className="text-base font-bold text-emerald-950">Verified and ready to test</p>
+                  <p className="mt-1 text-sm leading-relaxed text-emerald-800">
+                    The screenshot has been checked. Testing starts for everyone at the same time.
+                  </p>
+                </div>
+              </div>
+              <div className="rounded-xl bg-white/80 px-3 py-2 text-xs font-medium text-emerald-800">
+                When your group is ready, use <strong>Start testing</strong> at the top of this job.
+              </div>
               <Button
                 onClick={() => onReject?.(application.id)}
                 disabled={loading}
                 variant="outline"
-                size="sm"
-                className="w-full"
+                className="min-h-10 w-full border-emerald-200 bg-white text-slate-600 hover:bg-red-50 hover:text-red-700"
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Close application
@@ -525,29 +586,37 @@ export function ApplicationCard({
           )}
 
           {application.status === 'TESTING' && (
-            <div className="bg-purple-50 border border-purple-200 p-3 rounded-lg">
-              <p className="text-sm text-purple-800 font-medium">
-                🎯 Testing in progress
-              </p>
-              <p className="text-xs text-purple-700 mt-1">
-                Will automatically complete on {new Date(application.testingEndDate!).toLocaleDateString()}
-              </p>
+            <div className="flex items-start gap-3 rounded-2xl border border-purple-200 bg-gradient-to-br from-purple-50 to-white p-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
+                <Smartphone className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-purple-950">Testing in progress</p>
+                <p className="mt-1 text-xs text-purple-800">
+                  Will automatically complete on {new Date(application.testingEndDate!).toLocaleDateString()}
+                </p>
+              </div>
             </div>
           )}
 
           {application.status === 'COMPLETED' && (
-            <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
-              <p className="text-sm text-green-800">
-                🎉 Testing completed successfully
-              </p>
+            <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700">
+                <CheckCircle className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-sm font-bold text-emerald-950">Testing completed</p>
+                <p className="mt-1 text-xs text-emerald-800">This tester has finished the testing period.</p>
+              </div>
             </div>
           )}
 
           {application.status === 'REJECTED' && (
-            <div className="bg-red-50 border border-red-200 p-3 rounded-lg">
-              <p className="text-sm text-red-800">
-                ❌ Application closed
-              </p>
+            <div className="flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-red-700">
+                <XCircle className="h-5 w-5" />
+              </span>
+              <p className="text-sm font-semibold text-red-900">Application closed</p>
             </div>
           )}
         </CardContent>
@@ -567,7 +636,7 @@ export function ApplicationCard({
                 width={800}
                 height={450}
                 unoptimized
-                className="w-full h-auto rounded"
+                className="max-h-[75vh] w-full rounded-lg border border-slate-200 object-contain"
               />
             )}
             {application.verificationImage2 && (
@@ -577,7 +646,7 @@ export function ApplicationCard({
                 width={800}
                 height={450}
                 unoptimized
-                className="w-full h-auto rounded"
+                className="max-h-[75vh] w-full rounded-lg border border-slate-200 object-contain"
               />
             )}
           </div>
