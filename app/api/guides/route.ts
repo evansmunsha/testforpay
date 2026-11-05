@@ -173,10 +173,12 @@ async function handleEngagement(user: { userId: string; role: string }, body: un
     return NextResponse.json({ success: true, liked: !existing })
   }
 
+  if (parsed.data.action !== 'comment') return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
+  const text = parsed.data.text
   await prisma.guideComment.upsert({
     where: { videoId_userId: { videoId, userId: user.userId } },
-    create: { videoId, userId: user.userId, text: parsed.data.text },
-    update: { text: parsed.data.text },
+    create: { videoId, userId: user.userId, text },
+    update: { text },
   })
   return NextResponse.json({ success: true })
 }
