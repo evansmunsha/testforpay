@@ -530,6 +530,11 @@ You will get back the money for unused spots.`
   )
   const completedApplications = job.applications.filter(app => app.status === 'COMPLETED')
   const rejectedApplications = job.applications.filter(app => app.status === 'REJECTED')
+  const nonRejectedApplications = job.applications.filter(app => app.status !== 'REJECTED')
+  const testerColorIndexById = new Map<string, number>()
+  Array.from(new Set(job.applications.map(application => application.tester.id)))
+    .sort()
+    .forEach((testerId, index) => testerColorIndexById.set(testerId, index))
   const isDraft = job.status === 'DRAFT'
   const isCancelled = job.status === 'CANCELLED'
   const isCompleted = job.status === 'COMPLETED'
@@ -937,7 +942,7 @@ You will get back the money for unused spots.`
             <TabsContent value="testers" className="space-y-4">
               <div className="flex flex-wrap gap-2">
                 {([
-                  ['all', 'All', job.applications.length],
+                  ['all', 'All', nonRejectedApplications.length],
                   ['pending', 'To approve', pendingApplications.length],
                   ['active', 'Active', activeApplications.length],
                   ['completed', 'Done', completedApplications.length],
@@ -960,7 +965,7 @@ You will get back the money for unused spots.`
                   : testerFilter === 'active' ? activeApplications
                   : testerFilter === 'completed' ? completedApplications
                   : testerFilter === 'rejected' ? rejectedApplications
-                  : job.applications
+                  : nonRejectedApplications
                 if (filtered.length === 0) {
                   return (
                     <Card>
@@ -986,6 +991,7 @@ You will get back the money for unused spots.`
                   <ApplicationCard
                     key={application.id}
                     application={application}
+                    testerColorIndex={testerColorIndexById.get(application.tester.id) ?? 0}
                     onApprove={application.status === 'PENDING' ? handleApprove : undefined}
                     onReject={application.status === 'PENDING' ? handleReject : undefined}
                     onVerify={['OPTED_IN', 'VERIFIED', 'SCHEDULED', 'TESTING'].includes(application.status) ? handleVerify : undefined}

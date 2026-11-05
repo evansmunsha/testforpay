@@ -54,6 +54,7 @@ interface ApplicationCardProps {
   onReject?: (id: string) => void
   onVerify?: (id: string) => void
   loading?: boolean
+  testerColorIndex?: number
 }
 
 export function ApplicationCard({
@@ -62,6 +63,7 @@ export function ApplicationCard({
   onReject,
   onVerify,
   loading = false,
+  testerColorIndex = 0,
 }: ApplicationCardProps) {
   const [imageDialogOpen, setImageDialogOpen] = useState(false)
   const [engagementScore, setEngagementScore] = useState<number | null>(application.engagementScore || null)
@@ -151,16 +153,21 @@ export function ApplicationCard({
     }
   }
 
-  const accountAge = Math.floor(
-    (new Date().getTime() - new Date(application.tester.createdAt).getTime()) / 
-    (1000 * 60 * 60 * 24)
-  )
+  const accountCreatedAt = new Date(application.tester.createdAt).getTime()
+  const accountAge = Number.isFinite(accountCreatedAt)
+    ? Math.max(0, Math.floor((Date.now() - accountCreatedAt) / (1000 * 60 * 60 * 24)))
+    : null
+  const testerHue = (testerColorIndex * 137.508) % 360
+  const testerColor = `hsl(${testerHue} 70% 48%)`
   const repliesMuted = !!application.tester?.muteDeveloperReplies
 
   return (
     <>
-      <Card className="hover:shadow-md transition-shadow">
-        <CardHeader>
+      <Card
+        className="border-l-4 hover:shadow-md transition-shadow"
+        style={{ borderLeftColor: testerColor }}
+      >
+        <CardHeader style={{ backgroundColor: `hsl(${testerHue} 80% 96%)` }}>
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3 flex-1">
               <Image 
@@ -168,7 +175,8 @@ export function ApplicationCard({
                 alt="Tester" 
                 width={48} 
                 height={48}
-                className="rounded-full"
+                className="rounded-full border-2"
+                style={{ borderColor: testerColor }}
               />
               <div>
                 <CardTitle className="text-lg">
@@ -194,7 +202,7 @@ export function ApplicationCard({
             </div>
             <div className="flex items-center gap-2 text-gray-600">
               <Clock className="h-4 w-4" />
-              <span>Account age: {accountAge} days</span>
+              <span>Account age: {accountAge === null ? 'Not available' : `${accountAge} days`}</span>
             </div>
           </div>
 
