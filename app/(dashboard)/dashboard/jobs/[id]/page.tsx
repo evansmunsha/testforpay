@@ -19,6 +19,7 @@ import { TaskSubmissionGrid } from '@/components/jobs/task-submission-grid'
 import { GroupChat } from '@/components/group/group-chat'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { getDeveloperActions } from '@/lib/developer-actions'
+import { DEVELOPER_CHECKOUT_PAUSED } from '@/lib/constants'
 import { 
   ArrowLeft, 
   Calendar, 
@@ -60,6 +61,7 @@ interface Job {
   /** Platform fee in integer cents (EUR). */
   platformFee: Cents
   stripePaymentIntent?: string | null
+  isTraining: boolean
   status: string
   createdAt: string
   publishedAt: string | null
@@ -536,6 +538,7 @@ You will get back the money for unused spots.`
     .sort()
     .forEach((testerId, index) => testerColorIndexById.set(testerId, index))
   const isDraft = job.status === 'DRAFT'
+  const unpaidCheckoutPaused = isDraft && DEVELOPER_CHECKOUT_PAUSED && !job.isTraining && !job.stripePaymentIntent
   const isCancelled = job.status === 'CANCELLED'
   const isCompleted = job.status === 'COMPLETED'
   const isActive = ['ACTIVE', 'IN_PROGRESS'].includes(job.status)
@@ -549,7 +552,11 @@ You will get back the money for unused spots.`
   const totalChargeEurCents = job.totalBudget + job.platformFee
   const paymentReceived = !isDraft && !!job.stripePaymentIntent
   const paymentSummary = isDraft
-    ? 'Awaiting payment. Complete checkout to publish this job.'
+    ? unpaidCheckoutPaused
+      ? 'This job is saved as a draft. Payments are temporarily unavailable.'
+      : DEVELOPER_CHECKOUT_PAUSED
+        ? 'This job is saved as a draft. You can publish it when it is ready.'
+        : 'Awaiting payment. Complete checkout to publish this job.'
     : isCancelled
       ? paymentReceived
         ? 'Job cancelled. Refunds and partial payouts (if any) have been processed.'
@@ -613,7 +620,7 @@ You will get back the money for unused spots.`
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
             {refreshing ? 'Refreshing...' : 'Refresh'}
           </Button>
-          {job.status === 'DRAFT' && (
+          {job.status === 'DRAFT' && !unpaidCheckoutPaused && (
             <Button onClick={handlePublish}>
               <CheckCircle className="h-4 w-4 mr-2" />
               Publish Job
@@ -651,6 +658,8 @@ You will get back the money for unused spots.`
       {(() => {
         const actions = getDeveloperActions({
           isDraft,
+          checkoutPaused: unpaidCheckoutPaused,
+          draftReadyToPublish: DEVELOPER_CHECKOUT_PAUSED && !unpaidCheckoutPaused,
           pendingApprovals: pendingApplications.length,
           screenshotsToVerify: awaitingVerification.length,
           readyToStart: isReadyToStart && (recruitment?.pausedToResume ?? 0) === 0,
@@ -1166,16 +1175,22 @@ You will get back the money for unused spots.`
           {job.status === 'DRAFT' && (
             <Card className="bg-blue-50 border-blue-200">
               <CardContent className="pt-6">
-                <p className="text-sm text-blue-900 mb-4">
-                  Pay first. Your job goes live for testers as soon as the payment is confirmed.
-                </p>
-                <div className="mb-4">
-                  <DodoCheckoutButton jobId={job.id} amountEurCents={totalChargeEurCents} onPaid={() => fetchJob(true)} />
-                </div>
-                <Button onClick={handlePublish} className="w-full">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Publish Job
-                </Button>
+                {!DEVELOPER_CHECKOUT_PAUSED && (
+                  <p className="text-sm text-blue-900 mb-4">
+                    Pay first. Your job goes live for testers as soon as the payment is confirmed.
+                  </p>
+                )}
+                {(!DEVELOPER_CHECKOUT_PAUSED || unpaidCheckoutPaused) && (
+                  <div className="mb-4">
+                    <DodoCheckoutButton jobId={job.id} amountEurCents={totalChargeEurCents} onPaid={() => fetchJob(true)} />
+                  </div>
+                )}
+                {!unpaidCheckoutPaused && (
+                  <Button onClick={handlePublish} className="w-full">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Publish Job
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}

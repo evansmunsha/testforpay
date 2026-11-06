@@ -12,6 +12,9 @@ export const TEST_DURATION_DAYS = 14 // locked to 14 days
 export const MIN_PAYMENT_PER_TESTER = 2 // €2.00 (Starter pays €2.30)
 export const MAX_PAYMENT_PER_TESTER = 5 // €5.00 cap
 
+// Temporarily hide developer checkout without changing payment processing.
+export const DEVELOPER_CHECKOUT_PAUSED = true
+
 // Job Status
 export const JOB_STATUS = {
   DRAFT: 'DRAFT',

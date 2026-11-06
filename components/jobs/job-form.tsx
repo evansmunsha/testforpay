@@ -14,7 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { eurToUsd, formatEur, formatUsd } from '@/lib/currency'
 import { TaskTemplateSelector } from '@/components/jobs/task-template-selector'
-import { TASK_TEMPLATES } from '@/lib/constants'
+import { DEVELOPER_CHECKOUT_PAUSED, TASK_TEMPLATES } from '@/lib/constants'
 
 type PlanType = 'STARTER' | 'GROWTH' | 'PRO'
 
@@ -203,7 +203,7 @@ export function JobForm() {
     setError('')
 
     if (formData.appDescription.trim().length < 100) {
-      setError('Write at least 100 letters in the description, so testers know what to test. Then click Save job and go to payment.')
+      setError('Write at least 100 letters in the description, so testers know what to test. Then save your job.')
       return
     }
 
@@ -218,7 +218,7 @@ export function JobForm() {
       const data = await response.json()
 
       if (!response.ok) {
-        setError(data.error || 'Your job was not saved. Check the form and click Save job and go to payment again.')
+        setError(data.error || 'Your job was not saved. Check the form and try again.')
         setLoading(false)
         return
       }
@@ -226,7 +226,7 @@ export function JobForm() {
       localStorage.removeItem('jobFormData')
       router.push(`/dashboard/jobs/${data.jobId}`)
     } catch {
-      setError('Your job was not saved. Check your internet and click Save job and go to payment again.')
+      setError('Your job was not saved. Check your internet and try again.')
       setLoading(false)
     }
   }
@@ -601,11 +601,13 @@ export function JobForm() {
               </div>
 
               <Button onClick={handleSubmit} className="w-full" size="lg" disabled={loading || formData.appDescription.length < 100}>
-                {loading ? 'Saving your job...' : 'Save job and go to payment'}
+                {loading ? 'Saving your job...' : DEVELOPER_CHECKOUT_PAUSED ? 'Save job' : 'Save job and go to payment'}
               </Button>
 
               <p className="text-center text-xs text-gray-500">
-                Your job is saved as a draft. On the next screen, pay to publish it.
+                {DEVELOPER_CHECKOUT_PAUSED
+                  ? 'Your job will be saved as a draft. Payments are temporarily unavailable, so it cannot go live yet.'
+                  : 'Your job is saved as a draft. On the next screen, pay to publish it.'}
               </p>
             </CardContent>
           </Card>

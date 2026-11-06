@@ -12,6 +12,18 @@ describe('getDeveloperActions', () => {
     expect(actions.map((a) => a.id)).toEqual(['publish'])
   })
 
+  it('explains that a draft cannot go live while checkout is paused', () => {
+    const [action] = getDeveloperActions({ ...base, isDraft: true, checkoutPaused: true })
+    expect(action.text).toMatch(/draft.*temporarily unavailable.*cannot go live/i)
+    expect(action.buttonLabel).toBe('See details')
+  })
+
+  it('lets an eligible draft be published while checkout is paused', () => {
+    const [action] = getDeveloperActions({ ...base, isDraft: true, draftReadyToPublish: true })
+    expect(action.text).toMatch(/publish it/i)
+    expect(action.buttonLabel).toBe('See details')
+  })
+
   it('lists approvals, then screenshots, then start date', () => {
     const actions = getDeveloperActions({ ...base, pendingApprovals: 2, screenshotsToVerify: 1, readyToStart: true })
     expect(actions.map((a) => a.id)).toEqual(['approve', 'verify', 'start'])

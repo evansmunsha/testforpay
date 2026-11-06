@@ -6,6 +6,7 @@ import { DollarSign, Clock, CheckCircle, XCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
 import { Badge } from '@/components/ui/badge'
 import { formatEurFromCents } from '@/lib/currency'
+import { DEVELOPER_CHECKOUT_PAUSED } from '@/lib/constants'
 import type { Cents } from '@/types/money'
 import { Button } from '@/components/ui/button'
 
@@ -154,7 +155,11 @@ export default function PaymentsPage() {
           {isDeveloper ? 'Payments' : 'Earnings'}
         </h2>
         <p className="text-gray-600 mt-1">
-          {isDeveloper ? 'Track your EUR-based job and tester transactions. Developer checkout is processed in EUR at publish time.' : 'View your earnings and payouts'}
+          {isDeveloper
+            ? DEVELOPER_CHECKOUT_PAUSED
+              ? 'View your job and tester transactions. New job payments are temporarily unavailable.'
+              : 'Track your EUR-based job and tester transactions. Developer checkout is processed in EUR at publish time.'
+            : 'View your earnings and payouts'}
         </p>
       </div>
 

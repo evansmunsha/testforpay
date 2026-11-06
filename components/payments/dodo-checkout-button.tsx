@@ -5,6 +5,7 @@ import { Loader2, Lock, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { formatEurFromCents } from '@/lib/currency'
+import { DEVELOPER_CHECKOUT_PAUSED } from '@/lib/constants'
 import type { Cents } from '@/types/money'
 
 interface DodoCheckoutButtonProps {
@@ -25,7 +26,9 @@ export function DodoCheckoutButton({ jobId, amountEurCents, onPaid }: DodoChecko
     if (query.get('payment') !== 'returned') return
     const returnedStatus = (query.get('status') || '').toLowerCase()
     if (['failed', 'cancelled', 'canceled'].includes(returnedStatus)) {
-      setError('The payment did not go through, and you were not charged. Click "Pay now" to try again.')
+      setError(DEVELOPER_CHECKOUT_PAUSED
+        ? 'The payment did not go through. Checkout is temporarily unavailable. Contact support if you need help.'
+        : 'The payment did not go through, and you were not charged. Click "Pay now" to try again.')
       return
     }
     setConfirming(true)
@@ -47,13 +50,16 @@ export function DodoCheckoutButton({ jobId, amountEurCents, onPaid }: DodoChecko
       if (attempts >= 20) {
         clearInterval(timer)
         setConfirming(false)
-        setError('We did not receive a payment. If you did not pay, click "Pay now" to try again. If you paid, wait a few minutes and refresh, or contact us.')
+        setError(DEVELOPER_CHECKOUT_PAUSED
+          ? 'We could not confirm the payment yet. If you paid, wait a few minutes and refresh, or contact support.'
+          : 'We did not receive a payment. If you did not pay, click "Pay now" to try again. If you paid, wait a few minutes and refresh, or contact us.')
       }
     }, 3000)
     return () => clearInterval(timer)
   }, [jobId, onPaid])
 
   const startPayment = async () => {
+    if (DEVELOPER_CHECKOUT_PAUSED) return
     setLoading(true)
     setError('')
     setConfirming(false)
@@ -73,6 +79,17 @@ export function DodoCheckoutButton({ jobId, amountEurCents, onPaid }: DodoChecko
       setError('The payment page could not open. Check your internet and click "Pay now" again.')
     }
     setLoading(false)
+  }
+
+  if (DEVELOPER_CHECKOUT_PAUSED) {
+    return (
+      <div className="space-y-2 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900" role="status">
+        <p className="font-semibold">Payments are temporarily unavailable</p>
+        <p>Your job is saved as a draft and cannot go live yet.</p>
+        {confirming && <p>We are checking your earlier payment. Please wait.</p>}
+        {error && <p className="text-red-700">{error}</p>}
+      </div>
+    )
   }
 
   return (

@@ -4,6 +4,8 @@ export type DeveloperActionInput = {
   screenshotsToVerify: number
   readyToStart: boolean
   scheduledStartDate?: string | null
+  checkoutPaused?: boolean
+  draftReadyToPublish?: boolean
 }
 
 export type DeveloperAction = {
@@ -19,7 +21,11 @@ export function getDeveloperActions(input: DeveloperActionInput): DeveloperActio
   const actions: DeveloperAction[] = []
 
   if (input.isDraft) {
-    actions.push({ id: 'publish', text: 'This job is a draft. Finish payment to publish it.', buttonLabel: 'See payment' })
+    actions.push(input.checkoutPaused
+      ? { id: 'publish', text: 'This job is saved as a draft. Payments are temporarily unavailable, so it cannot go live yet.', buttonLabel: 'See details' }
+      : input.draftReadyToPublish
+        ? { id: 'publish', text: 'This job is a draft. Publish it when you are ready.', buttonLabel: 'See details' }
+        : { id: 'publish', text: 'This job is a draft. Finish payment to publish it.', buttonLabel: 'See payment' })
     return actions
   }
   if (input.pendingApprovals > 0) {
